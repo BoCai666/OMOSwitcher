@@ -101,11 +101,8 @@ npm run tauri:build
 
 ### 🤖 For LLM Agents
 
-Fetch the installation guide and follow it:
-
-```bash
-curl -s https://raw.githubusercontent.com/BoCai666/OMOSwitcher/main/docs/installation.md
-```
+Install and configure oh-my-opencode by following the instructions here:
+https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/refs/heads/dev/docs/guide/installation.md
 
 ---
 
