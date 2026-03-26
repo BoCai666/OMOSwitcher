@@ -90,6 +90,9 @@ const handleSwitchPreset = async (preset: Preset) => {
     // 应用预设配置到 configStore
     configStore.applyPreset(result.preset.config)
     
+    // 立即保存配置到文件
+    await configStore.saveConfig()
+    
     // 记录预设使用历史
     await recordPresetUsage(preset.name)
     
