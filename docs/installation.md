@@ -50,7 +50,7 @@ OMOSwitcher/
 │   └── src/
 │       ├── lib.rs         # Tauri 应用入口
 │       └── commands.rs    # Tauri 命令
-└── __tests__/             # 测试文件
+└── .github/workflows/      # GitHub Actions CI/CD
 ```
 
 ## 关键文件
@@ -60,8 +60,7 @@ OMOSwitcher/
 | `AGENTS.md` | 项目知识库 |
 | `src/AGENTS.md` | 前端模块说明 |
 | `src-tauri/AGENTS.md` | 后端模块说明 |
-| `src/views/AgentConfig.vue` | Agent 配置页面 |
-| `src/views/CategoryConfig.vue` | Category 配置页面 |
+| `src/views/ModelConfig.vue` | 模型配置页面 |
 | `src/services/modelStore.ts` | 模型管理服务 |
 | `src-tauri/src/commands.rs` | Tauri 命令实现 |
 
@@ -82,7 +81,6 @@ OMOSwitcher/
 | `npm run tauri:dev` | Tauri 开发模式 |
 | `npm run build` | 构建前端 |
 | `npm run tauri:build` | 构建生产版本 |
-| `npm run test` | 运行测试 |
 | `npm run type-check` | TypeScript 类型检查 |
 
 ## 配置文件路径
