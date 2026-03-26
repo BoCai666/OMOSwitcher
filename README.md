@@ -101,9 +101,9 @@ npm run tauri:build
 
 ### 🤖 For LLM Agents
 
-```bash
-# Install and configure OMOSwitcher by following the instructions here:
-# https://raw.githubusercontent.com/BoCai666/OMOSwitcher/main/docs/installation.md
+```
+Install and configure OMOSwitcher by following the instructions here:
+https://raw.githubusercontent.com/BoCai666/OMOSwitcher/main/docs/installation.md
 ```
 
 ---
