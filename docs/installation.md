@@ -12,8 +12,8 @@
 ### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/BoCai666/OMOSwicther.git
-cd OMOSwicther
+git clone https://github.com/BoCai666/OMOSwitcher.git
+cd OMOSwitcher
 ```
 
 ### 2. 安装依赖

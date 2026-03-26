@@ -86,8 +86,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/BoCai666/OMOSwicther.git
-cd OMOSwicther
+git clone https://github.com/BoCai666/OMOSwitcher.git
+cd OMOSwitcher
 
 # 安装依赖
 npm install
@@ -104,7 +104,7 @@ npm run tauri:build
 Fetch the installation guide and follow it:
 
 ```bash
-curl -s https://raw.githubusercontent.com/BoCai666/OMOSwicther/main/docs/installation.md
+curl -s https://raw.githubusercontent.com/BoCai666/OMOSwitcher/main/docs/installation.md
 ```
 
 ---
