@@ -73,11 +73,7 @@
 
 ## 🚀 快速开始
 
-<table>
-<tr>
-<td width="50%">
-
-### 👨‍💻 手动开始
+### 👨‍💻 For Humans
 
 **环境要求**
 
@@ -103,38 +99,54 @@ npm run tauri:dev
 npm run tauri:build
 ```
 
-</td>
-<td width="50%">
+### 🤖 For LLM Agents
 
-### 🤖 为 AI 使用
-
-如果你是 AI 助手，请阅读以下文件以快速了解项目：
+将以下提示词发送给你的 LLM Agent（Claude Code、Cursor、等）：
 
 ```
-AGENTS.md          # 项目知识库（必读）
-src/AGENTS.md      # 前端模块说明
-src-tauri/AGENTS.md # 后端模块说明
+Install and configure OMOSwitcher by following these steps:
+
+1. Clone the repository:
+   git clone https://github.com/BoCai666/OMOSwicther.git
+
+2. Install dependencies:
+   cd OMOSwicther && npm install
+
+3. Run in development mode:
+   npm run tauri:dev
+
+4. For production build:
+   npm run tauri:build
+
+Requirements: Node.js 18+, Rust 1.70+
+
+Read AGENTS.md for project context and code conventions.
 ```
 
-**关键信息**
+Or fetch the installation guide programmatically:
 
-| 配置 | 路径 |
+```bash
+curl -s https://raw.githubusercontent.com/BoCai666/OMOSwicther/main/AGENTS.md
+```
+
+**Key Files for Agents**
+
+| 文件 | 用途 |
 |:-----|:-----|
-| Agent 配置 | `src/views/AgentConfig.vue` |
-| Category 配置 | `src/views/CategoryConfig.vue` |
-| 模型管理 | `src/services/modelStore.ts` |
-| Tauri 命令 | `src-tauri/src/commands.rs` |
+| `AGENTS.md` | 项目知识库（必读） |
+| `src/AGENTS.md` | 前端模块说明 |
+| `src-tauri/AGENTS.md` | 后端模块说明 |
 
-**代码风格**
+**Code Conventions**
 
-- 组合式 API (`setup()`, `defineStore`)
+```
+- 组合式 API (setup(), defineStore)
 - 中文注释，英文标识符
-- 严格 TypeScript (`strict: true`)
-- 禁止 `as any`, `@ts-ignore`
-
-</td>
-</tr>
-</table>
+- 严格 TypeScript (strict: true)
+- 禁止 as any, @ts-ignore
+- 文件命名: kebab-case
+- 组件命名: PascalCase
+```
 
 ---
 
