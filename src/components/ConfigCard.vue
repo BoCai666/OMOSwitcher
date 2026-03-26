@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 配置卡片组件 - 用于显示 Agent 或 Category 的配置信息
 import { computed } from 'vue'
+import { ArrowRight } from '@element-plus/icons-vue'
 import type { Model } from '@/types'
 
 const props = defineProps<{
@@ -9,10 +10,12 @@ const props = defineProps<{
   models: Model[]
   editable?: boolean
   description?: string
+  clickable?: boolean
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
+  'click': []
 }>()
 
 // 使用计算属性实现 v-model 双向绑定
@@ -44,10 +47,16 @@ const groupedModels = computed(() => {
 </script>
 
 <template>
-  <el-card class="config-card" shadow="hover">
+  <el-card 
+    class="config-card" 
+    shadow="hover"
+    :class="{ 'clickable': clickable }"
+    @click="clickable && emit('click')"
+  >
     <template #header>
       <div class="card-header">
         <span class="name">{{ name }}</span>
+        <el-icon v-if="clickable" class="click-hint"><ArrowRight /></el-icon>
       </div>
     </template>
     
@@ -96,6 +105,16 @@ const groupedModels = computed(() => {
   margin-bottom: 16px;
 }
 
+.config-card.clickable {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.config-card.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -105,6 +124,11 @@ const groupedModels = computed(() => {
 .name {
   font-weight: 600;
   color: #303133;
+}
+
+.click-hint {
+  color: #909399;
+  font-size: 14px;
 }
 
 .card-content {

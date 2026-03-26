@@ -7,6 +7,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import type { CategoryName, Model, OhMyOpenCodeConfig } from '@/types'
 import { CATEGORY_NAMES, CATEGORY_INFO, createDefaultConfig } from '@/types'
 import ConfigCard from '@/components/ConfigCard.vue'
+import ConfigDetailDialog from '@/components/ConfigDetailDialog.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { listModels } from '@/services/modelStore'
 import { useConfigStore } from '@/stores/config'
@@ -22,6 +23,10 @@ const models = ref<Model[]>([])
 
 // 保存消息
 const saveMessage = ref('')
+
+// 详情对话框
+const detailDialogVisible = ref(false)
+const selectedCategoryName = ref<CategoryName | null>(null)
 
 // 配置数据（使用 store 中的配置，如果未加载则使用默认值）
 const config = computed<OhMyOpenCodeConfig>({
@@ -58,6 +63,12 @@ async function handleSave() {
   } catch (error) {
     saveMessage.value = '保存失败: ' + (error as Error).message
   }
+}
+
+// 查看详情
+function handleViewDetail(categoryName: CategoryName) {
+  selectedCategoryName.value = categoryName
+  detailDialogVisible.value = true
 }
 
 // 监听 store 中的错误
@@ -111,9 +122,21 @@ watch(() => configStore.error, (newError) => {
           v-model="config.categories[name].model"
           :models="models"
           :editable="true"
+          :clickable="true"
           @update:model-value="(val: string) => updateCategoryModel(name, val)"
+          @click="handleViewDetail(name)"
         />
       </div>
+
+      <!-- Category 详情对话框 -->
+      <ConfigDetailDialog
+        v-if="selectedCategoryName"
+        v-model:visible="detailDialogVisible"
+        type="category"
+        :name="selectedCategoryName"
+        :current-model="config.categories[selectedCategoryName].model"
+        :models="models"
+      />
     </div>
   </AppLayout>
 </template>

@@ -3,6 +3,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import ConfigCard from '@/components/ConfigCard.vue'
+import ConfigDetailDialog from '@/components/ConfigDetailDialog.vue'
 import { listModels } from '@/services/modelStore'
 import { useConfigStore } from '@/stores/config'
 import type { Model, AgentName, OhMyOpenCodeConfig } from '@/types'
@@ -19,6 +20,10 @@ const models = ref<Model[]>([])
 
 // 保存消息
 const saveMessage = ref('')
+
+// 详情对话框
+const detailDialogVisible = ref(false)
+const selectedAgentName = ref<AgentName | null>(null)
 
 // 配置数据（使用 store 中的配置，如果未加载则使用默认值）
 const config = computed<OhMyOpenCodeConfig>({
@@ -55,6 +60,12 @@ async function handleSave() {
   } catch (error) {
     saveMessage.value = '保存失败: ' + (error as Error).message
   }
+}
+
+// 查看详情
+function handleViewDetail(agentName: AgentName) {
+  selectedAgentName.value = agentName
+  detailDialogVisible.value = true
 }
 
 // 监听 store 中的错误
@@ -108,9 +119,21 @@ watch(() => configStore.error, (newError) => {
           v-model="config.agents[agentName as AgentName].model"
           :models="models"
           :editable="true"
+          :clickable="true"
           @update:model-value="(value: string) => updateAgentModel(agentName as AgentName, value)"
+          @click="handleViewDetail(agentName as AgentName)"
         />
       </div>
+
+      <!-- Agent 详情对话框 -->
+      <ConfigDetailDialog
+        v-if="selectedAgentName"
+        v-model:visible="detailDialogVisible"
+        type="agent"
+        :name="selectedAgentName"
+        :current-model="config.agents[selectedAgentName].model"
+        :models="models"
+      />
     </div>
   </AppLayout>
 </template>
