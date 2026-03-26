@@ -12,7 +12,7 @@
 [![Rust](https://img.shields.io/badge/Rust-1.70+-DEA584?style=flat-square&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-[功能特性](#-功能特性) • [快速开始](#-快速开始) • [项目结构](#-项目结构) • [配置说明](#-配置说明) • [开发指南](#-开发指南)
+[功能特性](#-功能特性) • [快速开始](#-快速开始) • [配置说明](#-配置说明) • [开发指南](#-开发指南)
 
 </div>
 
@@ -101,29 +101,9 @@ npm run tauri:build
 
 ### 🤖 For LLM Agents
 
-Install and configure OMOSwitcher by following the instructions here:
-https://raw.githubusercontent.com/BoCai666/OMOSwitcher/main/docs/installation.md
-
----
-
-## 📁 项目结构
-
-```
-OMOSwitcher/
-├── 📂 src/                    # Vue 前端源码
-│   ├── 📂 views/              # 页面组件
-│   ├── 📂 components/         # 公共组件
-│   ├── 📂 stores/             # Pinia 状态管理
-│   ├── 📂 services/           # 业务服务层
-│   └── 📂 types/              # TypeScript 类型
-│
-├── 📂 src-tauri/              # Rust 后端
-│   ├── 📂 src/
-│   │   ├── 📄 lib.rs          # 应用入口
-│   │   └── 📄 commands.rs     # Tauri 命令
-│   └── 📄 tauri.conf.json     # 应用配置
-│
-└── 📂 __tests__/              # 测试文件
+```bash
+# Install and configure OMOSwitcher by following the instructions here:
+# https://raw.githubusercontent.com/BoCai666/OMOSwitcher/main/docs/installation.md
 ```
 
 ---
