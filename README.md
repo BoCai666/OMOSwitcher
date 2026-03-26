@@ -101,51 +101,10 @@ npm run tauri:build
 
 ### 🤖 For LLM Agents
 
-将以下提示词发送给你的 LLM Agent（Claude Code、Cursor、等）：
-
-```
-Install and configure OMOSwitcher by following these steps:
-
-1. Clone the repository:
-   git clone https://github.com/BoCai666/OMOSwicther.git
-
-2. Install dependencies:
-   cd OMOSwicther && npm install
-
-3. Run in development mode:
-   npm run tauri:dev
-
-4. For production build:
-   npm run tauri:build
-
-Requirements: Node.js 18+, Rust 1.70+
-
-Read AGENTS.md for project context and code conventions.
-```
-
-Or fetch the installation guide programmatically:
+Fetch the installation guide and follow it:
 
 ```bash
-curl -s https://raw.githubusercontent.com/BoCai666/OMOSwicther/main/AGENTS.md
-```
-
-**Key Files for Agents**
-
-| 文件 | 用途 |
-|:-----|:-----|
-| `AGENTS.md` | 项目知识库（必读） |
-| `src/AGENTS.md` | 前端模块说明 |
-| `src-tauri/AGENTS.md` | 后端模块说明 |
-
-**Code Conventions**
-
-```
-- 组合式 API (setup(), defineStore)
-- 中文注释，英文标识符
-- 严格 TypeScript (strict: true)
-- 禁止 as any, @ts-ignore
-- 文件命名: kebab-case
-- 组件命名: PascalCase
+curl -s https://raw.githubusercontent.com/BoCai666/OMOSwicther/main/docs/installation.md
 ```
 
 ---
