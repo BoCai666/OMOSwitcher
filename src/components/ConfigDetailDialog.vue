@@ -61,6 +61,18 @@ const currentPrompt = computed(() => {
     : detail.value.systemPrompt.en
 })
 
+// 格式化回退链显示
+function formatFallbackModel(fallback: { model: string; variant?: string; providers: string[] }): { 
+  label: string
+  isCurrent: boolean 
+} {
+  const modelId = fallback.providers[0] + '/' + fallback.model
+  return {
+    label: `${fallback.model}${fallback.variant ? ` (${fallback.variant})` : ''}`,
+    isCurrent: modelId === props.currentModel || fallback.model === props.currentModel.split('/').pop()
+  }
+}
+
 // 关闭对话框时重置语言
 watch(dialogVisible, (val) => {
   if (!val) {
@@ -89,37 +101,39 @@ watch(dialogVisible, (val) => {
             {{ type === 'agent' ? 'Agent' : 'Category' }}
           </el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="当前模型" :span="2">
+        <el-descriptions-item label="当前模型">
           <div class="model-info">
             <el-tag type="info" size="small">{{ providerName }}</el-tag>
             <span class="model-name">{{ modelDisplayName }}</span>
           </div>
         </el-descriptions-item>
-        <!-- Agent 和 Category 共有：推荐模型和回退链 -->
         <el-descriptions-item label="推荐模型">
           <el-tag type="success" size="small">{{ detail.recommendedModel }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="回退模型链" :span="2">
-          <div class="fallback-chain">
-            <div 
-              v-for="(fallback, index) in detail.fallbackChain" 
-              :key="index" 
-              class="fallback-item"
-            >
-              <span class="fallback-index">{{ index + 1 }}</span>
-              <el-tag type="info" size="small">{{ fallback.model }}</el-tag>
-              <span v-if="fallback.variant" class="variant-badge">{{ fallback.variant }}</span>
-              <span class="providers">{{ fallback.providers.slice(0, 3).join(', ') }}{{ fallback.providers.length > 3 ? '...' : '' }}</span>
-            </div>
-          </div>
-        </el-descriptions-item>
-        <!-- 描述 -->
         <el-descriptions-item label="描述" :span="2">
           <span class="description-text">{{ detail.description }}</span>
         </el-descriptions-item>
       </el-descriptions>
 
-      <!-- 使用场景 -->
+      <!-- 回退模型链 -->
+      <div class="section">
+        <h4 class="section-title">回退模型链</h4>
+        <div class="fallback-chain">
+          <div 
+            v-for="(fallback, index) in detail.fallbackChain" 
+            :key="index" 
+            class="fallback-item"
+            :class="{ current: formatFallbackModel(fallback).isCurrent }"
+          >
+            <span class="fallback-index">{{ index + 1 }}</span>
+            <span class="fallback-model">{{ fallback.model }}</span>
+            <span v-if="fallback.variant" class="variant-badge">{{ fallback.variant }}</span>
+            <span class="providers">{{ fallback.providers.slice(0, 3).join(', ') }}{{ fallback.providers.length > 3 ? '...' : '' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 使用场景 (Agent 特有) -->
       <div v-if="type === 'agent' && (detail as any).useWhen" class="section">
         <h4 class="section-title">适用场景</h4>
         <ul class="use-when-list">
@@ -129,7 +143,7 @@ watch(dialogVisible, (val) => {
         </ul>
       </div>
 
-      <!-- 触发条件 -->
+      <!-- 触发条件 (Agent 特有) -->
       <div v-if="type === 'agent' && (detail as any).triggers?.length" class="section">
         <h4 class="section-title">触发条件</h4>
         <ul class="trigger-list">
@@ -139,7 +153,7 @@ watch(dialogVisible, (val) => {
         </ul>
       </div>
 
-      <!-- 避免场景 -->
+      <!-- 避免场景 (Agent 特有) -->
       <div v-if="type === 'agent' && (detail as any).avoidWhen?.length" class="section">
         <h4 class="section-title">避免场景</h4>
         <ul class="avoid-list">
@@ -208,45 +222,6 @@ watch(dialogVisible, (val) => {
   line-height: 1.6;
 }
 
-.fallback-chain {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.fallback-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 0;
-}
-
-.fallback-index {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  background-color: #409eff;
-  color: white;
-  border-radius: 50%;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.variant-badge {
-  font-size: 11px;
-  color: #909399;
-  background-color: #f4f4f5;
-  padding: 2px 6px;
-  border-radius: 3px;
-}
-
-.providers {
-  font-size: 12px;
-  color: #909399;
-}
-
 .section {
   margin-top: 8px;
 }
@@ -269,6 +244,73 @@ watch(dialogVisible, (val) => {
 
 .section-header .section-title {
   margin: 0;
+}
+
+/* 回退模型链样式 */
+.fallback-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fallback-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background-color: #fafafa;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.fallback-item:hover {
+  background-color: #f0f7ff;
+  border-color: #c0c4cc;
+}
+
+.fallback-item.current {
+  background-color: #ecf5ff;
+  border-color: #409eff;
+}
+
+.fallback-item.current .fallback-index {
+  background-color: #409eff;
+}
+
+.fallback-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  background-color: #909399;
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.fallback-model {
+  font-weight: 500;
+  color: #303133;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 13px;
+}
+
+.variant-badge {
+  font-size: 11px;
+  color: #67c23a;
+  background-color: #f0f9eb;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid #e1f3d8;
+}
+
+.providers {
+  font-size: 12px;
+  color: #909399;
+  margin-left: auto;
 }
 
 .use-when-list,
