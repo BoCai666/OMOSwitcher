@@ -95,26 +95,28 @@ watch(dialogVisible, (val) => {
             <span class="model-name">{{ modelDisplayName }}</span>
           </div>
         </el-descriptions-item>
+        <!-- Agent 和 Category 共有：推荐模型和回退链 -->
+        <el-descriptions-item label="推荐模型">
+          <el-tag type="success" size="small">{{ detail.recommendedModel }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="回退模型链" :span="2">
+          <div class="fallback-chain">
+            <div 
+              v-for="(fallback, index) in detail.fallbackChain" 
+              :key="index" 
+              class="fallback-item"
+            >
+              <span class="fallback-index">{{ index + 1 }}</span>
+              <el-tag type="info" size="small">{{ fallback.model }}</el-tag>
+              <span v-if="fallback.variant" class="variant-badge">{{ fallback.variant }}</span>
+              <span class="providers">{{ fallback.providers.slice(0, 3).join(', ') }}{{ fallback.providers.length > 3 ? '...' : '' }}</span>
+            </div>
+          </div>
+        </el-descriptions-item>
+        <!-- 描述 -->
         <el-descriptions-item label="描述" :span="2">
           <span class="description-text">{{ detail.description }}</span>
         </el-descriptions-item>
-        <!-- Agent 特有信息 -->
-        <template v-if="type === 'agent'">
-          <el-descriptions-item label="计算成本">
-            <el-tag 
-              :type="(detail as any).cost === 'FREE' ? 'success' : (detail as any).cost === 'CHEAP' ? 'warning' : 'danger'" 
-              size="small"
-            >
-              {{ (detail as any).cost }}
-            </el-tag>
-          </el-descriptions-item>
-        </template>
-        <!-- Category 特有信息 -->
-        <template v-if="type === 'category'">
-          <el-descriptions-item label="默认模型">
-            <el-tag type="info" size="small">{{ (detail as any).model }}</el-tag>
-          </el-descriptions-item>
-        </template>
       </el-descriptions>
 
       <!-- 使用场景 -->
@@ -204,6 +206,45 @@ watch(dialogVisible, (val) => {
 .description-text {
   color: #606266;
   line-height: 1.6;
+}
+
+.fallback-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fallback-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.fallback-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background-color: #409eff;
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.variant-badge {
+  font-size: 11px;
+  color: #909399;
+  background-color: #f4f4f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.providers {
+  font-size: 12px;
+  color: #909399;
 }
 
 .section {

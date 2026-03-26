@@ -6,11 +6,18 @@
 
 import type { CategoryName } from '@/types'
 
+export interface FallbackModel {
+  providers: string[]
+  model: string
+  variant?: string
+}
+
 export interface CategoryDetail {
   name: CategoryName
   displayName: string
   description: string
-  model: string
+  recommendedModel: string
+  fallbackChain: FallbackModel[]
   systemPrompt: {
     zh: string
     en: string
@@ -22,7 +29,14 @@ export const CATEGORY_DETAILS: Record<CategoryName, CategoryDetail> = {
     name: 'visual-engineering',
     displayName: 'Visual Engineering',
     description: '前端、UI/UX、设计、样式、动画',
-    model: 'google/gemini-3.1-pro',
+    recommendedModel: 'google/gemini-3.1-pro',
+    fallbackChain: [
+      { providers: ['google', 'github-copilot', 'opencode'], model: 'gemini-3.1-pro', variant: 'high' },
+      { providers: ['zai-coding-plan', 'opencode'], model: 'glm-5' },
+      { providers: ['anthropic', 'github-copilot', 'opencode'], model: 'claude-opus-4-6', variant: 'max' },
+      { providers: ['opencode-go'], model: 'glm-5' },
+      { providers: ['kimi-for-coding'], model: 'k2p5' }
+    ],
     systemPrompt: {
       zh: `<Category_Context>
 你正在处理视觉/UI 任务。
@@ -116,7 +130,13 @@ AVOID: Generic fonts, purple gradients on white, predictable layouts, cookie-cut
     name: 'ultrabrain',
     displayName: 'Ultra Brain',
     description: '仅用于真正困难、逻辑繁重的任务。只给明确目标，不给逐步指令。',
-    model: 'openai/gpt-5.4',
+    recommendedModel: 'openai/gpt-5.4',
+    fallbackChain: [
+      { providers: ['openai', 'opencode'], model: 'gpt-5.4', variant: 'xhigh' },
+      { providers: ['google', 'github-copilot', 'opencode'], model: 'gemini-3.1-pro', variant: 'high' },
+      { providers: ['anthropic', 'github-copilot', 'opencode'], model: 'claude-opus-4-6', variant: 'max' },
+      { providers: ['opencode-go'], model: 'glm-5' }
+    ],
     systemPrompt: {
       zh: `<Category_Context>
 你正在处理深度逻辑推理/复杂架构任务。
@@ -167,7 +187,12 @@ Response format:
     name: 'deep',
     displayName: 'Deep',
     description: '目标导向的自主问题解决，行动前深入研究。用于需要深度理解的复杂问题。',
-    model: 'openai/gpt-5.3-codex',
+    recommendedModel: 'openai/gpt-5.3-codex',
+    fallbackChain: [
+      { providers: ['openai', 'opencode'], model: 'gpt-5.3-codex', variant: 'medium' },
+      { providers: ['anthropic', 'github-copilot', 'opencode'], model: 'claude-opus-4-6', variant: 'max' },
+      { providers: ['google', 'github-copilot', 'opencode'], model: 'gemini-3.1-pro', variant: 'high' }
+    ],
     systemPrompt: {
       zh: `<Category_Context>
 你正在处理目标导向的自主任务。
@@ -186,10 +211,6 @@ Response format:
 - 行动前进行彻底研究
 - 解决需要深度理解的复杂问题
 - 独立工作，不需要频繁检查
-
-**单步 vs 多步上下文**：
-- 一个目标的子步骤 = 执行所有步骤，它们是一个原子任务的阶段
-- 真正独立的任务 = 标记并拒绝，需要单独委托
 
 **响应格式**：
 - 最小状态更新（用户信任你的自主性）
@@ -226,7 +247,12 @@ You are NOT an interactive assistant. You are an autonomous problem-solver.
     name: 'artistry',
     displayName: 'Artistry',
     description: '高度创意/艺术性任务、新颖想法。超越标准模式的复杂问题解决。',
-    model: 'google/gemini-3.1-pro',
+    recommendedModel: 'google/gemini-3.1-pro',
+    fallbackChain: [
+      { providers: ['google', 'github-copilot', 'opencode'], model: 'gemini-3.1-pro', variant: 'high' },
+      { providers: ['anthropic', 'github-copilot', 'opencode'], model: 'claude-opus-4-6', variant: 'max' },
+      { providers: ['openai', 'github-copilot', 'opencode'], model: 'gpt-5.4' }
+    ],
     systemPrompt: {
       zh: `<Category_Context>
 你正在处理高度创意/艺术性任务。
@@ -267,7 +293,14 @@ Approach:
     name: 'quick',
     displayName: 'Quick',
     description: '琐碎任务 - 单文件更改、拼写修正、简单修改。',
-    model: 'openai/gpt-5.4-mini',
+    recommendedModel: 'openai/gpt-5.4-mini',
+    fallbackChain: [
+      { providers: ['openai', 'github-copilot', 'opencode'], model: 'gpt-5.4-mini' },
+      { providers: ['anthropic', 'github-copilot', 'opencode'], model: 'claude-haiku-4-5' },
+      { providers: ['google', 'github-copilot', 'opencode'], model: 'gemini-3-flash' },
+      { providers: ['opencode-go'], model: 'minimax-m2.7' },
+      { providers: ['opencode'], model: 'gpt-5-nano' }
+    ],
     systemPrompt: {
       zh: `<Category_Context>
 你正在处理小型/快速任务。
@@ -326,7 +359,14 @@ Your prompt MUST be EXHAUSTIVELY EXPLICIT:
     name: 'unspecified-low',
     displayName: 'Unspecified Low',
     description: '不适合其他类别的任务，低工作量。',
-    model: 'anthropic/claude-sonnet-4-6',
+    recommendedModel: 'anthropic/claude-sonnet-4-6',
+    fallbackChain: [
+      { providers: ['anthropic', 'github-copilot', 'opencode'], model: 'claude-sonnet-4-6' },
+      { providers: ['openai', 'opencode'], model: 'gpt-5.3-codex', variant: 'medium' },
+      { providers: ['opencode-go'], model: 'kimi-k2.5' },
+      { providers: ['google', 'github-copilot', 'opencode'], model: 'gemini-3-flash' },
+      { providers: ['opencode-go'], model: 'minimax-m2.7' }
+    ],
     systemPrompt: {
       zh: `<Category_Context>
 你正在处理不适合特定类别但需要中等工作量的任务。
@@ -375,7 +415,16 @@ THIS CATEGORY USES A MID-TIER MODEL.
     name: 'unspecified-high',
     displayName: 'Unspecified High',
     description: '不适合其他类别的任务，高工作量。',
-    model: 'anthropic/claude-opus-4-6',
+    recommendedModel: 'anthropic/claude-opus-4-6',
+    fallbackChain: [
+      { providers: ['anthropic', 'github-copilot', 'opencode'], model: 'claude-opus-4-6', variant: 'max' },
+      { providers: ['openai', 'github-copilot', 'opencode'], model: 'gpt-5.4', variant: 'high' },
+      { providers: ['zai-coding-plan', 'opencode'], model: 'glm-5' },
+      { providers: ['kimi-for-coding'], model: 'k2p5' },
+      { providers: ['opencode-go'], model: 'glm-5' },
+      { providers: ['opencode'], model: 'kimi-k2.5' },
+      { providers: ['opencode', 'moonshotai', 'moonshotai-cn', 'firmware', 'ollama-cloud', 'aihubmix'], model: 'kimi-k2.5' }
+    ],
     systemPrompt: {
       zh: `<Category_Context>
 你正在处理不适合特定类别但需要大量工作量的任务。
@@ -420,7 +469,13 @@ If task is unclassifiable but moderate-effort, use unspecified-low instead.
     name: 'writing',
     displayName: 'Writing',
     description: '文档、散文、技术写作。',
-    model: 'kimi-for-coding/k2p5',
+    recommendedModel: 'google/gemini-3-flash',
+    fallbackChain: [
+      { providers: ['google', 'github-copilot', 'opencode'], model: 'gemini-3-flash' },
+      { providers: ['opencode-go'], model: 'kimi-k2.5' },
+      { providers: ['anthropic', 'github-copilot', 'opencode'], model: 'claude-sonnet-4-6' },
+      { providers: ['opencode-go'], model: 'minimax-m2.7' }
+    ],
     systemPrompt: {
       zh: `<Category_Context>
 你正在处理写作/散文任务。

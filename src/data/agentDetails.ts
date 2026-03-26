@@ -6,11 +6,18 @@
 
 import type { AgentName } from '@/types'
 
+export interface FallbackModel {
+  providers: string[]
+  model: string
+  variant?: string
+}
+
 export interface AgentDetail {
   name: AgentName
   displayName: string
   description: string
-  cost: 'FREE' | 'CHEAP' | 'EXPENSIVE'
+  recommendedModel: string
+  fallbackChain: FallbackModel[]
   triggers: string[]
   useWhen: string[]
   avoidWhen: string[]
@@ -25,7 +32,16 @@ export const AGENT_DETAILS: Record<AgentName, AgentDetail> = {
     name: 'sisyphus',
     displayName: 'Sisyphus',
     description: '默认主编排器。计划、委托并执行复杂任务，使用专门的子代理进行积极的并行执行。',
-    cost: 'EXPENSIVE',
+    recommendedModel: 'anthropic/claude-opus-4-6',
+    fallbackChain: [
+      { providers: ['anthropic', 'github-copilot', 'opencode'], model: 'claude-opus-4-6', variant: 'max' },
+      { providers: ['opencode-go'], model: 'kimi-k2.5' },
+      { providers: ['kimi-for-coding'], model: 'k2p5' },
+      { providers: ['opencode', 'moonshotai', 'moonshotai-cn', 'firmware', 'ollama-cloud', 'aihubmix'], model: 'kimi-k2.5' },
+      { providers: ['openai', 'github-copilot', 'opencode'], model: 'gpt-5.4', variant: 'medium' },
+      { providers: ['zai-coding-plan', 'opencode'], model: 'glm-5' },
+      { providers: ['opencode'], model: 'big-pickle' }
+    ],
     triggers: [
       '外部库/源被提及时启动 librarian 后台任务',
       '涉及 2 个以上模块时启动 explore 后台任务',
@@ -77,7 +93,11 @@ export const AGENT_DETAILS: Record<AgentName, AgentDetail> = {
     name: 'hephaestus',
     displayName: 'Hephaestus',
     description: '自主深度工作者。给它目标而非步骤，它将自主探索代码库、研究模式并端到端执行。',
-    cost: 'EXPENSIVE',
+    recommendedModel: 'openai/gpt-5.3-codex',
+    fallbackChain: [
+      { providers: ['openai', 'venice', 'opencode'], model: 'gpt-5.3-codex', variant: 'medium' },
+      { providers: ['github-copilot'], model: 'gpt-5.4', variant: 'medium' }
+    ],
     triggers: [
       '复杂实现任务需要自主深度工作',
       '多步骤实现需要彻底探索',
@@ -141,7 +161,13 @@ export const AGENT_DETAILS: Record<AgentName, AgentDetail> = {
     name: 'oracle',
     displayName: 'Oracle',
     description: '只读咨询代理，用于架构决策、代码审查和调试。具有出色的逻辑推理和深度分析能力。',
-    cost: 'EXPENSIVE',
+    recommendedModel: 'openai/gpt-5.4',
+    fallbackChain: [
+      { providers: ['openai', 'github-copilot', 'opencode'], model: 'gpt-5.4', variant: 'high' },
+      { providers: ['google', 'github-copilot', 'opencode'], model: 'gemini-3.1-pro', variant: 'high' },
+      { providers: ['anthropic', 'github-copilot', 'opencode'], model: 'claude-opus-4-6', variant: 'max' },
+      { providers: ['opencode-go'], model: 'glm-5' }
+    ],
     triggers: [
       '架构决策、多系统权衡、不熟悉的模式',
       '完成重要实现后的自我审查',
@@ -214,7 +240,13 @@ export const AGENT_DETAILS: Record<AgentName, AgentDetail> = {
     name: 'librarian',
     displayName: 'Librarian',
     description: '专业的代码库理解代理，用于多仓库分析、搜索远程代码库、获取官方文档和查找实现示例。',
-    cost: 'CHEAP',
+    recommendedModel: 'opencode-go/minimax-m2.7',
+    fallbackChain: [
+      { providers: ['opencode-go'], model: 'minimax-m2.7' },
+      { providers: ['opencode'], model: 'minimax-m2.5' },
+      { providers: ['anthropic', 'opencode'], model: 'claude-haiku-4-5' },
+      { providers: ['opencode'], model: 'gpt-5-nano' }
+    ],
     triggers: [
       '不熟悉的包/库，在奇怪行为时查找现有开源实现'
     ],
@@ -287,7 +319,14 @@ https://github.com/<owner>/<repo>/blob/<commit-sha>/<filepath>#L<start>-L<end>
     name: 'explore',
     displayName: 'Explore',
     description: '代码库搜索专家。回答"X 在哪里？"、"哪个文件包含 Y？"、"找到执行 Z 的代码"等问题。',
-    cost: 'FREE',
+    recommendedModel: 'github-copilot/grok-code-fast-1',
+    fallbackChain: [
+      { providers: ['github-copilot', 'xai'], model: 'grok-code-fast-1' },
+      { providers: ['opencode-go'], model: 'minimax-m2.7' },
+      { providers: ['opencode'], model: 'minimax-m2.5' },
+      { providers: ['anthropic', 'opencode'], model: 'claude-haiku-4-5' },
+      { providers: ['opencode'], model: 'gpt-5-nano' }
+    ],
     triggers: [
       '涉及 2 个以上模块时启动 explore 后台任务',
       '查找现有代码库结构、模式和样式'
@@ -372,7 +411,13 @@ Answer questions like:
     name: 'multimodal-looker',
     displayName: 'Multimodal Looker',
     description: '视觉内容专家。分析 PDF、图像、图表以提取信息，节省主代理上下文。',
-    cost: 'CHEAP',
+    recommendedModel: 'openai/gpt-5.4',
+    fallbackChain: [
+      { providers: ['openai', 'opencode'], model: 'gpt-5.4', variant: 'medium' },
+      { providers: ['opencode-go'], model: 'kimi-k2.5' },
+      { providers: ['zai-coding-plan'], model: 'glm-4.6v' },
+      { providers: ['openai', 'github-copilot', 'opencode'], model: 'gpt-5-nano' }
+    ],
     triggers: [],
     useWhen: [
       '需要分析无法作为纯文本读取的媒体文件',
@@ -431,7 +476,13 @@ Answer questions like:
     name: 'prometheus',
     displayName: 'Prometheus',
     description: '战略规划代理。通过迭代提问创建详细工作计划，是计划生成专家。',
-    cost: 'EXPENSIVE',
+    recommendedModel: 'anthropic/claude-opus-4-6',
+    fallbackChain: [
+      { providers: ['anthropic', 'github-copilot', 'opencode'], model: 'claude-opus-4-6', variant: 'max' },
+      { providers: ['openai', 'github-copilot', 'opencode'], model: 'gpt-5.4', variant: 'high' },
+      { providers: ['opencode-go'], model: 'glm-5' },
+      { providers: ['google', 'github-copilot', 'opencode'], model: 'gemini-3.1-pro' }
+    ],
     triggers: [
       '需要创建详细工作计划',
       '复杂任务需要分解'
@@ -495,7 +546,13 @@ Answer questions like:
     name: 'metis',
     displayName: 'Metis',
     description: '计划顾问。预规划分析，识别隐藏意图、歧义和 AI 失败点。',
-    cost: 'EXPENSIVE',
+    recommendedModel: 'anthropic/claude-opus-4-6',
+    fallbackChain: [
+      { providers: ['anthropic', 'github-copilot', 'opencode'], model: 'claude-opus-4-6', variant: 'max' },
+      { providers: ['openai', 'github-copilot', 'opencode'], model: 'gpt-5.4', variant: 'high' },
+      { providers: ['opencode-go'], model: 'glm-5' },
+      { providers: ['kimi-for-coding'], model: 'k2p5' }
+    ],
     triggers: [
       '复杂任务需要范围澄清，需求模糊'
     ],
@@ -564,7 +621,13 @@ Identify intent type:
     name: 'momus',
     displayName: 'Momus',
     description: '计划审查代理。根据清晰度、可验证性和完整性标准验证计划。',
-    cost: 'EXPENSIVE',
+    recommendedModel: 'openai/gpt-5.4',
+    fallbackChain: [
+      { providers: ['openai', 'github-copilot', 'opencode'], model: 'gpt-5.4', variant: 'xhigh' },
+      { providers: ['anthropic', 'github-copilot', 'opencode'], model: 'claude-opus-4-6', variant: 'max' },
+      { providers: ['google', 'github-copilot', 'opencode'], model: 'gemini-3.1-pro', variant: 'high' },
+      { providers: ['opencode-go'], model: 'glm-5' }
+    ],
     triggers: [
       '根据清晰度、可验证性和完整性标准评估工作计划',
       '在实现之前捕获差距、歧义和缺失上下文'
@@ -626,7 +689,13 @@ Identify intent type:
     name: 'atlas',
     displayName: 'Atlas',
     description: '执行 Prometheus 计划。分发任务给专门的子代理，验证完成情况。指挥家而非演奏者。',
-    cost: 'EXPENSIVE',
+    recommendedModel: 'anthropic/claude-sonnet-4-6',
+    fallbackChain: [
+      { providers: ['anthropic', 'github-copilot', 'opencode'], model: 'claude-sonnet-4-6' },
+      { providers: ['opencode-go'], model: 'kimi-k2.5' },
+      { providers: ['openai', 'github-copilot', 'opencode'], model: 'gpt-5.4', variant: 'medium' },
+      { providers: ['opencode-go'], model: 'minimax-m2.7' }
+    ],
     triggers: [
       '完成待办列表中的所有任务并进行验证',
       '跨专业代理的并行任务执行'
