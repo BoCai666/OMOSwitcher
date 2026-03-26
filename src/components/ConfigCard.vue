@@ -1,5 +1,9 @@
 <script setup lang="ts">
-// 配置卡片组件 - 用于显示 Agent 或 Category 的配置信息
+/**
+ * 配置卡片组件
+ * 用于显示 Agent 或 Category 的配置信息
+ * 点击卡片可查看详情
+ */
 import { computed } from 'vue'
 import { ArrowRight } from '@element-plus/icons-vue'
 import type { Model } from '@/types'
@@ -8,7 +12,6 @@ const props = defineProps<{
   name: string
   modelValue: string
   models: Model[]
-  editable?: boolean
   description?: string
   clickable?: boolean
 }>()
@@ -18,31 +21,19 @@ const emit = defineEmits<{
   'click': []
 }>()
 
-// 使用计算属性实现 v-model 双向绑定
-const currentModel = computed({
-  get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
+// 当前模型信息
+const currentModelInfo = computed(() => {
+  return props.models.find(m => m.id === props.modelValue)
 })
 
-// 计算当前模型的显示名称
+// 供应商名称
+const providerName = computed(() => {
+  return currentModelInfo.value?.provider || props.modelValue.split('/')[0]
+})
+
+// 模型显示名称
 const displayModel = computed(() => {
-  return props.models.find(m => m.id === props.modelValue)?.name || props.modelValue
-})
-
-// 按供应商分组的模型
-const groupedModels = computed(() => {
-  const groups = new Map<string, Model[]>()
-  
-  for (const model of props.models) {
-    const provider = model.provider
-    if (!groups.has(provider)) {
-      groups.set(provider, [])
-    }
-    groups.get(provider)!.push(model)
-  }
-  
-  // 按供应商名称排序
-  return new Map(Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0])))
+  return currentModelInfo.value?.name || props.modelValue.split('/').pop() || props.modelValue
 })
 </script>
 
@@ -66,36 +57,16 @@ const groupedModels = computed(() => {
         {{ description }}
       </div>
       
+      <!-- 当前模型显示 -->
       <div class="model-display">
-        <span class="label">当前模型:</span>
-        <span class="value">{{ displayModel }}</span>
+        <div class="model-info">
+          <span class="label">当前模型</span>
+          <div class="model-details">
+            <el-tag type="info" size="small" class="provider-tag">{{ providerName }}</el-tag>
+            <span class="model-name">{{ displayModel }}</span>
+          </div>
+        </div>
       </div>
-      
-      <el-select
-        v-if="editable !== false"
-        v-model="currentModel"
-        placeholder="选择模型"
-        class="model-select"
-        filterable
-      >
-        <el-option-group
-          v-for="[provider, providerModels] in groupedModels"
-          :key="provider"
-          :label="provider"
-        >
-          <el-option
-            v-for="model in providerModels"
-            :key="model.id"
-            :label="model.name"
-            :value="model.id"
-          >
-            <div class="model-option">
-              <span class="model-name">{{ model.name }}</span>
-              <span class="model-id-small">{{ model.id }}</span>
-            </div>
-          </el-option>
-        </el-option-group>
-      </el-select>
     </div>
   </el-card>
 </template>
@@ -148,37 +119,36 @@ const groupedModels = computed(() => {
 }
 
 .model-display {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #ecf5ff 100%);
+  border-radius: 8px;
+}
+
+.model-info {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .label {
+  font-size: 12px;
   color: #909399;
 }
 
-.value {
-  color: #409eff;
-  font-weight: 500;
-}
-
-.model-select {
-  width: 100%;
-}
-
-.model-option {
+.model-details {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  width: 100%;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.provider-tag {
+  font-size: 11px;
 }
 
 .model-name {
-  font-weight: 500;
-}
-
-.model-id-small {
-  font-size: 12px;
-  color: #909399;
-  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #409eff;
+  font-size: 14px;
 }
 </style>

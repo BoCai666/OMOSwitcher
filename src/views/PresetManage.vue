@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // 预设管理页面组件
 // 提供预设列表展示、切换、删除和保存功能
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
+import { Plus, Edit } from '@element-plus/icons-vue'
 import type { Preset } from '@/types'
 import { useConfigStore } from '@/stores'
 import {
@@ -35,6 +36,11 @@ const dialogVisible = ref(false)
 // 预设详情对话框
 const detailDialogVisible = ref(false)
 const selectedPreset = ref<Preset | null>(null)
+
+// 编辑描述相关
+const editingPresetName = ref<string | null>(null)
+const editingDescription = ref('')
+const descriptionInputRef = ref<HTMLInputElement | null>(null)
 
 // 加载预设列表
 const loadPresets = async () => {
@@ -87,8 +93,8 @@ const handleSwitchPreset = async (preset: Preset) => {
       return
     }
 
-    // 应用预设配置到 configStore
-    configStore.applyPreset(result.preset.config)
+    // 应用预设配置到 configStore，传入预设名称以便跟踪
+    configStore.applyPreset(result.preset.config, preset.name)
     
     // 立即保存配置到文件
     await configStore.saveConfig()
@@ -118,6 +124,10 @@ const handleDeletePreset = async (preset: Preset) => {
   try {
     const success = await deletePreset(preset.name)
     if (success) {
+      // 如果删除的是当前预设，清除 configStore 中的当前预设状态
+      if (configStore.currentPresetName === preset.name) {
+        configStore.clearCurrentPreset()
+      }
       showSuccess('删除成功')
       await loadPresets()
     } else {
@@ -171,6 +181,34 @@ const handleViewPreset = (preset: Preset) => {
   selectedPreset.value = preset
   detailDialogVisible.value = true
 }
+
+// 编辑描述
+const handleEditDescription = (preset: Preset) => {
+  editingPresetName.value = preset.name
+  editingDescription.value = preset.description || ''
+  nextTick(() => {
+    descriptionInputRef.value?.focus()
+  })
+}
+
+// 取消编辑描述
+const handleCancelEditDescription = () => {
+  editingPresetName.value = null
+  editingDescription.value = ''
+}
+
+// 保存描述
+const handleSaveDescription = async (preset: Preset) => {
+  try {
+    await savePreset(preset.name, preset.config, editingDescription.value.trim() || undefined)
+    showSuccess('描述已更新')
+    editingPresetName.value = null
+    editingDescription.value = ''
+    await loadPresets()
+  } catch (error) {
+    showError(error)
+  }
+}
 </script>
 
 <template>
@@ -208,11 +246,39 @@ const handleViewPreset = (preset: Preset) => {
           </el-table-column>
 
           <!-- 描述列 -->
-          <el-table-column prop="description" label="描述" min-width="200">
+          <el-table-column prop="description" label="描述" min-width="280">
             <template #default="{ row }">
-              <span class="preset-description">
-                {{ row.description || '无描述' }}
-              </span>
+              <div v-if="editingPresetName === row.name" class="description-edit">
+                <el-input
+                  ref="descriptionInputRef"
+                  v-model="editingDescription"
+                  placeholder="输入描述"
+                  size="small"
+                  @keyup.enter="handleSaveDescription(row)"
+                  @keyup.esc="handleCancelEditDescription"
+                />
+                <div class="edit-actions">
+                  <el-button size="small" type="primary" @click="handleSaveDescription(row)">
+                    保存
+                  </el-button>
+                  <el-button size="small" @click="handleCancelEditDescription">
+                    取消
+                  </el-button>
+                </div>
+              </div>
+              <div v-else class="description-cell">
+                <span class="preset-description">
+                  {{ row.description || '无描述' }}
+                </span>
+                <el-button
+                  size="small"
+                  text
+                  class="edit-btn"
+                  @click.stop="handleEditDescription(row)"
+                >
+                  <el-icon><Edit /></el-icon>
+                </el-button>
+              </div>
             </template>
           </el-table-column>
 
@@ -321,5 +387,31 @@ const handleViewPreset = (preset: Preset) => {
 
 .preset-description {
   color: #606266;
+}
+
+.description-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.description-cell .edit-btn {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.description-cell:hover .edit-btn {
+  opacity: 1;
+}
+
+.description-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 4px;
 }
 </style>

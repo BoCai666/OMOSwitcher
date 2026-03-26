@@ -6,7 +6,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import type { OhMyOpenCodeConfig, AgentName, CategoryName } from '@/types'
-import { readConfig, writeConfig } from '@/services'
+import { readConfig, writeConfig, savePreset } from '@/services'
 
 // 保存状态类型
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -25,6 +25,9 @@ export const useConfigStore = defineStore('config', () => {
 
   // 原始配置（用于检测未保存更改和重置）
   const originalConfig = ref<OhMyOpenCodeConfig | null>(null)
+
+  // 当前预设名称
+  const currentPresetName = ref<string | null>(null)
 
   // 保存状态
   const saveStatus = ref<SaveStatus>('idle')
@@ -58,6 +61,9 @@ export const useConfigStore = defineStore('config', () => {
     return JSON.stringify(config.value) !== JSON.stringify(originalConfig.value)
   })
 
+  // 是否有当前预设
+  const hasCurrentPreset = computed(() => currentPresetName.value !== null)
+
   // ========== 内部方法 ==========
 
   // 实际保存配置
@@ -67,7 +73,15 @@ export const useConfigStore = defineStore('config', () => {
     try {
       saveStatus.value = 'saving'
       error.value = null
+      
+      // 保存主配置文件
       await writeConfig(config.value)
+      
+      // 如果有当前预设，同步更新预设文件
+      if (currentPresetName.value) {
+        await savePreset(currentPresetName.value, config.value)
+      }
+      
       saveStatus.value = 'saved'
       isDirty.value = false
       // 更新原始配置为当前配置
@@ -186,13 +200,31 @@ export const useConfigStore = defineStore('config', () => {
   /**
    * 应用预设配置
    * @param presetConfig 预设的配置内容
+   * @param presetName 预设名称（可选，用于跟踪当前预设）
    */
-  function applyPreset(presetConfig: OhMyOpenCodeConfig): void {
+  function applyPreset(presetConfig: OhMyOpenCodeConfig, presetName?: string): void {
     // 深拷贝预设配置到当前配置
     config.value = JSON.parse(JSON.stringify(presetConfig))
+    // 设置当前预设名称
+    currentPresetName.value = presetName || null
     // 注意：不更新 originalConfig，这样用户可以检测到相对于原始配置的更改
     isDirty.value = true
     saveStatus.value = 'idle'
+  }
+
+  /**
+   * 设置当前预设名称
+   * @param name 预设名称，传入 null 清除当前预设
+   */
+  function setCurrentPreset(name: string | null): void {
+    currentPresetName.value = name
+  }
+
+  /**
+   * 清除当前预设（切换到无预设状态）
+   */
+  function clearCurrentPreset(): void {
+    currentPresetName.value = null
   }
 
   /**
@@ -214,6 +246,7 @@ export const useConfigStore = defineStore('config', () => {
     isDirty.value = false
     saveStatus.value = 'idle'
     error.value = null
+    currentPresetName.value = null
     if (debounceTimer) {
       clearTimeout(debounceTimer)
       debounceTimer = null
@@ -248,6 +281,7 @@ export const useConfigStore = defineStore('config', () => {
     configPath,
     config,
     originalConfig,
+    currentPresetName,
     saveStatus,
     isDirty,
     error,
@@ -258,6 +292,7 @@ export const useConfigStore = defineStore('config', () => {
     isSaved,
     hasError,
     hasUnsavedChanges,
+    hasCurrentPreset,
 
     // 方法
     loadConfig,
@@ -267,6 +302,8 @@ export const useConfigStore = defineStore('config', () => {
     saveConfig,
     autoSave,
     applyPreset,
+    setCurrentPreset,
+    clearCurrentPreset,
     resetToOriginal,
     reset,
     clearError

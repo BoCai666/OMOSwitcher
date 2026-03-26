@@ -10,8 +10,7 @@ const router = useRouter()
 // 导航菜单项配置
 const menuItems = [
   { index: '/', title: '主页' },
-  { index: '/agents', title: 'Agent 配置' },
-  { index: '/categories', title: 'Category 配置' },
+  { index: '/config', title: '模型配置' },
   { index: '/models', title: '模型管理' },
   { index: '/presets', title: '预设管理' }
 ]

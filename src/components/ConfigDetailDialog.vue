@@ -2,8 +2,10 @@
 /**
  * 配置详情对话框组件
  * 用于显示 Agent 或 Category 的详细信息，包括系统提示词
+ * 点击当前模型可切换模型
  */
 import { ref, computed, watch } from 'vue'
+import { Edit } from '@element-plus/icons-vue'
 import type { AgentName, CategoryName, Model } from '@/types'
 import { AGENT_DETAILS } from '@/data/agentDetails'
 import { CATEGORY_DETAILS } from '@/data/categoryDetails'
@@ -18,6 +20,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:visible': [value: boolean]
+  'change-model': []
 }>()
 
 // 语言切换：'zh' | 'en'
@@ -73,6 +76,11 @@ function formatFallbackModel(fallback: { model: string; variant?: string; provid
   }
 }
 
+// 点击切换模型
+function handleChangeModel() {
+  emit('change-model')
+}
+
 // 关闭对话框时重置语言
 watch(dialogVisible, (val) => {
   if (!val) {
@@ -102,9 +110,10 @@ watch(dialogVisible, (val) => {
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="当前模型">
-          <div class="model-info">
+          <div class="model-info clickable" @click="handleChangeModel">
             <el-tag type="info" size="small">{{ providerName }}</el-tag>
             <span class="model-name">{{ modelDisplayName }}</span>
+            <el-icon class="edit-icon"><Edit /></el-icon>
           </div>
         </el-descriptions-item>
         <el-descriptions-item label="推荐模型">
@@ -212,9 +221,32 @@ watch(dialogVisible, (val) => {
   gap: 8px;
 }
 
+.model-info.clickable {
+  cursor: pointer;
+  padding: 4px 8px;
+  margin: -4px -8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.model-info.clickable:hover {
+  background-color: #ecf5ff;
+}
+
+.model-info.clickable:hover .edit-icon {
+  opacity: 1;
+}
+
 .model-name {
   font-weight: 500;
   color: #409eff;
+}
+
+.edit-icon {
+  color: #409eff;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
 .description-text {
