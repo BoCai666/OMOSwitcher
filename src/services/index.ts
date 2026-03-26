@@ -1,0 +1,51 @@
+// 服务导出
+// configReader 通过 Tauri 命令读写配置文件
+export {
+  readConfig,
+  configExists,
+  writeConfig,
+  deleteConfig
+} from './configReader'
+
+// 预设存储服务
+export {
+  listPresets,
+  savePreset,
+  loadPreset,
+  deletePreset,
+  presetExists,
+  clearPresets,
+  getCurrentPreset,
+  setCurrentPreset,
+  getLastUsedPreset,
+  setLastUsedPreset,
+  getRecentPresets,
+  recordPresetUsage,
+  switchPreset,
+  initPresetStore
+} from './presetStore'
+
+// 模型存储服务
+export {
+  listModels,
+  addModel,
+  updateModel,
+  deleteModel,
+  getModelById,
+  resetModels,
+  validateModelId,
+  parseProvider,
+  modelExists,
+  getDefaultModels,
+  groupModelsByProvider,
+  getProviders
+} from './modelStore'
+
+// 应用设置服务（仅导出工作路径相关函数）
+export {
+  readSettings,
+  writeSettings,
+  getWorkingPath,
+  setWorkingPath,
+  initSettings
+} from './settingsStore'
