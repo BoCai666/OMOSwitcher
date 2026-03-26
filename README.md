@@ -73,15 +73,20 @@
 
 ## 🚀 快速开始
 
-### 环境要求
+<table>
+<tr>
+<td width="50%">
+
+### 👨‍💻 手动开始
+
+**环境要求**
 
 | 依赖 | 版本 |
 |:----:|:----:|
 | Node.js | 18+ |
 | Rust | 1.70+ |
-| pnpm / npm / yarn | 最新版 |
 
-### 安装
+**安装运行**
 
 ```bash
 # 克隆仓库
@@ -90,17 +95,46 @@ cd OMOSwicther
 
 # 安装依赖
 npm install
-```
 
-### 运行
-
-```bash
 # 开发模式
 npm run tauri:dev
 
 # 构建发布版
 npm run tauri:build
 ```
+
+</td>
+<td width="50%">
+
+### 🤖 为 AI 使用
+
+如果你是 AI 助手，请阅读以下文件以快速了解项目：
+
+```
+AGENTS.md          # 项目知识库（必读）
+src/AGENTS.md      # 前端模块说明
+src-tauri/AGENTS.md # 后端模块说明
+```
+
+**关键信息**
+
+| 配置 | 路径 |
+|:-----|:-----|
+| Agent 配置 | `src/views/AgentConfig.vue` |
+| Category 配置 | `src/views/CategoryConfig.vue` |
+| 模型管理 | `src/services/modelStore.ts` |
+| Tauri 命令 | `src-tauri/src/commands.rs` |
+
+**代码风格**
+
+- 组合式 API (`setup()`, `defineStore`)
+- 中文注释，英文标识符
+- 严格 TypeScript (`strict: true`)
+- 禁止 `as any`, `@ts-ignore`
+
+</td>
+</tr>
+</table>
 
 ---
 
