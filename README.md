@@ -129,12 +129,11 @@ https://raw.githubusercontent.com/BoCai666/OMOSwitcher/main/docs/installation.md
 
 | 命令 | 说明 |
 |:-----|:-----|
-| `npm run dev` | 启动 Vite 开发服务器 |
 | `npm run tauri:dev` | Tauri 开发模式（热重载） |
-| `npm run build` | 构建前端 |
 | `npm run tauri:build` | 构建生产版本 |
-| `npm run test` | 运行测试（监听模式） |
+| `npm run build` | 构建前端 |
 | `npm run type-check` | TypeScript 类型检查 |
+| `npm run kill-port` | 清理 1420 端口（Windows） |
 
 ### 技术栈
 

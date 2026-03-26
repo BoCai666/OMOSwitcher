@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "OhMyOpenCode 模型配置管理工具",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
@@ -13,7 +16,9 @@
     "kill-port": "node scripts/kill-port.js 1420",
     "pretauri:dev": "npm run kill-port",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "build:monitor": "npm run build -w @omoswitcher/monitor",
+    "pkg:monitor": "npm run pkg -w @omoswitcher/monitor"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",

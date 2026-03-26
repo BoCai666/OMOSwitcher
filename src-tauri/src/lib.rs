@@ -26,6 +26,10 @@ pub fn run() {
             commands::write_settings,
             // 启动命令
             commands::launch_opencode,
+            // Sidecar 监控服务命令
+            commands::start_monitor_service,
+            commands::stop_monitor_service,
+            commands::get_monitor_status,
         ])
         .run(tauri::generate_context!())
         .expect("启动 Tauri 应用时出错");

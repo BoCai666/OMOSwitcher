@@ -4,6 +4,11 @@
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::Mutex;
+
+use serde::Serialize;
+use tauri_plugin_shell::process::CommandChild;
+use tauri_plugin_shell::ShellExt;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -107,8 +112,12 @@ pub fn write_config(content: String) -> Result<(), String> {
 
 /// 启动 opencode 命令行工具
 /// working_path: 工作目录路径，为空则使用用户主目录
+/// 监控代理地址: localhost:8080
 #[tauri::command]
 pub fn launch_opencode(working_path: String) -> Result<(), String> {
+    // 监控代理地址
+    const PROXY_URL: &str = "http://localhost:8080";
+    
     #[cfg(target_os = "windows")]
     {
         // Windows: 使用 CREATE_NEW_CONSOLE 标志启动独立的 PowerShell 窗口
@@ -122,9 +131,15 @@ pub fn launch_opencode(working_path: String) -> Result<(), String> {
             working_path
         };
 
+        // 设置代理环境变量并启动 opencode
+        let ps_command = format!(
+            "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; cd '{}'; opencode",
+            PROXY_URL, PROXY_URL, path
+        );
+
         // 使用 CREATE_NEW_CONSOLE 标志创建独立的控制台窗口
         Command::new("powershell")
-            .args(["-NoExit", "-Command", &format!("cd '{}'; opencode", path)])
+            .args(["-NoExit", "-Command", &ps_command])
             .creation_flags(CREATE_NEW_CONSOLE)
             .spawn()
             .map(|_| ())
@@ -142,34 +157,25 @@ pub fn launch_opencode(working_path: String) -> Result<(), String> {
             working_path
         };
 
+        // 设置代理环境变量并启动 opencode
+        let bash_command = format!(
+            "export HTTP_PROXY='{}' HTTPS_PROXY='{}' && cd '{}' && opencode; exec bash",
+            PROXY_URL, PROXY_URL, path
+        );
+
         // 尝试使用常见的终端模拟器
         let terminals = [
             (
                 "gnome-terminal",
-                vec![
-                    "--",
-                    "bash",
-                    "-c",
-                    &format!("cd '{}' && opencode; exec bash", path),
-                ],
+                vec!["--", "bash", "-c", &bash_command],
             ),
             (
                 "konsole",
-                vec![
-                    "-e",
-                    "bash",
-                    "-c",
-                    &format!("cd '{}' && opencode; exec bash", path),
-                ],
+                vec!["-e", "bash", "-c", &bash_command],
             ),
             (
                 "xterm",
-                vec![
-                    "-e",
-                    "bash",
-                    "-c",
-                    &format!("cd '{}' && opencode; exec bash", path),
-                ],
+                vec!["-e", "bash", "-c", &bash_command],
             ),
         ];
 
@@ -240,4 +246,71 @@ pub fn write_models(content: String) -> Result<(), String> {
         fs::create_dir_all(parent).map_err(|e| format!("创建配置目录失败: {}", e))?;
     }
     fs::write(&path, content).map_err(|e| format!("写入模型列表失败: {}", e))
+}
+
+// ============== Sidecar 监控服务管理 ==============
+
+/// 全局状态存储 Monitor Sidecar 进程句柄
+static MONITOR_PROCESS: Mutex<Option<CommandChild>> = Mutex::new(None);
+
+/// Monitor 服务运行状态
+#[derive(Serialize)]
+pub struct MonitorStatus {
+    /// 是否正在运行
+    pub is_running: bool,
+    /// 服务端口
+    pub port: u16,
+}
+
+/// 启动 Monitor Sidecar 服务
+#[tauri::command]
+pub async fn start_monitor_service(app: tauri::AppHandle) -> Result<String, String> {
+    // 检查是否已经在运行
+    {
+        let process = MONITOR_PROCESS.lock().unwrap();
+        if process.is_some() {
+            return Ok("Monitor service already running".to_string());
+        }
+    }
+
+    // 创建 sidecar 命令
+    let sidecar = app
+        .shell()
+        .sidecar("monitor")
+        .map_err(|e| format!("创建 sidecar 失败: {}", e))?;
+
+    // 启动 sidecar 进程
+    let (_rx, child) = sidecar
+        .spawn()
+        .map_err(|e| format!("启动 sidecar 失败: {}", e))?;
+
+    // 存储进程句柄
+    {
+        let mut process = MONITOR_PROCESS.lock().unwrap();
+        *process = Some(child);
+    }
+
+    Ok("Monitor service started".to_string())
+}
+
+/// 停止 Monitor Sidecar 服务
+#[tauri::command]
+pub fn stop_monitor_service() -> Result<(), String> {
+    let mut process = MONITOR_PROCESS.lock().unwrap();
+    if let Some(child) = process.take() {
+        child
+            .kill()
+            .map_err(|e| format!("停止 sidecar 失败: {}", e))?;
+    }
+    Ok(())
+}
+
+/// 获取 Monitor 服务运行状态
+#[tauri::command]
+pub fn get_monitor_status() -> Result<MonitorStatus, String> {
+    let process = MONITOR_PROCESS.lock().unwrap();
+    Ok(MonitorStatus {
+        is_running: process.is_some(),
+        port: 3030,
+    })
 }

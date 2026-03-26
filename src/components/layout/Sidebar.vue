@@ -12,7 +12,8 @@ const menuItems = [
   { index: '/', title: '主页' },
   { index: '/config', title: '模型配置' },
   { index: '/models', title: '模型管理' },
-  { index: '/presets', title: '预设管理' }
+  { index: '/presets', title: '预设管理' },
+  { index: '/monitor', title: '监控' }
 ]
 
 // 计算当前激活的菜单项

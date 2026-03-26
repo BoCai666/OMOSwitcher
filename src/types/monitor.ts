@@ -1,0 +1,141 @@
+/**
+ * 监控服务类型定义
+ * 基于后端 packages/monitor/src/types.ts 适配前端环境
+ */
+
+// LLM 请求信息
+export interface LLMRequest {
+  id: string
+  timestamp: number
+  provider: string
+  model: string
+  method: string
+  url: string
+  domain?: string
+  headers: Record<string, string>
+  body: unknown
+  parsedBody?: {
+    messages?: Array<{ role: string; content: string }>
+    prompt?: string
+    temperature?: number
+    max_tokens?: number
+    [key: string]: unknown
+  }
+}
+
+// LLM 响应信息
+export interface LLMResponse {
+  id: string
+  requestId: string
+  timestamp: number
+  statusCode: number
+  headers: Record<string, string>
+  body: unknown
+  parsedBody?: {
+    content?: string
+    choices?: unknown[]
+    usage?: {
+      prompt_tokens: number
+      completion_tokens: number
+      total_tokens: number
+    }
+    [key: string]: unknown
+  }
+  duration: number
+}
+
+// LLM 指标
+export interface LLMMetrics {
+  id: string
+  requestId: string
+  model: string
+  provider: string
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  estimatedCost: number
+  duration: number
+  timestamp: number
+}
+
+// MCP 调用记录
+export interface MCPCall {
+  id: string
+  requestId: string
+  jsonrpcVersion?: string
+  rpcId?: string
+  toolName: string
+  toolTitle?: string
+  toolDescription?: string
+  arguments?: Record<string, unknown>
+  resultContent?: unknown
+  resultIsError: boolean
+  errorMessage?: string
+  executionDuration?: number
+  transportType?: 'stdio' | 'sse' | 'http'
+  serverName?: string
+  traceId?: string
+  timestamp: number
+}
+
+// 请求列表项（简化版用于列表展示）
+export interface RequestListItem {
+  id: string
+  timestamp: number
+  provider: string
+  model: string
+  method: string
+  url: string
+  domain?: string
+  tokens?: number
+  cost?: number
+  duration?: number
+  statusCode?: number
+}
+
+// 监控服务状态
+export interface MonitorStatus {
+  is_running: boolean
+  port: number
+}
+
+// 统计汇总
+export interface StatsSummary {
+  today: {
+    requestCount: number
+    totalTokens: number
+    totalCost: number
+  }
+  week: {
+    requestCount: number
+    totalTokens: number
+    totalCost: number
+  }
+  month: {
+    requestCount: number
+    totalTokens: number
+    totalCost: number
+  }
+}
+
+// 指标统计
+export interface MetricsStats {
+  count: number
+  totalTokens: number
+  totalCost: number
+  modelStats: Record<string, { count: number; tokens: number; cost: number }>
+}
+
+// 每日记录
+export interface DailyRecord {
+  date: string
+  requestCount: number
+  totalTokens: number
+  totalCost: number
+  models: string[]
+  modelStats: Record<string, {
+    count: number
+    tokens: number
+    cost: number
+  }>
+}

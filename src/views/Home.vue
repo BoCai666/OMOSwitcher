@@ -276,6 +276,9 @@ onMounted(() => {
                 <el-icon><VideoPlay /></el-icon>
                 启动 OpenCode
               </el-button>
+              <el-tag type="success" size="small" class="proxy-hint">
+                自动设置监控代理 (localhost:8080)
+              </el-tag>
               <el-button type="primary" size="large" @click="goToAgents">
                 <el-icon><User /></el-icon>
                 配置 Agents
@@ -508,6 +511,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.proxy-hint {
+  margin-left: 8px;
+  vertical-align: middle;
 }
 
 /* 预设列表 */

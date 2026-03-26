@@ -5,6 +5,11 @@ node_modules/
 dist/
 src-tauri/target/
 
+# packages 构建输出（保留源码）
+packages/*/dist/
+packages/*/node_modules/
+packages/*/data/
+
 # IDE 和编辑器
 .idea/
 .vscode/
@@ -35,3 +40,6 @@ coverage/
 # AI Agent 知识库文件
 AGENTS.md
 **/AGENTS.md
+
+# pkg 缓存
+.pkg-cache/
