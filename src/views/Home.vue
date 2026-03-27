@@ -4,7 +4,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useConfigStore } from '@/stores/config'
 import { listPresets, loadPreset } from '@/services/presetStore'
-import { getWorkingPath, setWorkingPath } from '@/services/settingsStore'
+import { getWorkingPath, setWorkingPath, getProxyConfig, setProxyConfig } from '@/services/settingsStore'
 import { AGENT_NAMES, CATEGORY_NAMES, type OhMyOpenCodeConfig } from '@/types'
 import { showSuccess, showError } from '@/utils/errorHandler'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -19,6 +19,10 @@ const { launchOpenCode, isLaunching, error } = useOpenCode()
 
 // 工作路径输入
 const workingPath = ref('')
+
+// 代理配置
+const proxyEnabled = ref(false)
+const proxyCaCertPath = ref('')
 
 // 加载保存的路径
 async function loadSavedPath() {
@@ -37,6 +41,21 @@ async function savePath() {
   }
 }
 
+// 加载代理配置
+async function loadProxyConfig() {
+  const config = await getProxyConfig()
+  proxyEnabled.value = config.enabled
+  proxyCaCertPath.value = config.caCertPath || ''
+}
+
+// 保存代理配置
+async function saveProxyConfig() {
+  await setProxyConfig({
+    enabled: proxyEnabled.value,
+    caCertPath: proxyCaCertPath.value || undefined
+  })
+}
+
 // 打开文件夹选择对话框
 async function browseFolder() {
   try {
@@ -53,10 +72,28 @@ async function browseFolder() {
   }
 }
 
-// 启动 OpenCode（带路径）
+// 打开证书文件选择对话框
+async function browseCertFile() {
+  try {
+    const selected = await open({
+      directory: false,
+      multiple: false,
+      filters: [{ name: '证书文件', extensions: ['crt', 'pem', 'cer'] }],
+      title: '选择 CA 证书文件'
+    })
+    if (selected) {
+      proxyCaCertPath.value = selected as string
+    }
+  } catch (e) {
+    // 用户取消选择，不做处理
+  }
+}
+
+// 启动 OpenCode（带路径和代理配置）
 async function handleLaunchOpenCode() {
   await savePath()
-  launchOpenCode(workingPath.value)
+  await saveProxyConfig()
+  launchOpenCode(workingPath.value, proxyEnabled.value, proxyCaCertPath.value)
 }
 
 // 监听错误并显示提示
@@ -163,6 +200,8 @@ onMounted(() => {
   configStore.loadConfig()
   // 加载保存的工作路径
   loadSavedPath()
+  // 加载代理配置
+  loadProxyConfig()
 })
 </script>
 
@@ -267,40 +306,78 @@ onMounted(() => {
                    </template>
                  </el-input>
                </div>
-              <el-button 
-                type="primary" 
-                size="large" 
-                :loading="isLaunching"
-                @click="handleLaunchOpenCode"
-              >
-                <el-icon><VideoPlay /></el-icon>
-                启动 OpenCode
-              </el-button>
-              <el-tag type="success" size="small" class="proxy-hint">
-                自动设置监控代理 (localhost:8080)
-              </el-tag>
-              <el-button type="primary" size="large" @click="goToAgents">
-                <el-icon><User /></el-icon>
-                配置 Agents
-              </el-button>
-              <el-button type="success" size="large" @click="goToCategories">
-                <el-icon><Folder /></el-icon>
-                配置 Categories
-              </el-button>
-              <el-button type="info" size="large" @click="goToPresets">
-                <el-icon><Collection /></el-icon>
-                管理预设
-              </el-button>
-              <el-button 
-                type="warning" 
-                size="large" 
-                :disabled="!configStore.hasUnsavedChanges"
-                @click="saveConfig"
-              >
-                <el-icon><DocumentChecked /></el-icon>
-                保存配置
-              </el-button>
-            </div>
+               
+               <!-- 代理配置区域 -->
+               <div class="proxy-config-wrapper">
+                 <div class="proxy-switch-row">
+                   <el-switch
+                     v-model="proxyEnabled"
+                     active-text="启用监控代理"
+                     inactive-text="直连模式"
+                   />
+                   <el-tag v-if="proxyEnabled" :type="proxyCaCertPath ? 'success' : 'warning'" size="small">
+                     {{ proxyCaCertPath ? '已配置证书' : '未配置证书' }}
+                   </el-tag>
+                 </div>
+                 
+                 <el-collapse-transition>
+                   <div v-if="proxyEnabled" class="proxy-cert-config">
+                     <el-input
+                       v-model="proxyCaCertPath"
+                       placeholder="企业代理 CA 证书路径（可选，用于信任自签名证书）"
+                       clearable
+                       class="cert-input"
+                     >
+                       <template #prepend>
+                         <el-icon><Key /></el-icon>
+                         <span>CA 证书</span>
+                       </template>
+                       <template #append>
+                         <el-button @click="browseCertFile">
+                           <el-icon><FolderOpened /></el-icon>
+                           浏览
+                         </el-button>
+                       </template>
+                     </el-input>
+                     <div class="proxy-info">
+                       <el-icon><InfoFilled /></el-icon>
+                       <span>启用后，流量将通过监控代理 (localhost:8080)，可监控 LLM API 调用。如遇到企业代理 SSL 错误，请配置 CA 证书。</span>
+                     </div>
+                   </div>
+                 </el-collapse-transition>
+               </div>
+               
+               <el-button 
+                 type="primary" 
+                 size="large" 
+                 :loading="isLaunching"
+                 @click="handleLaunchOpenCode"
+               >
+                 <el-icon><VideoPlay /></el-icon>
+                 启动 OpenCode
+               </el-button>
+               <el-button type="primary" size="large" @click="goToAgents">
+                 <el-icon><User /></el-icon>
+                 配置 Agents
+               </el-button>
+               <el-button type="success" size="large" @click="goToCategories">
+                 <el-icon><Folder /></el-icon>
+                 配置 Categories
+               </el-button>
+               <el-button type="info" size="large" @click="goToPresets">
+                 <el-icon><Collection /></el-icon>
+                 管理预设
+               </el-button>
+               <el-button 
+                 type="warning" 
+                 size="large" 
+                 :disabled="!configStore.hasUnsavedChanges"
+                 @click="saveConfig"
+               >
+                 <el-icon><DocumentChecked /></el-icon>
+                 保存配置
+               </el-button>
+             </div>
           </el-card>
         </el-col>
       </el-row>
@@ -507,15 +584,52 @@ onMounted(() => {
   gap: 8px;
 }
 
-.quick-actions .el-button {
+/* 代理配置区域 */
+.proxy-config-wrapper {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 12px;
+  background-color: #f5f7fa;
+  border-radius: 8px;
+}
+
+.proxy-switch-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.proxy-cert-config {
+  margin-top: 12px;
+}
+
+.cert-input {
+  width: 100%;
+}
+
+.cert-input :deep(.el-input-group__prepend) {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.proxy-hint {
-  margin-left: 8px;
-  vertical-align: middle;
+.proxy-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #ecf5ff;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #409eff;
+  line-height: 1.5;
+}
+
+.proxy-info .el-icon {
+  margin-top: 2px;
+  flex-shrink: 0;
 }
 
 /* 预设列表 */

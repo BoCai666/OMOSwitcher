@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useMonitorStore } from '@/stores/monitor'
+import { getProxyConfig } from '@/services/settingsStore'
 import { ElMessage } from 'element-plus'
 
 const monitorStore = useMonitorStore()
@@ -10,7 +11,12 @@ const startupAttempted = ref(false)
 onMounted(async () => {
   try {
     startupAttempted.value = true
-    await monitorStore.startMonitor()
+    
+    // 获取代理配置
+    const proxyConfig = await getProxyConfig()
+    
+    // 启动监控服务，传递企业代理 CA 证书路径
+    await monitorStore.startMonitor(proxyConfig.caCertPath)
     console.log('[App] Monitor service started successfully')
   } catch (error) {
     // 启动失败不阻塞应用，用户可手动重试

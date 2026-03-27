@@ -112,10 +112,14 @@ pub fn write_config(content: String) -> Result<(), String> {
 
 /// 启动 opencode 命令行工具
 /// working_path: 工作目录路径，为空则使用用户主目录
-/// 监控代理地址: localhost:8080
-/// NODE_TLS_REJECT_UNAUTHORIZED: 跳过SSL证书验证（解决企业网络代理自签名证书问题）
+/// proxy_enabled: 是否启用监控代理
+/// proxy_ca_cert_path: 企业代理 CA 证书路径（可选）
 #[tauri::command]
-pub fn launch_opencode(working_path: String) -> Result<(), String> {
+pub fn launch_opencode(
+    working_path: String,
+    proxy_enabled: bool,
+    proxy_ca_cert_path: String,
+) -> Result<(), String> {
     // 监控代理地址
     const PROXY_URL: &str = "http://localhost:8080";
     
@@ -132,11 +136,26 @@ pub fn launch_opencode(working_path: String) -> Result<(), String> {
             working_path
         };
 
-        // 设置代理环境变量和跳过SSL证书验证，然后启动 opencode
-        let ps_command = format!(
-            "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; $env:NODE_TLS_REJECT_UNAUTHORIZED='0'; cd '{}'; opencode",
-            PROXY_URL, PROXY_URL, path
-        );
+        // 构建启动命令
+        let ps_command = if proxy_enabled {
+            // 启用代理模式
+            if proxy_ca_cert_path.is_empty() {
+                // 没有配置企业代理证书，只设置代理
+                format!(
+                    "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; cd '{}'; opencode",
+                    PROXY_URL, PROXY_URL, path
+                )
+            } else {
+                // 配置了企业代理证书，设置代理和证书路径
+                format!(
+                    "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; $env:NODE_EXTRA_CA_CERTS='{}'; cd '{}'; opencode",
+                    PROXY_URL, PROXY_URL, proxy_ca_cert_path, path
+                )
+            }
+        } else {
+            // 直连模式，不设置代理
+            format!("cd '{}'; opencode", path)
+        };
 
         // 使用 CREATE_NEW_CONSOLE 标志创建独立的控制台窗口
         Command::new("powershell")
@@ -158,11 +177,26 @@ pub fn launch_opencode(working_path: String) -> Result<(), String> {
             working_path
         };
 
-        // 设置代理环境变量和跳过SSL证书验证，然后启动 opencode
-        let bash_command = format!(
-            "export HTTP_PROXY='{}' HTTPS_PROXY='{}' NODE_TLS_REJECT_UNAUTHORIZED='0' && cd '{}' && opencode; exec bash",
-            PROXY_URL, PROXY_URL, path
-        );
+        // 构建启动命令
+        let bash_command = if proxy_enabled {
+            // 启用代理模式
+            if proxy_ca_cert_path.is_empty() {
+                // 没有配置企业代理证书，只设置代理
+                format!(
+                    "export HTTP_PROXY='{}' HTTPS_PROXY='{}' && cd '{}' && opencode; exec bash",
+                    PROXY_URL, PROXY_URL, path
+                )
+            } else {
+                // 配置了企业代理证书，设置代理和证书路径
+                format!(
+                    "export HTTP_PROXY='{}' HTTPS_PROXY='{}' NODE_EXTRA_CA_CERTS='{}' && cd '{}' && opencode; exec bash",
+                    PROXY_URL, PROXY_URL, proxy_ca_cert_path, path
+                )
+            }
+        } else {
+            // 直连模式，不设置代理
+            format!("cd '{}' && opencode; exec bash", path)
+        };
 
         // 尝试使用常见的终端模拟器
         let terminals = [
@@ -264,8 +298,12 @@ pub struct MonitorStatus {
 }
 
 /// 启动 Monitor Sidecar 服务
+/// enterprise_ca_cert_path: 企业代理 CA 证书路径（可选）
 #[tauri::command]
-pub async fn start_monitor_service(app: tauri::AppHandle) -> Result<String, String> {
+pub async fn start_monitor_service(
+    app: tauri::AppHandle,
+    enterprise_ca_cert_path: String,
+) -> Result<String, String> {
     // 检查是否已经在运行
     {
         let process = MONITOR_PROCESS.lock().unwrap();
@@ -275,10 +313,15 @@ pub async fn start_monitor_service(app: tauri::AppHandle) -> Result<String, Stri
     }
 
     // 创建 sidecar 命令
-    let sidecar = app
+    let mut sidecar = app
         .shell()
         .sidecar("monitor")
         .map_err(|e| format!("创建 sidecar 失败: {}", e))?;
+
+    // 如果配置了企业代理 CA 证书，设置环境变量
+    if !enterprise_ca_cert_path.is_empty() {
+        sidecar = sidecar.env("ENTERPRISE_CA_CERT_PATH", &enterprise_ca_cert_path);
+    }
 
     // 启动 sidecar 进程
     let (_rx, child) = sidecar

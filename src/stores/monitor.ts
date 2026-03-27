@@ -120,11 +120,14 @@ export const useMonitorStore = defineStore('monitor', () => {
 
   /**
    * 启动监控服务
+   * @param enterpriseCaCertPath 企业代理 CA 证书路径（可选）
    */
-  async function startMonitor(): Promise<string> {
+  async function startMonitor(enterpriseCaCertPath?: string): Promise<string> {
     try {
       error.value = null
-      const result = await invoke<string>('start_monitor_service')
+      const result = await invoke<string>('start_monitor_service', {
+        enterpriseCaCertPath: enterpriseCaCertPath || ''
+      })
       status.value.is_running = true
       return result
     } catch (e) {

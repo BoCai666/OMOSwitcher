@@ -26,7 +26,10 @@ export const config = {
     enabled: true, // 启用自动清理
     days: 90, // 保留90天
     archiveBeforeDelete: true // 删除前归档到压缩文件
-  }
+  },
+
+  // 企业代理 CA 证书路径（用于信任企业代理的自签名证书）
+  enterpriseCaCertPath: process.env.ENTERPRISE_CA_CERT_PATH || '',
 };
 
 /**

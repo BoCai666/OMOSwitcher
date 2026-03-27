@@ -13,10 +13,21 @@ export interface AppSettings {
   lastUsedPreset?: string
   // 预设使用历史
   presetHistory?: string[]
+  // 代理配置
+  proxy: {
+    // 是否启用代理（监控代理）
+    enabled: boolean
+    // 企业代理 CA 证书路径（用于信任企业代理的自签名证书）
+    caCertPath?: string
+  }
 }
 
 // 默认设置
-const DEFAULT_SETTINGS: AppSettings = {}
+const DEFAULT_SETTINGS: AppSettings = {
+  proxy: {
+    enabled: false
+  }
+}
 
 // 内存缓存
 let settingsCache: AppSettings | null = null
@@ -168,4 +179,64 @@ export async function recordPresetUsage(name: string): Promise<void> {
  */
 export async function initSettings(): Promise<void> {
   await readSettings()
+}
+
+// ==================== 代理配置相关函数 ====================
+
+/**
+ * 获取代理配置
+ */
+export async function getProxyConfig(): Promise<{ enabled: boolean; caCertPath?: string }> {
+  const settings = await readSettings()
+  return settings.proxy || { enabled: false }
+}
+
+/**
+ * 设置代理配置
+ */
+export async function setProxyConfig(config: { enabled: boolean; caCertPath?: string }): Promise<void> {
+  const settings = await readSettings()
+  settings.proxy = config
+  await writeSettings(settings)
+}
+
+/**
+ * 获取代理 CA 证书路径
+ */
+export async function getProxyCaCertPath(): Promise<string | undefined> {
+  const settings = await readSettings()
+  return settings.proxy?.caCertPath
+}
+
+/**
+ * 设置代理 CA 证书路径
+ */
+export async function setProxyCaCertPath(path: string | undefined): Promise<void> {
+  const settings = await readSettings()
+  if (!settings.proxy) {
+    settings.proxy = { enabled: false }
+  }
+  settings.proxy.caCertPath = path
+  await writeSettings(settings)
+}
+
+/**
+ * 检查代理是否启用
+ */
+export async function isProxyEnabled(): Promise<boolean> {
+  const settings = await readSettings()
+  return settings.proxy?.enabled ?? false
+}
+
+/**
+ * 设置代理启用状态
+ */
+export async function setProxyEnabled(enabled: boolean): Promise<void> {
+  const settings = await readSettings()
+  if (!settings.proxy) {
+    settings.proxy = { enabled }
+  } else {
+    settings.proxy.enabled = enabled
+  }
+  await writeSettings(settings)
 }

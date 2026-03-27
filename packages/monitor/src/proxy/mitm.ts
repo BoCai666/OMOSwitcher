@@ -14,8 +14,10 @@ import net from 'net';
 import tls from 'tls';
 import http from 'http';
 import https from 'https';
+import fs from 'fs';
 import { EventEmitter } from 'events';
 import type { CertificateManager } from './server.js';
+import { config } from '../config.js';
 
 // 流量捕获钩子接口
 export interface TrafficCaptureHooks {
@@ -167,7 +169,7 @@ export class MITMHandler extends EventEmitter {
         let bodyReceived = false;
         
         // 立即设置转发选项并创建请求（不等待完整body）
-        const options = {
+        const options: https.RequestOptions = {
           hostname,
           port,
           path: clientReq.url,
@@ -179,6 +181,17 @@ export class MITMHandler extends EventEmitter {
           // 跳过 SSL 证书验证，解决企业网络代理自签名证书问题
           rejectUnauthorized: false,
         };
+
+        // 如果配置了企业代理 CA 证书，加载并使用它
+        if (config.enterpriseCaCertPath) {
+          try {
+            const caCert = fs.readFileSync(config.enterpriseCaCertPath, 'utf-8');
+            options.ca = caCert;
+            this.logDebug(`Loaded enterprise CA cert from: ${config.enterpriseCaCertPath}`);
+          } catch (err) {
+            this.logError(`Failed to load enterprise CA cert: ${err}`);
+          }
+        }
 
         const proxyReq = https.request(options, (proxyRes) => {
           const responseData: any = {

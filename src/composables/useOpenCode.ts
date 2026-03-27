@@ -13,16 +13,26 @@ export function useOpenCode() {
   /**
    * 启动 OpenCode
    * @param workingPath 工作目录路径，为空则使用用户主目录
+   * @param proxyEnabled 是否启用监控代理
+   * @param proxyCaCertPath 代理 CA 证书路径（可选）
    * 调用 Tauri 命令在后台启动 opencode
    */
-  const launchOpenCode = async (workingPath: string = '') => {
+  const launchOpenCode = async (
+    workingPath: string = '',
+    proxyEnabled: boolean = false,
+    proxyCaCertPath: string = ''
+  ) => {
     isLaunching.value = true
     error.value = null
     
     try {
       // 动态导入 Tauri API（仅在 Tauri 环境中可用）
       const { invoke } = await import('@tauri-apps/api/core')
-      await invoke('launch_opencode', { workingPath })
+      await invoke('launch_opencode', { 
+        workingPath,
+        proxyEnabled,
+        proxyCaCertPath
+      })
       // 启动成功，不显示消息，让用户继续操作
     } catch (e) {
       // 命令不存在或执行失败时显示错误
