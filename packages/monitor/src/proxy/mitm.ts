@@ -176,6 +176,8 @@ export class MITMHandler extends EventEmitter {
             ...clientReq.headers,
             host: hostname,
           },
+          // 跳过 SSL 证书验证，解决企业网络代理自签名证书问题
+          rejectUnauthorized: false,
         };
 
         const proxyReq = https.request(options, (proxyRes) => {
