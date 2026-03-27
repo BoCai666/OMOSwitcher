@@ -22,6 +22,62 @@ function formatJSON(data: unknown): string {
   }
 }
 
+// 格式化请求体（优先使用 parsedBody）
+function formatRequestBody(request: { body: unknown; parsedBody?: unknown }): string {
+  // 优先使用已解析的 body
+  if (request.parsedBody) {
+    return formatJSON(request.parsedBody)
+  }
+  
+  // 如果 body 是 Buffer 对象（序列化后为 { type: "Buffer", data: [...] }）
+  if (request.body && typeof request.body === 'object') {
+    const body = request.body as { type?: string; data?: number[] }
+    if (body.type === 'Buffer' && Array.isArray(body.data)) {
+      try {
+        // 将 Buffer 数组转换为字符串
+        const str = String.fromCharCode.apply(null, body.data)
+        // 尝试解析为 JSON
+        try {
+          return formatJSON(JSON.parse(str))
+        } catch {
+          return str
+        }
+      } catch {
+        return formatJSON(request.body)
+      }
+    }
+  }
+  
+  return formatJSON(request.body)
+}
+
+// 格式化响应体（优先使用 parsedBody）
+function formatResponseBody(response: { body: unknown; parsedBody?: unknown }): string {
+  // 优先使用已解析的 body
+  if (response.parsedBody) {
+    return formatJSON(response.parsedBody)
+  }
+  
+  // 如果 body 是 Buffer 对象
+  if (response.body && typeof response.body === 'object') {
+    const body = response.body as { type?: string; data?: number[] }
+    if (body.type === 'Buffer' && Array.isArray(body.data)) {
+      try {
+        const str = String.fromCharCode.apply(null, body.data)
+        try {
+          return formatJSON(JSON.parse(str))
+        } catch {
+          return str
+        }
+      } catch {
+        return formatJSON(response.body)
+      }
+    }
+  }
+  
+  return formatJSON(response.body)
+}
+
 // 格式化时间戳
 function formatTime(timestamp: number): string {
   return new Date(timestamp).toLocaleString('zh-CN')
@@ -109,7 +165,7 @@ watch(() => store.selectedRequestId, () => {
             </span>
           </template>
           <div class="json-content">
-            <pre v-if="store.selectedRequest"><code>{{ formatJSON(store.selectedRequest.body) }}</code></pre>
+            <pre v-if="store.selectedRequest"><code>{{ formatRequestBody(store.selectedRequest) }}</code></pre>
             <el-empty v-else description="暂无请求数据" />
           </div>
         </el-tab-pane>
@@ -123,7 +179,7 @@ watch(() => store.selectedRequestId, () => {
             </span>
           </template>
           <div class="json-content">
-            <pre v-if="store.selectedResponse"><code>{{ formatJSON(store.selectedResponse.body) }}</code></pre>
+            <pre v-if="store.selectedResponse"><code>{{ formatResponseBody(store.selectedResponse) }}</code></pre>
             <el-empty v-else description="暂无响应数据" />
           </div>
         </el-tab-pane>
