@@ -113,6 +113,7 @@ pub fn write_config(content: String) -> Result<(), String> {
 /// 启动 opencode 命令行工具
 /// working_path: 工作目录路径，为空则使用用户主目录
 /// 监控代理地址: localhost:8080
+/// NODE_TLS_REJECT_UNAUTHORIZED: 跳过SSL证书验证（解决企业网络代理自签名证书问题）
 #[tauri::command]
 pub fn launch_opencode(working_path: String) -> Result<(), String> {
     // 监控代理地址
@@ -131,9 +132,9 @@ pub fn launch_opencode(working_path: String) -> Result<(), String> {
             working_path
         };
 
-        // 设置代理环境变量并启动 opencode
+        // 设置代理环境变量和跳过SSL证书验证，然后启动 opencode
         let ps_command = format!(
-            "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; cd '{}'; opencode",
+            "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; $env:NODE_TLS_REJECT_UNAUTHORIZED='0'; cd '{}'; opencode",
             PROXY_URL, PROXY_URL, path
         );
 
@@ -157,9 +158,9 @@ pub fn launch_opencode(working_path: String) -> Result<(), String> {
             working_path
         };
 
-        // 设置代理环境变量并启动 opencode
+        // 设置代理环境变量和跳过SSL证书验证，然后启动 opencode
         let bash_command = format!(
-            "export HTTP_PROXY='{}' HTTPS_PROXY='{}' && cd '{}' && opencode; exec bash",
+            "export HTTP_PROXY='{}' HTTPS_PROXY='{}' NODE_TLS_REJECT_UNAUTHORIZED='0' && cd '{}' && opencode; exec bash",
             PROXY_URL, PROXY_URL, path
         );
 
