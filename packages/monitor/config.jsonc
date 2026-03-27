@@ -30,6 +30,21 @@
       "domain": "ark.cn-beijing.volces.com",
       "provider": "volces",
       "enabled": true
+    },
+    {
+      "domain": "cloud.infini-ai.com",
+      "provider": "infini",
+      "enabled": true
+    },
+    {
+      "domain": "api.minimaxi.com",
+      "provider": "minimax",
+      "enabled": true
+    },
+    {
+      "domain": "modelservice.jdcloud.com",
+      "provider": "jdcloud",
+      "enabled": true
     }
   ],
   // 定价配置：各模型的输入输出定价（美元 per 1M tokens）
@@ -115,10 +130,10 @@
   },
   // 端口配置：各服务监听的端口
   "ports": {
-    // Web 界面服务端口
-    "web": 3030,
-    // 代理服务端口
-    "proxy": 8080
+    // Web API 端口（Tauri 前端调用）
+    "web": 7100,
+    // 代理服务端口（拦截 LLM API）
+    "proxy": 7101
   },
   // 监控配置
   "monitor": {

@@ -41,11 +41,15 @@ export {
   getProviders
 } from './modelStore'
 
-// 应用设置服务（仅导出工作路径相关函数）
+// 应用设置服务
 export {
   readSettings,
   writeSettings,
   getWorkingPath,
   setWorkingPath,
-  initSettings
+  initSettings,
+  getMonitorPorts,
+  setMonitorPorts,
+  getMonitorWebPort,
+  getMonitorProxyPort
 } from './settingsStore'

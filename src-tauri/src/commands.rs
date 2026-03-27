@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Mutex;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri_plugin_shell::process::CommandChild;
 use tauri_plugin_shell::ShellExt;
 
@@ -60,6 +60,40 @@ fn get_models_path() -> Result<PathBuf, String> {
 /// 获取应用设置文件路径（位于 omoswitcher 目录）
 fn get_settings_path() -> Result<PathBuf, String> {
     Ok(get_omoswitcher_dir()?.join("settings.json"))
+}
+
+// Monitor 端口配置结构
+#[derive(Debug, Deserialize, Default)]
+struct MonitorPorts {
+    web: u16,
+    proxy: u16,
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct AppSettings {
+    monitor_ports: Option<MonitorPorts>,
+}
+
+/// 读取 Monitor 端口配置
+/// 返回 (web_port, proxy_port)
+fn get_monitor_ports() -> (u16, u16) {
+    // 默认端口
+    let default_ports = (7100, 7101);
+    
+    // 尝试读取 settings.json
+    if let Ok(path) = get_settings_path() {
+        if path.exists() {
+            if let Ok(content) = fs::read_to_string(&path) {
+                if let Ok(settings) = serde_json::from_str::<AppSettings>(&content) {
+                    if let Some(ports) = settings.monitor_ports {
+                        return (ports.web, ports.proxy);
+                    }
+                }
+            }
+        }
+    }
+    
+    default_ports
 }
 
 /// 读取应用设置
@@ -120,8 +154,9 @@ pub fn launch_opencode(
     proxy_enabled: bool,
     proxy_ca_cert_path: String,
 ) -> Result<(), String> {
-    // 监控代理地址
-    const PROXY_URL: &str = "http://localhost:8080";
+    // 从配置读取代理端口
+    let (_, proxy_port) = get_monitor_ports();
+    let proxy_url = format!("http://localhost:{}", proxy_port);
     
     #[cfg(target_os = "windows")]
     {
@@ -143,13 +178,13 @@ pub fn launch_opencode(
                 // 没有配置企业代理证书，只设置代理
                 format!(
                     "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; cd '{}'; opencode",
-                    PROXY_URL, PROXY_URL, path
+                    proxy_url, proxy_url, path
                 )
             } else {
                 // 配置了企业代理证书，设置代理和证书路径
                 format!(
                     "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; $env:NODE_EXTRA_CA_CERTS='{}'; cd '{}'; opencode",
-                    PROXY_URL, PROXY_URL, proxy_ca_cert_path, path
+                    proxy_url, proxy_url, proxy_ca_cert_path, path
                 )
             }
         } else {
@@ -184,13 +219,13 @@ pub fn launch_opencode(
                 // 没有配置企业代理证书，只设置代理
                 format!(
                     "export HTTP_PROXY='{}' HTTPS_PROXY='{}' && cd '{}' && opencode; exec bash",
-                    PROXY_URL, PROXY_URL, path
+                    proxy_url, proxy_url, path
                 )
             } else {
                 // 配置了企业代理证书，设置代理和证书路径
                 format!(
                     "export HTTP_PROXY='{}' HTTPS_PROXY='{}' NODE_EXTRA_CA_CERTS='{}' && cd '{}' && opencode; exec bash",
-                    PROXY_URL, PROXY_URL, proxy_ca_cert_path, path
+                    proxy_url, proxy_url, proxy_ca_cert_path, path
                 )
             }
         } else {
@@ -312,11 +347,19 @@ pub async fn start_monitor_service(
         }
     }
 
+    // 获取端口配置
+    let (web_port, proxy_port) = get_monitor_ports();
+
     // 创建 sidecar 命令
     let mut sidecar = app
         .shell()
         .sidecar("monitor")
         .map_err(|e| format!("创建 sidecar 失败: {}", e))?;
+
+    // 设置端口环境变量
+    sidecar = sidecar
+        .env("PORT", web_port.to_string())
+        .env("PROXY_PORT", proxy_port.to_string());
 
     // 如果配置了企业代理 CA 证书，设置环境变量
     if !enterprise_ca_cert_path.is_empty() {
@@ -353,8 +396,9 @@ pub fn stop_monitor_service() -> Result<(), String> {
 #[tauri::command]
 pub fn get_monitor_status() -> Result<MonitorStatus, String> {
     let process = MONITOR_PROCESS.lock().unwrap();
+    let (web_port, _) = get_monitor_ports();
     Ok(MonitorStatus {
         is_running: process.is_some(),
-        port: 3030,
+        port: web_port,
     })
 }

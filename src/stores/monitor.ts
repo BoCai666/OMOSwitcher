@@ -29,7 +29,7 @@ export const useMonitorStore = defineStore('monitor', () => {
   // 服务状态
   const status = ref<MonitorStatus>({
     is_running: false,
-    port: 3030
+    port: 7100
   })
 
   // 加载状态
@@ -358,7 +358,7 @@ export const useMonitorStore = defineStore('monitor', () => {
     stopAutoRefresh()
     requests.value = []
     stats.value = null
-    status.value = { is_running: false, port: 3030 }
+    status.value = { is_running: false, port: 7100 }
     loading.value = false
     error.value = null
     selectedRequestId.value = null

@@ -1,6 +1,6 @@
 /**
  * 应用设置存储模块
- * 管理应用设置，存储在 ~/.config/opencode/settings.json
+ * 管理应用设置，存储在 ~/.config/omoswitcher/settings.json
  */
 
 // 设置类型定义
@@ -20,12 +20,23 @@ export interface AppSettings {
     // 企业代理 CA 证书路径（用于信任企业代理的自签名证书）
     caCertPath?: string
   }
+  // Monitor 服务端口配置
+  monitorPorts: {
+    // Web API 端口（Tauri 前端调用）
+    web: number
+    // 代理服务端口（拦截 LLM API）
+    proxy: number
+  }
 }
 
 // 默认设置
 const DEFAULT_SETTINGS: AppSettings = {
   proxy: {
     enabled: false
+  },
+  monitorPorts: {
+    web: 7100,
+    proxy: 7101
   }
 }
 
@@ -175,10 +186,40 @@ export async function recordPresetUsage(name: string): Promise<void> {
 
 /**
  * 初始化设置存储
- * 在应用启动时调用
+ * 在应用启动时调用，确保设置文件存在并包含默认值
  */
 export async function initSettings(): Promise<void> {
-  await readSettings()
+  try {
+    const invoke = await getTauriInvoke()
+    if (!invoke) {
+      settingsCache = { ...DEFAULT_SETTINGS }
+      return
+    }
+
+    // 尝试读取现有设置
+    const content = await invoke<string>('read_settings')
+    if (content) {
+      // 文件存在，解析并缓存
+      const parsed = JSON.parse(content) as Partial<AppSettings>
+      // 合并默认值，确保 monitorPorts 存在
+      settingsCache = {
+        ...DEFAULT_SETTINGS,
+        ...parsed,
+        monitorPorts: parsed.monitorPorts || DEFAULT_SETTINGS.monitorPorts
+      }
+      // 如果原来没有 monitorPorts，写入更新后的设置
+      if (!parsed.monitorPorts) {
+        await invoke('write_settings', { content: JSON.stringify(settingsCache, null, 2) })
+      }
+    } else {
+      // 文件不存在，创建默认设置
+      settingsCache = { ...DEFAULT_SETTINGS }
+      await invoke('write_settings', { content: JSON.stringify(settingsCache, null, 2) })
+    }
+  } catch (error) {
+    console.log('初始化设置失败:', error)
+    settingsCache = { ...DEFAULT_SETTINGS }
+  }
 }
 
 // ==================== 代理配置相关函数 ====================
@@ -239,4 +280,39 @@ export async function setProxyEnabled(enabled: boolean): Promise<void> {
     settings.proxy.enabled = enabled
   }
   await writeSettings(settings)
+}
+
+// ==================== Monitor 端口配置相关函数 ====================
+
+/**
+ * 获取 Monitor 端口配置
+ */
+export async function getMonitorPorts(): Promise<{ web: number; proxy: number }> {
+  const settings = await readSettings()
+  return settings.monitorPorts
+}
+
+/**
+ * 设置 Monitor 端口配置
+ */
+export async function setMonitorPorts(ports: { web: number; proxy: number }): Promise<void> {
+  const settings = await readSettings()
+  settings.monitorPorts = ports
+  await writeSettings(settings)
+}
+
+/**
+ * 获取 Web API 端口
+ */
+export async function getMonitorWebPort(): Promise<number> {
+  const ports = await getMonitorPorts()
+  return ports.web
+}
+
+/**
+ * 获取 Proxy 端口
+ */
+export async function getMonitorProxyPort(): Promise<number> {
+  const ports = await getMonitorPorts()
+  return ports.proxy
 }

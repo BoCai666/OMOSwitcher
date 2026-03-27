@@ -248,7 +248,7 @@ async function main() {
     const caCertPath = certManager.getCACertPath();
     
     // 4. 创建 ProxyServer 实例
-    const proxyPort = config.proxyPort || 8080;
+    const proxyPort = config.proxyPort || 7101;
     proxyServer = new ProxyServer({
       port: proxyPort,
       enableMITM: true,

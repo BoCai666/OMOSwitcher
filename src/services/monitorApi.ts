@@ -12,9 +12,35 @@ import type {
   LLMMetrics
 } from '@/types/monitor'
 
-// 监控服务端口
-const MONITOR_PORT = 3030
-const BASE_URL = `http://localhost:${MONITOR_PORT}/api`
+// 端口缓存
+let cachedPort: number | null = null
+
+/**
+ * 获取 Monitor Web API 端口
+ */
+async function getMonitorPort(): Promise<number> {
+  if (cachedPort !== null) {
+    return cachedPort
+  }
+  
+  try {
+    // 动态导入避免循环依赖
+    const { getMonitorWebPort } = await import('./settingsStore')
+    cachedPort = await getMonitorWebPort()
+    return cachedPort
+  } catch {
+    // 默认端口
+    return 7100
+  }
+}
+
+/**
+ * 获取 API 基础 URL
+ */
+async function getBaseUrl(): Promise<string> {
+  const port = await getMonitorPort()
+  return `http://localhost:${port}/api`
+}
 
 /**
  * 监控服务 API
@@ -25,7 +51,8 @@ export const monitorApi = {
    * @param limit 返回数量限制
    */
   async getRequests(limit = 100): Promise<RequestListItem[]> {
-    const response = await fetch(`${BASE_URL}/requests?limit=${limit}`)
+    const baseUrl = await getBaseUrl()
+    const response = await fetch(`${baseUrl}/requests?limit=${limit}`)
     if (!response.ok) {
       throw new Error(`获取请求列表失败: ${response.statusText}`)
     }
@@ -37,7 +64,8 @@ export const monitorApi = {
    * @param id 请求 ID
    */
   async getRequest(id: string): Promise<LLMRequest> {
-    const response = await fetch(`${BASE_URL}/requests/${id}`)
+    const baseUrl = await getBaseUrl()
+    const response = await fetch(`${baseUrl}/requests/${id}`)
     if (!response.ok) {
       throw new Error(`获取请求详情失败: ${response.statusText}`)
     }
@@ -49,7 +77,8 @@ export const monitorApi = {
    * @param requestId 请求 ID
    */
   async getResponse(requestId: string): Promise<LLMResponse> {
-    const response = await fetch(`${BASE_URL}/requests/${requestId}/response`)
+    const baseUrl = await getBaseUrl()
+    const response = await fetch(`${baseUrl}/requests/${requestId}/response`)
     if (!response.ok) {
       throw new Error(`获取响应详情失败: ${response.statusText}`)
     }
@@ -61,7 +90,8 @@ export const monitorApi = {
    * @param requestId 请求 ID
    */
   async getMcpCalls(requestId: string): Promise<MCPCall[]> {
-    const response = await fetch(`${BASE_URL}/requests/${requestId}/mcp-calls`)
+    const baseUrl = await getBaseUrl()
+    const response = await fetch(`${baseUrl}/requests/${requestId}/mcp-calls`)
     if (!response.ok) {
       throw new Error(`获取 MCP 调用失败: ${response.statusText}`)
     }
@@ -73,7 +103,8 @@ export const monitorApi = {
    * @param requestId 请求 ID
    */
   async getMetrics(requestId: string): Promise<LLMMetrics | null> {
-    const response = await fetch(`${BASE_URL}/requests/${requestId}/metrics`)
+    const baseUrl = await getBaseUrl()
+    const response = await fetch(`${baseUrl}/requests/${requestId}/metrics`)
     if (!response.ok) {
       if (response.status === 404) {
         return null
@@ -87,7 +118,8 @@ export const monitorApi = {
    * 获取统计汇总
    */
   async getStatsSummary(): Promise<StatsSummary> {
-    const response = await fetch(`${BASE_URL}/stats/summary`)
+    const baseUrl = await getBaseUrl()
+    const response = await fetch(`${baseUrl}/stats/summary`)
     if (!response.ok) {
       throw new Error(`获取统计汇总失败: ${response.statusText}`)
     }
@@ -100,7 +132,8 @@ export const monitorApi = {
    */
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await fetch(`${BASE_URL}/health`, {
+      const baseUrl = await getBaseUrl()
+      const response = await fetch(`${baseUrl}/health`, {
         method: 'GET',
         signal: AbortSignal.timeout(3000) // 3秒超时
       })
@@ -114,11 +147,19 @@ export const monitorApi = {
    * 清空监控数据
    */
   async clearData(): Promise<void> {
-    const response = await fetch(`${BASE_URL}/clear`, {
+    const baseUrl = await getBaseUrl()
+    const response = await fetch(`${baseUrl}/clear`, {
       method: 'POST'
     })
     if (!response.ok) {
       throw new Error(`清空数据失败: ${response.statusText}`)
     }
+  },
+  
+  /**
+   * 清除端口缓存（当端口配置变更时调用）
+   */
+  clearPortCache(): void {
+    cachedPort = null
   }
 }

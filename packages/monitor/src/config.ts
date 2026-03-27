@@ -8,8 +8,8 @@ export const config = {
   // 现有配置
   maxMemoryRecords: parseInt(process.env.MAX_RECORDS || '1000'),
   autoCleanup: process.env.AUTO_CLEANUP !== 'false',
-  port: parseInt(process.env.PORT || '3000'),
-  proxyPort: parseInt(process.env.PROXY_PORT || '8080'),
+  port: parseInt(process.env.PORT || '7100'),
+  proxyPort: parseInt(process.env.PROXY_PORT || '7101'),
   
   // 新增存储配置
   storage: {
