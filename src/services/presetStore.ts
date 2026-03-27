@@ -105,9 +105,12 @@ export async function savePreset(
   // 检查是否已存在同名预设
   const existingIndex = presets.findIndex((p) => p.name === name)
 
+  // 如果描述为空且预设已存在，保留原有描述
+  const finalDescription = description ?? (existingIndex >= 0 ? presets[existingIndex].description : undefined)
+
   const preset: Preset = {
     name,
-    description,
+    description: finalDescription,
     config,
     createdAt: existingIndex >= 0 ? presets[existingIndex].createdAt : now,
     updatedAt: now

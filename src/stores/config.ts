@@ -6,7 +6,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import type { OhMyOpenCodeConfig, AgentName, CategoryName } from '@/types'
-import { readConfig, writeConfig, savePreset } from '@/services'
+import { readConfig, writeConfig, savePreset, getCurrentPreset } from '@/services'
 
 // 保存状态类型
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -123,6 +123,8 @@ export const useConfigStore = defineStore('config', () => {
       config.value = await readConfig()
       // 保存原始配置副本
       originalConfig.value = JSON.parse(JSON.stringify(config.value))
+      // 从持久化存储加载当前预设名称
+      currentPresetName.value = (await getCurrentPreset()) || null
       isDirty.value = false
       saveStatus.value = 'idle'
     } catch (e) {
