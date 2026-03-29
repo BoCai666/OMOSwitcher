@@ -16,10 +16,6 @@ import {
 import { showError, showSuccess, showWarning, confirm, AppError, ErrorCode } from '@/utils/errorHandler'
 import PresetDialog from '@/components/PresetDialog.vue'
 import PresetDetailDialog from '@/components/PresetDetailDialog.vue'
-import AppLayout from '@/components/layout/AppLayout.vue'
-
-// 页面标题
-const pageTitle = '预设管理'
 
 // 配置 store
 const configStore = useConfigStore()
@@ -56,6 +52,11 @@ onMounted(() => {
 // 检查预设是否为当前预设
 const isCurrentPreset = (preset: Preset) => {
   return currentPresetName.value === preset.name
+}
+
+// 获取行类名（用于高亮当前预设）
+const getRowClassName = ({ row }: { row: Preset }) => {
+  return isCurrentPreset(row) ? 'is-current-preset' : ''
 }
 
 // 切换预设
@@ -212,8 +213,7 @@ const handleSaveDescription = async (preset: Preset) => {
 </script>
 
 <template>
-  <AppLayout :title="pageTitle">
-    <div class="preset-manage">
+  <div class="preset-manage">
       <!-- 页面标题和操作按钮 -->
       <div class="page-header">
         <div class="header-left">
@@ -231,7 +231,7 @@ const handleSaveDescription = async (preset: Preset) => {
           :data="presets"
           style="width: 100%"
           v-loading="false"
-          empty-text="暂无预设，请点击上方按钮创建"
+          :row-class-name="getRowClassName"
         >
           <!-- 预设名称列 -->
           <el-table-column prop="name" label="预设名称" min-width="150">
@@ -297,31 +297,73 @@ const handleSaveDescription = async (preset: Preset) => {
           </el-table-column>
 
           <!-- 操作列 -->
-          <el-table-column label="操作" width="260" fixed="right">
+          <el-table-column label="操作" width="280" fixed="right">
             <template #default="{ row }">
-              <el-button
-                size="small"
-                @click="handleViewPreset(row)"
-              >
-                查看
-              </el-button>
-              <el-button
-                size="small"
-                type="primary"
-                @click="handleSwitchPreset(row)"
-              >
-                切换
-              </el-button>
-              <el-button
-                size="small"
-                type="danger"
-                @click="handleDeletePreset(row)"
-              >
-                删除
-              </el-button>
+              <div class="action-buttons">
+                <el-button
+                  size="small"
+                  class="neon-button-view"
+                  @click="handleViewPreset(row)"
+                >
+                  <span class="btn-text">查看</span>
+                </el-button>
+                <el-button
+                  size="small"
+                  class="neon-button-switch"
+                  @click="handleSwitchPreset(row)"
+                >
+                  <span class="btn-text">切换</span>
+                </el-button>
+                <el-button
+                  size="small"
+                  class="neon-button-delete"
+                  @click="handleDeletePreset(row)"
+                >
+                  <span class="btn-text">删除</span>
+                </el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
+
+        <!-- 自定义空状态 -->
+        <template #empty>
+          <div class="empty-state">
+            <div class="empty-illustration">
+              <svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- 主文件夹 -->
+                <path d="M40 50C40 44.4772 44.4772 40 50 40H75L85 55H150C155.523 55 160 59.4772 160 65V120C160 125.523 155.523 130 150 130H50C44.4772 130 40 125.523 40 120V50Z" 
+                  fill="url(#folderGradient)" stroke="var(--app-color-primary)" stroke-width="1.5"/>
+                <!-- 内部发光效果 -->
+                <path d="M50 65H150V115H50V65Z" fill="var(--app-bg-base)" opacity="0.5"/>
+                <!-- 小文件图标 -->
+                <rect x="65" y="80" width="25" height="30" rx="3" fill="var(--app-bg-card)" stroke="var(--app-border-default)"/>
+                <rect x="72" y="88" width="11" height="2" rx="1" fill="var(--app-color-primary)" opacity="0.6"/>
+                <rect x="72" y="94" width="11" height="2" rx="1" fill="var(--app-color-primary)" opacity="0.4"/>
+                <!-- 星形装饰 -->
+                <circle cx="150" cy="45" r="8" fill="var(--app-color-primary)" opacity="0.2"/>
+                <circle cx="150" cy="45" r="4" fill="var(--app-color-primary)" opacity="0.6"/>
+                <!-- 底部装饰线 -->
+                <path d="M60 140H140" stroke="var(--app-border-default)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+                <defs>
+                  <linearGradient id="folderGradient" x1="40" y1="40" x2="160" y2="130" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="var(--app-bg-card)"/>
+                    <stop offset="100%" stop-color="var(--app-bg-base)"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <h3 class="empty-title">暂无预设配置</h3>
+            <p class="empty-description">
+              您还没有保存任何配置预设<br>
+              点击下方按钮，将当前配置保存为新预设
+            </p>
+            <el-button type="primary" class="neon-button-primary" @click="dialogVisible = true">
+              <el-icon><Plus /></el-icon>
+              创建第一个预设
+            </el-button>
+          </div>
+        </template>
       </el-card>
 
       <!-- 预设对话框组件 -->
@@ -339,20 +381,28 @@ const handleSaveDescription = async (preset: Preset) => {
         :preset="selectedPreset"
       />
     </div>
-  </AppLayout>
 </template>
 
 <style scoped>
+/* ============================================
+   预设管理页面样式 - 赛博朋克霓虹主题
+   使用 CSS 变量实现主题适配
+   ============================================ */
+
+/* 基础变量定义 - 使用全局 CSS 变量 */
 .preset-manage {
   max-width: 1200px;
   margin: 0 auto;
+  padding: 24px;
 }
 
+/* 页面头部 */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding: 0 8px;
 }
 
 .header-left {
@@ -362,31 +412,122 @@ const handleSaveDescription = async (preset: Preset) => {
 }
 
 .subtitle {
-  color: #909399;
+  color: var(--app-text-secondary);
   font-size: 14px;
+  letter-spacing: 0.5px;
 }
 
+/* 霓虹按钮 - 主按钮 */
+:deep(.el-button[type="primary"]) {
+  background: transparent !important;
+  border: 1px solid var(--app-color-primary) !important;
+  color: var(--app-color-primary) !important;
+  box-shadow: 
+    0 0 10px rgba(0, 212, 255, 0.3),
+    inset 0 0 10px rgba(0, 212, 255, 0.05) !important;
+  transition: all 0.3s ease !important;
+}
+
+:deep(.el-button[type="primary"]:hover) {
+  background: rgba(0, 212, 255, 0.1) !important;
+  box-shadow: 
+    0 0 20px rgba(0, 212, 255, 0.5),
+    0 0 40px rgba(0, 212, 255, 0.3),
+    inset 0 0 15px rgba(0, 212, 255, 0.1) !important;
+  transform: translateY(-1px);
+}
+
+/* 预设卡片 */
 .preset-list-card {
-  margin-top: 20px;
+  background: var(--app-bg-card) !important;
+  border: 1px solid var(--app-border-default) !important;
+  border-radius: 12px !important;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(0, 212, 255, 0.05) !important;
+  overflow: hidden;
 }
 
+:deep(.el-card__body) {
+  padding: 0 !important;
+}
+
+/* 表格样式覆盖 */
+:deep(.el-table) {
+  background: transparent !important;
+  color: var(--app-text-primary) !important;
+}
+
+:deep(.el-table__header-wrapper) {
+  background: var(--app-bg-base) !important;
+}
+
+:deep(.el-table__header) {
+  background: transparent !important;
+}
+
+:deep(.el-table th.el-table__cell) {
+  background: var(--app-bg-base) !important;
+  color: var(--app-color-primary) !important;
+  font-weight: 600 !important;
+  border-bottom: 1px solid var(--app-border-default) !important;
+  padding: 16px 12px !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 12px;
+}
+
+:deep(.el-table td.el-table__cell) {
+  background: transparent !important;
+  border-bottom: 1px solid var(--app-border-default) !important;
+  padding: 16px 12px !important;
+}
+
+:deep(.el-table__body tr) {
+  transition: all 0.3s ease;
+}
+
+/* 表格行悬停效果 */
+:deep(.el-table__body tr:hover > td.el-table__cell) {
+  background: rgba(0, 212, 255, 0.05) !important;
+}
+
+:deep(.el-table__body tr:hover) {
+  box-shadow: inset 0 0 30px rgba(0, 212, 255, 0.05);
+}
+
+/* 当前预设高亮 */
+:deep(.el-table__body tr.is-current-preset td.el-table__cell) {
+  background: rgba(0, 212, 255, 0.08) !important;
+  box-shadow: inset 2px 0 0 var(--app-color-primary);
+}
+
+/* 预设名称单元格 */
 .preset-name-cell {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .preset-name {
   font-weight: 500;
-  color: #303133;
+  color: var(--app-text-primary);
+  font-size: 14px;
 }
 
-.current-tag {
-  margin-left: 4px;
+/* 当前标签 */
+:deep(.current-tag.el-tag--success) {
+  background: rgba(0, 255, 157, 0.15) !important;
+  border: 1px solid var(--app-color-success) !important;
+  color: var(--app-color-success) !important;
+  box-shadow: 0 0 10px rgba(0, 255, 157, 0.2);
+  font-weight: 600;
 }
 
+/* 描述单元格 */
 .preset-description {
-  color: #606266;
+  color: var(--app-text-secondary);
+  font-size: 13px;
 }
 
 .description-cell {
@@ -397,7 +538,8 @@ const handleSaveDescription = async (preset: Preset) => {
 
 .description-cell .edit-btn {
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: all 0.3s ease;
+  color: var(--app-color-primary) !important;
 }
 
 .description-cell:hover .edit-btn {
@@ -412,6 +554,376 @@ const handleSaveDescription = async (preset: Preset) => {
 
 .edit-actions {
   display: flex;
-  gap: 4px;
+  gap: 8px;
+}
+
+/* 操作按钮容器 */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* 霓虹效果按钮 - 查看 */
+.neon-button-view {
+  background: transparent !important;
+  border: 1px solid var(--app-text-secondary) !important;
+  color: var(--app-text-secondary) !important;
+  transition: all 0.3s ease !important;
+  padding: 6px 14px !important;
+}
+
+.neon-button-view:hover {
+  background: rgba(144, 144, 160, 0.1) !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+  box-shadow: 
+    0 0 10px rgba(255, 255, 255, 0.3),
+    inset 0 0 10px rgba(255, 255, 255, 0.05) !important;
+}
+
+/* 霓虹效果按钮 - 切换 */
+.neon-button-switch {
+  background: transparent !important;
+  border: 1px solid var(--app-color-success) !important;
+  color: var(--app-color-success) !important;
+  transition: all 0.3s ease !important;
+  padding: 6px 14px !important;
+}
+
+.neon-button-switch:hover {
+  background: rgba(0, 255, 157, 0.1) !important;
+  box-shadow: 
+    0 0 15px rgba(0, 255, 157, 0.4),
+    0 0 30px rgba(0, 255, 157, 0.2),
+    inset 0 0 10px rgba(0, 255, 157, 0.1) !important;
+  transform: translateY(-1px);
+}
+
+/* 霓虹效果按钮 - 删除 */
+.neon-button-delete {
+  background: transparent !important;
+  border: 1px solid var(--app-color-danger) !important;
+  color: var(--app-color-danger) !important;
+  transition: all 0.3s ease !important;
+  padding: 6px 14px !important;
+}
+
+.neon-button-delete:hover {
+  background: rgba(255, 71, 87, 0.1) !important;
+  box-shadow: 
+    0 0 15px rgba(255, 71, 87, 0.4),
+    0 0 30px rgba(255, 71, 87, 0.2),
+    inset 0 0 10px rgba(255, 71, 87, 0.1) !important;
+  transform: translateY(-1px);
+}
+
+.btn-text {
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* 空状态样式 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.empty-illustration {
+  width: 200px;
+  height: 160px;
+  margin-bottom: 24px;
+  filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.2));
+}
+
+.empty-illustration svg {
+  width: 100%;
+  height: 100%;
+}
+
+.empty-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--app-text-primary);
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+
+.empty-description {
+  font-size: 14px;
+  color: var(--app-text-secondary);
+  line-height: 1.6;
+  margin-bottom: 24px;
+  max-width: 400px;
+}
+
+/* 空状态霓虹按钮 */
+.neon-button-primary {
+  background: transparent !important;
+  border: 1px solid var(--app-color-primary) !important;
+  color: var(--app-color-primary) !important;
+  box-shadow: 
+    0 0 15px rgba(0, 212, 255, 0.3),
+    inset 0 0 15px rgba(0, 212, 255, 0.05) !important;
+  transition: all 0.3s ease !important;
+  padding: 12px 24px !important;
+  font-size: 14px !important;
+}
+
+.neon-button-primary:hover {
+  background: rgba(0, 212, 255, 0.15) !important;
+  box-shadow: 
+    0 0 25px rgba(0, 212, 255, 0.6),
+    0 0 50px rgba(0, 212, 255, 0.3),
+    inset 0 0 20px rgba(0, 212, 255, 0.1) !important;
+  transform: translateY(-2px);
+}
+
+/* 输入框样式覆盖 */
+:deep(.el-input__wrapper) {
+  background: var(--app-bg-base) !important;
+  border: 1px solid var(--app-border-default) !important;
+  box-shadow: none !important;
+}
+
+:deep(.el-input__wrapper:hover) {
+  border-color: var(--app-color-primary) !important;
+}
+
+:deep(.el-input__inner) {
+  color: var(--app-text-primary) !important;
+  background: transparent !important;
+}
+
+:deep(.el-input__inner::placeholder) {
+  color: var(--app-text-secondary) !important;
+}
+
+/* 加载动画覆盖 */
+:deep(.el-loading-mask) {
+  background: rgba(10, 10, 15, 0.8) !important;
+  backdrop-filter: blur(4px);
+}
+
+/* 滚动条美化 */
+:deep(.el-table__body-wrapper::-webkit-scrollbar) {
+  width: 8px;
+  height: 8px;
+}
+
+:deep(.el-table__body-wrapper::-webkit-scrollbar-track) {
+  background: var(--app-bg-base);
+}
+
+:deep(.el-table__body-wrapper::-webkit-scrollbar-thumb) {
+  background: var(--app-border-default);
+  border-radius: 4px;
+}
+
+:deep(.el-table__body-wrapper::-webkit-scrollbar-thumb:hover) {
+  background: var(--app-color-primary);
+}
+
+/* ==================== 赛博朋克主题 ==================== */
+html.cyberpunk .preset-manage {
+  background: transparent;
+}
+
+html.cyberpunk .page-header {
+  background: rgba(26, 26, 46, 0.8);
+  border: 1px solid rgba(0, 255, 255, 0.15);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .subtitle {
+  color: var(--app-color-primary);
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+html.cyberpunk .preset-list-card {
+  background: rgba(26, 26, 46, 0.9) !important;
+  border: 1px solid rgba(0, 255, 255, 0.2) !important;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(0, 255, 255, 0.1) !important;
+}
+
+html.cyberpunk :deep(.el-table th.el-table__cell) {
+  background: rgba(0, 255, 255, 0.08) !important;
+  color: var(--app-color-primary) !important;
+  border-bottom: 1px solid rgba(0, 255, 255, 0.2) !important;
+}
+
+html.cyberpunk :deep(.el-table__body tr:hover > td.el-table__cell) {
+  background: rgba(0, 255, 255, 0.08) !important;
+  box-shadow: inset 0 0 20px rgba(0, 255, 255, 0.05);
+}
+
+html.cyberpunk :deep(.el-table__body tr.is-current-preset td.el-table__cell) {
+  background: rgba(0, 255, 136, 0.1) !important;
+  box-shadow: inset 3px 0 0 var(--app-color-success);
+}
+
+html.cyberpunk .preset-name {
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+html.cyberpunk .neon-button-view:hover {
+  box-shadow:
+    0 0 15px rgba(0, 255, 255, 0.4),
+    0 0 30px rgba(0, 255, 255, 0.2) !important;
+}
+
+html.cyberpunk .neon-button-switch {
+  border-color: var(--app-color-success) !important;
+  color: var(--app-color-success) !important;
+}
+
+html.cyberpunk .neon-button-switch:hover {
+  background: rgba(0, 255, 136, 0.15) !important;
+  box-shadow:
+    0 0 20px rgba(0, 255, 136, 0.5),
+    0 0 40px rgba(0, 255, 136, 0.2) !important;
+}
+
+html.cyberpunk .neon-button-delete:hover {
+  background: rgba(255, 51, 102, 0.15) !important;
+  box-shadow:
+    0 0 20px rgba(255, 51, 102, 0.5),
+    0 0 40px rgba(255, 51, 102, 0.2) !important;
+}
+
+html.cyberpunk .empty-illustration {
+  filter: drop-shadow(0 0 30px rgba(0, 255, 255, 0.3));
+}
+
+html.cyberpunk .empty-title {
+  text-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+}
+
+/* ==================== 玻璃拟态主题 ==================== */
+html.glassmorphism .preset-manage {
+  background: transparent;
+}
+
+html.glassmorphism .page-header {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+html.glassmorphism .subtitle {
+  color: var(--app-text-secondary);
+}
+
+html.glassmorphism .preset-list-card {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+}
+
+html.glassmorphism :deep(.el-table) {
+  background: transparent !important;
+}
+
+html.glassmorphism :deep(.el-table th.el-table__cell) {
+  background: rgba(37, 99, 235, 0.08) !important;
+  color: var(--app-color-primary) !important;
+  border-bottom: 1px solid rgba(37, 99, 235, 0.15) !important;
+}
+
+html.glassmorphism :deep(.el-table td.el-table__cell) {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+html.glassmorphism :deep(.el-table__body tr:hover > td.el-table__cell) {
+  background: rgba(37, 99, 235, 0.05) !important;
+}
+
+html.glassmorphism :deep(.el-table__body tr.is-current-preset td.el-table__cell) {
+  background: rgba(16, 185, 129, 0.08) !important;
+  box-shadow: inset 3px 0 0 var(--app-color-success);
+}
+
+html.glassmorphism :deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+html.glassmorphism :deep(.el-input__wrapper:hover) {
+  border-color: var(--app-color-primary) !important;
+}
+
+html.glassmorphism .neon-button-view {
+  background: rgba(255, 255, 255, 0.6) !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  color: var(--app-text-primary) !important;
+}
+
+html.glassmorphism .neon-button-view:hover {
+  background: rgba(37, 99, 235, 0.1) !important;
+  border-color: var(--app-color-primary) !important;
+  color: var(--app-color-primary) !important;
+  box-shadow: none !important;
+}
+
+html.glassmorphism .neon-button-switch {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  color: var(--app-color-success) !important;
+}
+
+html.glassmorphism .neon-button-switch:hover {
+  background: rgba(16, 185, 129, 0.2) !important;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2) !important;
+}
+
+html.glassmorphism .neon-button-delete {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  color: var(--app-color-danger) !important;
+}
+
+html.glassmorphism .neon-button-delete:hover {
+  background: rgba(239, 68, 68, 0.2) !important;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2) !important;
+}
+
+html.glassmorphism .empty-state {
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: var(--app-radius-lg);
+}
+
+html.glassmorphism .neon-button-primary {
+  background: linear-gradient(135deg, var(--app-color-primary), var(--app-color-secondary)) !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3) !important;
+}
+
+html.glassmorphism .neon-button-primary:hover {
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.4) !important;
+  transform: translateY(-2px);
+}
+
+/* 玻璃拟态主题 - 取消按钮增强对比度 */
+html.glassmorphism .edit-actions :deep(.el-button:not(.el-button--primary)) {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  color: #374151 !important;
+  font-weight: 500;
+}
+
+html.glassmorphism .edit-actions :deep(.el-button:not(.el-button--primary):hover) {
+  border-color: var(--app-color-primary) !important;
+  color: var(--app-color-primary) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
 }
 </style>

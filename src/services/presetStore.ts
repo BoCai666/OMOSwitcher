@@ -31,7 +31,7 @@ async function getTauriInvoke() {
 }
 
 /**
- * 获取所有预设列表
+ * 获取所有预设列表（使用合并命令，避免 N+1 问题）
  * @returns 预设数组，失败时返回空数组
  */
 export async function listPresets(): Promise<Preset[]> {
@@ -46,36 +46,18 @@ export async function listPresets(): Promise<Preset[]> {
       return []
     }
 
-    // 获取预设文件名列表
-    const names: string[] = await invoke('list_presets')
-    
-    // 读取每个预设的内容
-    const presets: Preset[] = []
-    for (const name of names) {
-      try {
-        const content = await invoke<string>('read_preset', { name })
-        const data = JSON.parse(content)
-        presets.push({
-          name,
-          description: data.description,
-          config: data.config,
-          createdAt: data.createdAt || new Date().toISOString(),
-          updatedAt: data.updatedAt || new Date().toISOString()
-        })
-      } catch (e) {
-        console.error(`读取预设 ${name} 失败:`, e)
-      }
+    // 使用新的合并命令，一次性获取所有预设
+    const content = await invoke<string>('read_all_presets')
+    if (content) {
+      const presets = JSON.parse(content) as Preset[]
+      presetsCache = presets
+      return [...presets]
     }
-
-    // 按更新时间倒序排列
-    presets.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    
-    presetsCache = presets
-    return [...presets]
   } catch (error) {
     console.error('读取预设列表失败:', error)
-    return []
   }
+
+  return []
 }
 
 /**

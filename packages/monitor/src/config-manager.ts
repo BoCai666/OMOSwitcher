@@ -1,6 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { fileURLToPath } from 'url';
+import logger from './logger.js';
 
 // pkg 环境中 __dirname 和 __filename 已被注入，使用不同的变量名
 const pkgFilename = typeof __filename !== 'undefined' 
@@ -9,6 +11,16 @@ const pkgFilename = typeof __filename !== 'undefined'
 const pkgDirname = typeof __dirname !== 'undefined' 
   ? __dirname 
   : path.dirname(pkgFilename);
+
+// 检测是否在 pkg 打包环境中运行
+// pkg 会设置 process.pkg 和特定的入口点路径
+const isPkgEnvironment = typeof (process as any).pkg !== 'undefined' || 
+                         pkgFilename.includes('snapshot') ||
+                         pkgDirname.includes('snapshot');
+
+// 用户配置目录
+const USER_CONFIG_DIR = path.join(os.homedir(), '.config', 'omoswitcher');
+const USER_CONFIG_FILE = path.join(USER_CONFIG_DIR, 'monitor-config.jsonc');
 
 // 配置变更回调类型
 export type ConfigChangeCallback = (key: string, value: any, oldValue: any) => void;
@@ -54,22 +66,36 @@ export class ConfigManager {
 
   /**
    * 构造函数
-   * @param configPath 配置文件路径（可选，默认为项目根目录的 config.jsonc）
+   * @param configPath 配置文件路径（可选，默认为用户配置目录）
    */
   constructor(configPath?: string) {
     if (configPath) {
       this.configPath = path.resolve(configPath);
     } else {
-      // 默认指向项目根目录的 config.jsonc
-      // pkg 打包后，尝试多个可能的位置
-      const possiblePaths = [
-        path.resolve(pkgDirname, '..', 'config.jsonc'),  // 开发环境
-        path.resolve(pkgDirname, 'config.jsonc'),        // pkg 打包后（与 dist 同级）
-        path.resolve(process.cwd(), 'config.jsonc'),     // 当前工作目录
-      ];
-      
-      // 找到第一个存在的配置文件
-      this.configPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
+      // pkg 打包环境：只使用用户配置目录
+      if (isPkgEnvironment) {
+        this.configPath = USER_CONFIG_FILE;
+        logger.debug(`[ConfigManager] pkg 环境，使用用户配置目录: ${this.configPath}`);
+      } else {
+        // 开发环境：按优先级查找
+        const possiblePaths = [
+          USER_CONFIG_FILE,                                    // 用户配置目录
+          path.resolve(pkgDirname, '..', 'config.jsonc'),      // 项目根目录
+          path.resolve(process.cwd(), 'config.jsonc'),         // 当前工作目录
+        ];
+        
+        // 找到第一个存在的配置文件
+        const existingPath = possiblePaths.find(p => fs.existsSync(p));
+        
+        if (existingPath) {
+          this.configPath = existingPath;
+        } else {
+          // 没有找到配置文件，使用用户配置目录（会自动创建）
+          this.configPath = USER_CONFIG_FILE;
+        }
+        
+        logger.debug(`[ConfigManager] 开发环境，配置文件路径: ${this.configPath}`);
+      }
     }
   }
 
@@ -81,17 +107,23 @@ export class ConfigManager {
       if (fs.existsSync(this.configPath)) {
         const content = await fs.promises.readFile(this.configPath, 'utf-8');
         this.config = this.parseJSONC(content);
+        logger.info(`[ConfigManager] 已加载配置文件: ${this.configPath}`);
       } else {
         // 文件不存在，使用默认配置
         this.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-        // 写入默认配置文件
+        // 确保目录存在后写入默认配置文件
+        const configDir = path.dirname(this.configPath);
+        if (!fs.existsSync(configDir)) {
+          await fs.promises.mkdir(configDir, { recursive: true });
+        }
         await this.writeConfigFile(this.config);
+        logger.info(`[ConfigManager] 已创建默认配置文件: ${this.configPath}`);
       }
       
       // 启动文件监听
       this.startWatching();
     } catch (error) {
-      console.error('Failed to load config:', error);
+      logger.error('[ConfigManager] 加载配置失败:', error);
       // 加载失败时使用默认配置
       this.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
     }
@@ -263,9 +295,9 @@ export class ConfigManager {
       return;
     }
 
-    // 文件不存在时跳过监听（pkg 打包环境）
+    // 文件不存在时跳过监听
     if (!fs.existsSync(this.configPath)) {
-      console.log('[Config] Config file not found, skipping file watcher');
+      logger.debug('[ConfigManager] 配置文件不存在，跳过文件监听');
       return;
     }
 
@@ -275,8 +307,10 @@ export class ConfigManager {
           this.handleConfigChange();
         }
       });
+      logger.debug('[ConfigManager] 已启动配置文件监听');
     } catch (error) {
-      console.warn('Failed to watch config file:', error);
+      // 监听失败不影响正常运行
+      logger.warn('[ConfigManager] 无法监听配置文件:', error);
     }
   }
 
@@ -312,7 +346,7 @@ export class ConfigManager {
       this.notifyChanges(oldConfig, newConfig);
       
     } catch (error) {
-      console.error('Failed to reload config:', error);
+      logger.error('[ConfigManager] 重新加载配置失败:', error);
     } finally {
       this.isReloading = false;
     }
@@ -344,7 +378,7 @@ export class ConfigManager {
             try {
               callback(fullKey, newValue, oldValue);
             } catch (error) {
-              console.error('Config callback error:', error);
+              logger.error('[ConfigManager] 配置变更回调错误:', error);
             }
           }
         }
@@ -430,7 +464,7 @@ export class ConfigManager {
       try {
         callback(key, value, oldValue);
       } catch (error) {
-        console.error('Config callback error:', error);
+        logger.error('[ConfigManager] 配置变更回调错误:', error);
       }
     }
   }

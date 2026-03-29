@@ -1,0 +1,114 @@
+/**
+ * 故障效果 (Glitch Effect)
+ * 赛博朋克风格的 RGB 分离和闪烁效果
+ */
+
+/* 基础故障文字效果 */
+.glitch-text {
+  position: relative;
+  animation: glitch-text 3s infinite;
+}
+
+.glitch-text::before,
+.glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.glitch-text::before {
+  color: var(--app-accent-cyan);
+  animation: glitch-1 2s infinite;
+  clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+  transform: translate(-2px, -2px);
+}
+
+.glitch-text::after {
+  color: var(--app-accent-magenta);
+  animation: glitch-2 2s infinite;
+  clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+  transform: translate(2px, 2px);
+}
+
+@keyframes glitch-1 {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(-3px, 3px); }
+  40% { transform: translate(-3px, -3px); }
+  60% { transform: translate(3px, 3px); }
+  80% { transform: translate(3px, -3px); }
+}
+
+@keyframes glitch-2 {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(3px, -3px); }
+  40% { transform: translate(3px, 3px); }
+  60% { transform: translate(-3px, -3px); }
+  80% { transform: translate(-3px, 3px); }
+}
+
+@keyframes glitch-text {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.8; }
+  94% { opacity: 1; }
+  95% { opacity: 0.9; }
+  96% { opacity: 1; }
+}
+
+/* 简单故障边框 */
+.glitch-border {
+  position: relative;
+  animation: glitch-border 4s infinite;
+}
+
+@keyframes glitch-border {
+  0%, 100% {
+    box-shadow: 0 0 0 1px var(--app-color-primary);
+  }
+  5% {
+    box-shadow: -2px 0 0 1px var(--app-accent-cyan),
+                2px 0 0 1px var(--app-accent-magenta);
+  }
+  10% {
+    box-shadow: 2px 0 0 1px var(--app-accent-cyan),
+                -2px 0 0 1px var(--app-accent-magenta);
+  }
+  15%, 100% {
+    box-shadow: 0 0 0 1px var(--app-color-primary);
+  }
+}
+
+/* 故障闪烁效果 */
+.glitch-flicker {
+  animation: glitch-flicker 0.15s infinite;
+}
+
+@keyframes glitch-flicker {
+  0% { opacity: 0.8; }
+  20% { opacity: 0.9; }
+  40% { opacity: 1; }
+  60% { opacity: 0.85; }
+  80% { opacity: 0.95; }
+  100% { opacity: 1; }
+}
+
+/* 故障图像效果 (使用 filter) */
+.glitch-image {
+  animation: glitch-image 3s infinite;
+}
+
+@keyframes glitch-image {
+  0%, 100% { filter: none; }
+  5% { filter: hue-rotate(90deg) saturate(2); }
+  10% { filter: none; }
+  15% { filter: hue-rotate(-90deg) saturate(1.5); }
+  20%, 100% { filter: none; }
+}
+
+/* 悬浮触发故障 */
+.glitch-hover:hover {
+  animation: glitch-text 0.3s ease-in-out;
+}

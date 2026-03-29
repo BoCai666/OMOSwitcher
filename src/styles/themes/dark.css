@@ -1,0 +1,134 @@
+/**
+ * 暗色主题配色方案
+ * Linear.app / Raycast 风格
+ */
+
+html.dark {
+  /* ==================== 背景色 ==================== */
+  --app-bg-base: #0a0a0f;
+  --app-bg-card: #12121a;
+  --app-bg-elevated: #1a1a2e;
+  --app-bg-hover: #1a1a2e;
+  --app-bg-active: #1e1e32;
+  --app-bg-dark: #0a0a0f;
+  --app-bg-mask: rgba(10, 10, 15, 0.8);
+
+  /* ==================== 文字色 ==================== */
+  --app-text-primary: #e5eaf3;
+  --app-text-secondary: #cfd3dc;
+  --app-text-tertiary: #a3a6ad;
+  --app-text-disabled: #5a5d65;
+  --app-text-placeholder: #6b6d73;
+  --app-text-inverse: #0a0a0f;
+
+  /* ==================== 边框色 ==================== */
+  --app-border-default: #2a2a3a;
+  --app-border-base: #2a2a3a;
+  --app-border-hover: #3a3a4a;
+  --app-border-active: #00d4ff;
+  --app-border-focus: #00d4ff;
+  --app-border-disabled: #1e1e28;
+  --app-border-light: #1e1e28;
+  --app-border-dark: #3a3a4a;
+
+  /* ==================== 主题强调色 - 霓虹风格 ==================== */
+  --app-color-primary: #00d4ff;
+  --app-color-secondary: #00ffd5;
+  --app-color-accent: #a855f7;
+  --app-color-purple: #a855f7;
+  --app-color-success: #10b981;
+  --app-color-warning: #f59e0b;
+  --app-color-danger: #ef4444;
+  --app-color-info: #00d4ff;
+
+  /* ==================== 悬浮态强调色 ==================== */
+  --app-color-primary-hover: #00b8e0;
+  --app-color-primary-active: #009dc7;
+  --app-color-primary-light: rgba(0, 212, 255, 0.1);
+
+  /* ==================== 强调色（霓虹风格） ==================== */
+  --app-accent-primary: #00d4ff;
+  --app-accent-secondary: #00ffd5;
+  --app-accent-purple: #a855f7;
+  --app-accent-pink: #ff6b9d;
+  --app-accent-orange: #ff9f43;
+  --app-accent-green: #10b981;
+  --app-accent-red: #ef4444;
+  --app-accent-yellow: #fbbf24;
+
+  /* ==================== 状态色 ==================== */
+  --app-success: #10b981;
+  --app-warning: #f59e0b;
+  --app-error: #ef4444;
+  --app-info: #00d4ff;
+
+  /* ==================== 阴影 - 霓虹边框发光效果 ==================== */
+  --app-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --app-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --app-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --app-shadow-xl: 0 12px 48px rgba(0, 0, 0, 0.6);
+  --app-shadow-base: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --app-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --app-shadow-dark: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --app-shadow-modal: 0 12px 48px rgba(0, 0, 0, 0.7);
+  --app-shadow-glow-primary: 0 0 20px rgba(0, 212, 255, 0.3);
+  --app-shadow-glow-secondary: 0 0 20px rgba(0, 255, 213, 0.3);
+  --app-shadow-glow-accent: 0 0 20px rgba(168, 85, 247, 0.3);
+  --app-shadow-glow-intense: 0 0 40px rgba(0, 212, 255, 0.5);
+  --app-shadow-glow-cyan: 0 0 20px rgba(0, 212, 255, 0.3);
+  --app-shadow-glow-purple: 0 0 20px rgba(168, 85, 247, 0.3);
+  --app-shadow-glow-pink: 0 0 20px rgba(255, 107, 157, 0.3);
+
+  /* ==================== 圆角 ==================== */
+  --app-radius-sm: 4px;
+  --app-radius-md: 8px;
+  --app-radius-lg: 12px;
+  --app-radius-xl: 16px;
+  --app-radius-full: 9999px;
+  --app-radius-small: 4px;
+  --app-radius-base: 6px;
+  --app-radius-large: 8px;
+  --app-radius-round: 50%;
+
+  /* ==================== 玻璃效果 ==================== */
+  --app-glass-bg: rgba(18, 18, 26, 0.75);
+  --app-glass-border: rgba(255, 255, 255, 0.08);
+  --app-glass-blur: blur(12px);
+  --app-glass-saturate: saturate(180%);
+
+  /* ==================== 滚动条 ==================== */
+  --app-scrollbar-track: #12121a;
+  --app-scrollbar-thumb: #2a2a3a;
+  --app-scrollbar-thumb-hover: #3a3a4a;
+
+  /* ==================== 遮罩层 ==================== */
+  --app-overlay-bg: rgba(10, 10, 15, 0.85);
+  --app-overlay-blur: blur(4px);
+
+  /* ==================== Element Plus 变量覆盖 ==================== */
+  /* 文字颜色 - 使用暗色主题的浅色文字 */
+  --el-text-color-primary: #e5eaf3;
+  --el-text-color-regular: #cfd3dc;
+  --el-text-color-secondary: #a3a6ad;
+  --el-text-color-placeholder: #6b6d73;
+  --el-text-color-disabled: #5a5d65;
+
+  /* 背景色 */
+  --el-bg-color: #0a0a0f;
+  --el-bg-color-page: #0a0a0f;
+  --el-bg-color-overlay: #12121a;
+
+  /* 填充色 */
+  --el-fill-color: #1a1a2e;
+  --el-fill-color-light: #1f1f35;
+  --el-fill-color-lighter: #252540;
+  --el-fill-color-blank: #12121a;
+
+  /* 边框色 */
+  --el-border-color: #2a2a3a;
+  --el-border-color-light: #2a2a3a;
+  --el-border-color-lighter: #1e1e28;
+
+  /* 主色调 */
+  --el-color-primary: #00d4ff;
+}

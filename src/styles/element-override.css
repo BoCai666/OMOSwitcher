@@ -1,0 +1,1827 @@
+/*
+ * Element Plus 基础组件主题定制
+ * Button, Input, Card, Tag - 赛博朋克霓虹 & 玻璃拟态效果
+ */
+
+/* =========================================================
+   基础组件主题定制 - 赛博朋克霓虹 & 玻璃拟态
+   Button, Input, Card, Tag
+   ========================================================= */
+
+/* ==================== Button 组件 ==================== */
+
+/* 赛博朋克主题 - Primary Button 霓虹发光效果 */
+html.cyberpunk .el-button--primary {
+  background: linear-gradient(135deg, var(--app-color-primary), var(--app-color-secondary));
+  border: 1px solid var(--app-color-primary);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.4),
+              0 0 30px rgba(0, 255, 255, 0.2),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  color: #0a0a0f;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html.cyberpunk .el-button--primary:hover {
+  background: linear-gradient(135deg, var(--app-color-primary), var(--app-color-secondary));
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.6),
+              0 0 40px rgba(0, 255, 255, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+html.cyberpunk .el-button--primary:active {
+  background: linear-gradient(135deg, var(--app-color-secondary), var(--app-color-primary));
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.3),
+              inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  transform: translateY(0);
+}
+
+html.cyberpunk .el-button--primary:focus-visible {
+  box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.3),
+              0 0 20px rgba(0, 255, 255, 0.6);
+}
+
+/* 赛博朋克 - Default Button 透明背景霓虹边框 */
+html.cyberpunk .el-button--default {
+  background: transparent;
+  border: 1px solid var(--app-border-default);
+  color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-button--default:hover {
+  background: rgba(0, 255, 255, 0.1);
+  border-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .el-button--default:active {
+  background: rgba(0, 255, 255, 0.2);
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+/* 赛博朋克 - Success Button */
+html.cyberpunk .el-button--success {
+  background: transparent;
+  border: 1px solid var(--app-color-success);
+  color: var(--app-color-success);
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-button--success:hover {
+  background: rgba(0, 255, 136, 0.15);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+}
+
+/* 赛博朋克 - Warning Button */
+html.cyberpunk .el-button--warning {
+  background: transparent;
+  border: 1px solid var(--app-color-warning);
+  color: var(--app-color-warning);
+  box-shadow: 0 0 10px rgba(255, 170, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-button--warning:hover {
+  background: rgba(255, 170, 0, 0.15);
+  box-shadow: 0 0 20px rgba(255, 170, 0, 0.4);
+}
+
+/* 赛博朋克 - Danger Button */
+html.cyberpunk .el-button--danger {
+  background: transparent;
+  border: 1px solid var(--app-color-danger);
+  color: var(--app-color-danger);
+  box-shadow: 0 0 10px rgba(255, 51, 102, 0.2);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-button--danger:hover {
+  background: rgba(255, 51, 102, 0.15);
+  box-shadow: 0 0 20px rgba(255, 51, 102, 0.4);
+}
+
+/* 赛博朋克 - Info Button */
+html.cyberpunk .el-button--info {
+  background: transparent;
+  border: 1px solid var(--app-color-info);
+  color: var(--app-color-info);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-button--info:hover {
+  background: rgba(0, 212, 255, 0.15);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+}
+
+/* 赛博朋克 - 禁用状态 */
+html.cyberpunk .el-button.is-disabled,
+html.cyberpunk .el-button.is-disabled:hover {
+  background: rgba(100, 100, 100, 0.1);
+  border-color: var(--app-border-default);
+  color: var(--app-text-disabled);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* 玻璃拟态主题 - Primary Button 渐变背景 */
+html.glassmorphism .el-button--primary {
+  background: var(--app-gradient-primary);
+  border: none;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3),
+              0 1px 3px rgba(0, 0, 0, 0.1);
+  color: #ffffff;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html.glassmorphism .el-button--primary:hover {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4),
+              0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+html.glassmorphism .el-button--primary:active {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  transform: translateY(0);
+}
+
+/* 玻璃拟态 - Default Button 玻璃背景 */
+html.glassmorphism .el-button--default {
+  background: var(--app-glass-bg);
+  backdrop-filter: var(--app-glass-blur);
+  border: 1px solid var(--app-glass-border);
+  color: var(--app-text-secondary);
+  box-shadow: var(--app-shadow-sm);
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .el-button--default:hover {
+  background: var(--app-bg-hover);
+  border-color: var(--app-border-hover);
+  box-shadow: var(--app-shadow-md);
+}
+
+html.glassmorphism .el-button--default:active {
+  background: var(--app-bg-active);
+  box-shadow: var(--app-shadow-sm);
+}
+
+/* 玻璃拟态 - 其他类型按钮 */
+html.glassmorphism .el-button--success {
+  background: linear-gradient(135deg, #34d399, #10b981);
+  border: none;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+  color: #ffffff;
+}
+
+html.glassmorphism .el-button--success:hover {
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+html.glassmorphism .el-button--warning {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border: none;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+  color: #ffffff;
+}
+
+html.glassmorphism .el-button--warning:hover {
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+}
+
+html.glassmorphism .el-button--danger {
+  background: linear-gradient(135deg, #f87171, #ef4444);
+  border: none;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+  color: #ffffff;
+}
+
+html.glassmorphism .el-button--danger:hover {
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
+
+html.glassmorphism .el-button--info {
+  background: linear-gradient(135deg, #94a3b8, #64748b);
+  border: none;
+  box-shadow: 0 4px 15px rgba(100, 116, 139, 0.3);
+  color: #ffffff;
+}
+
+/* 玻璃拟态 - 禁用状态 */
+html.glassmorphism .el-button.is-disabled,
+html.glassmorphism .el-button.is-disabled:hover {
+  background: rgba(200, 200, 200, 0.3);
+  border-color: rgba(200, 200, 200, 0.4);
+  color: rgba(100, 100, 100, 0.6);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* ==================== Input 组件 ==================== */
+
+/* 赛博朋克主题 - Input 霓虹效果 */
+html.cyberpunk .el-input__wrapper {
+  background-color: var(--app-bg-card);
+  box-shadow: 0 0 0 1px var(--app-border-default) inset;
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--app-color-primary) inset,
+              0 0 12px rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--app-color-primary) inset,
+              0 0 20px rgba(0, 255, 255, 0.4),
+              0 0 40px rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .el-input__inner {
+  color: var(--app-text-primary);
+  background: transparent;
+}
+
+html.cyberpunk .el-input__inner::placeholder {
+  color: var(--app-text-placeholder);
+}
+
+/* 赛博朋克 - 前后缀 */
+html.cyberpunk .el-input-group__prepend,
+html.cyberpunk .el-input-group__append {
+  background-color: var(--app-bg-elevated);
+  border-color: var(--app-border-default);
+  color: var(--app-text-secondary);
+}
+
+html.cyberpunk .el-input-group__prepend {
+  border-right-color: var(--app-border-default);
+}
+
+html.cyberpunk .el-input-group__append {
+  border-left-color: var(--app-border-default);
+}
+
+/* 玻璃拟态主题 - Input 玻璃背景 */
+html.glassmorphism .el-input__wrapper {
+  background: var(--app-glass-bg);
+  backdrop-filter: var(--app-glass-blur);
+  box-shadow: 0 0 0 1px var(--app-glass-border) inset,
+              var(--app-shadow-sm);
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .el-input__wrapper:hover {
+  background: var(--app-bg-hover);
+  box-shadow: 0 0 0 1px var(--app-border-hover) inset,
+              var(--app-shadow-md);
+}
+
+html.glassmorphism .el-input__wrapper.is-focus {
+  background: var(--app-bg-elevated);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2),
+              0 0 0 1px var(--app-color-primary) inset,
+              var(--app-shadow-md);
+}
+
+html.glassmorphism .el-input__inner {
+  color: var(--app-text-primary);
+  background: transparent;
+}
+
+html.glassmorphism .el-input__inner::placeholder {
+  color: var(--app-text-placeholder);
+}
+
+/* 玻璃拟态 - 前后缀 */
+html.glassmorphism .el-input-group__prepend,
+html.glassmorphism .el-input-group__append {
+  background: var(--app-glass-bg);
+  backdrop-filter: var(--app-glass-blur);
+  border-color: var(--app-glass-border);
+  color: var(--app-text-secondary);
+}
+
+/* ==================== Card 组件 ==================== */
+
+/* 赛博朋克主题 - Card 霓虹边框 */
+html.cyberpunk .el-card {
+  background-color: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html.cyberpunk .el-card:hover {
+  border-color: var(--app-color-primary);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+              0 0 20px rgba(0, 255, 255, 0.15),
+              0 0 40px rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .el-card__header {
+  border-bottom: 1px solid var(--app-border-default);
+  padding: 16px 20px;
+}
+
+html.cyberpunk .el-card__body {
+  padding: 20px;
+}
+
+/* 玻璃拟态主题 - Card 毛玻璃效果 */
+html.glassmorphism .el-card {
+  background: var(--app-glass-bg);
+  backdrop-filter: var(--app-glass-blur);
+  -webkit-backdrop-filter: var(--app-glass-blur);
+  border: 1px solid var(--app-glass-border);
+  box-shadow: var(--app-shadow-glass);
+  border-radius: var(--app-radius-lg);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html.glassmorphism .el-card:hover {
+  background: var(--app-bg-elevated);
+  box-shadow: var(--app-shadow-glass-hover),
+              var(--app-shadow-lg);
+  transform: translateY(-2px);
+}
+
+html.glassmorphism .el-card__header {
+  border-bottom: 1px solid var(--app-glass-border);
+  padding: 16px 20px;
+}
+
+html.glassmorphism .el-card__body {
+  padding: 20px;
+}
+
+/* ==================== Tag 组件 ==================== */
+
+/* 赛博朋克主题 - Tag 霓虹发光 */
+html.cyberpunk .el-tag {
+  background-color: transparent;
+  border: 1px solid var(--app-border-default);
+  color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-tag:hover {
+  border-color: var(--app-color-primary);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+  color: var(--app-color-primary);
+}
+
+/* 赛博朋克 - Primary Tag */
+html.cyberpunk .el-tag--primary {
+  background-color: rgba(0, 255, 255, 0.1);
+  border-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .el-tag--primary:hover {
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+}
+
+/* 赛博朋克 - Success Tag */
+html.cyberpunk .el-tag--success {
+  background-color: rgba(0, 255, 136, 0.1);
+  border-color: var(--app-color-success);
+  color: var(--app-color-success);
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+}
+
+html.cyberpunk .el-tag--success:hover {
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+}
+
+/* 赛博朋克 - Warning Tag */
+html.cyberpunk .el-tag--warning {
+  background-color: rgba(255, 170, 0, 0.1);
+  border-color: var(--app-color-warning);
+  color: var(--app-color-warning);
+  box-shadow: 0 0 10px rgba(255, 170, 0, 0.2);
+}
+
+html.cyberpunk .el-tag--warning:hover {
+  box-shadow: 0 0 15px rgba(255, 170, 0, 0.4);
+}
+
+/* 赛博朋克 - Danger Tag */
+html.cyberpunk .el-tag--danger {
+  background-color: rgba(255, 51, 102, 0.1);
+  border-color: var(--app-color-danger);
+  color: var(--app-color-danger);
+  box-shadow: 0 0 10px rgba(255, 51, 102, 0.2);
+}
+
+html.cyberpunk .el-tag--danger:hover {
+  box-shadow: 0 0 15px rgba(255, 51, 102, 0.4);
+}
+
+/* 赛博朋克 - Info Tag */
+html.cyberpunk .el-tag--info {
+  background-color: rgba(0, 212, 255, 0.1);
+  border-color: var(--app-color-info);
+  color: var(--app-color-info);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+}
+
+html.cyberpunk .el-tag--info:hover {
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+}
+
+/* 赛博朋克 - Close 按钮 */
+html.cyberpunk .el-tag .el-tag__close {
+  color: inherit;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+}
+
+html.cyberpunk .el-tag .el-tag__close:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* 玻璃拟态主题 - Tag 玻璃效果 */
+html.glassmorphism .el-tag {
+  background: var(--app-glass-bg);
+  backdrop-filter: var(--app-glass-blur);
+  border: 1px solid var(--app-glass-border);
+  color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .el-tag:hover {
+  background: var(--app-bg-hover);
+  border-color: var(--app-border-hover);
+}
+
+/* 玻璃拟态 - Primary Tag */
+html.glassmorphism .el-tag--primary {
+  background: rgba(37, 99, 235, 0.15);
+  border-color: rgba(37, 99, 235, 0.4);
+  color: var(--app-color-primary);
+}
+
+html.glassmorphism .el-tag--primary:hover {
+  background: rgba(37, 99, 235, 0.25);
+  border-color: var(--app-color-primary);
+}
+
+/* 玻璃拟态 - Success Tag */
+html.glassmorphism .el-tag--success {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: var(--app-color-success);
+}
+
+html.glassmorphism .el-tag--success:hover {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: var(--app-color-success);
+}
+
+/* 玻璃拟态 - Warning Tag */
+html.glassmorphism .el-tag--warning {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: var(--app-color-warning);
+}
+
+html.glassmorphism .el-tag--warning:hover {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: var(--app-color-warning);
+}
+
+/* 玻璃拟态 - Danger Tag */
+html.glassmorphism .el-tag--danger {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: var(--app-color-danger);
+}
+
+html.glassmorphism .el-tag--danger:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: var(--app-color-danger);
+}
+
+/* 玻璃拟态 - Info Tag */
+html.glassmorphism .el-tag--info {
+  background: rgba(100, 116, 139, 0.15);
+  border-color: rgba(100, 116, 139, 0.4);
+  color: var(--app-color-info);
+}
+
+html.glassmorphism .el-tag--info:hover {
+  background: rgba(100, 116, 139, 0.25);
+  border-color: var(--app-color-info);
+}
+
+/* 玻璃拟态 - Close 按钮 */
+html.glassmorphism .el-tag .el-tag__close {
+  color: inherit;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+}
+
+html.glassmorphism .el-tag .el-tag__close:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 50%;
+}
+
+/* =========================================================
+   T9: Select, Switch, Tabs, Form 组件
+   ========================================================= */
+
+/* ==================== Select 组件 ==================== */
+
+/* 赛博朋克主题 - Select 霓虹效果 */
+html.cyberpunk .el-select {
+  --el-select-border-color-hover: var(--app-color-primary);
+}
+
+html.cyberpunk .el-select .el-input__wrapper {
+  background-color: var(--app-bg-card);
+  box-shadow: 0 0 0 1px var(--app-border-default) inset;
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-select .el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--app-color-primary) inset,
+              0 0 12px rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .el-select .el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--app-color-primary) inset,
+              0 0 20px rgba(0, 255, 255, 0.4);
+}
+
+/* 赛博朋克 - 下拉菜单 */
+html.cyberpunk .el-select-dropdown {
+  background-color: var(--app-bg-elevated);
+  border: 1px solid var(--app-border-default);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4),
+              0 0 15px rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .el-select-dropdown__item {
+  color: var(--app-text-secondary);
+  transition: all 0.2s ease;
+}
+
+html.cyberpunk .el-select-dropdown__item:hover {
+  background-color: rgba(0, 255, 255, 0.1);
+  color: var(--app-color-primary);
+}
+
+html.cyberpunk .el-select-dropdown__item.is-selected {
+  background-color: rgba(0, 255, 255, 0.15);
+  color: var(--app-color-primary);
+  font-weight: 600;
+}
+
+html.cyberpunk .el-select-dropdown__item.is-disabled {
+  color: var(--app-text-disabled);
+  cursor: not-allowed;
+}
+
+/* 玻璃拟态主题 - Select 玻璃效果 */
+html.glassmorphism .el-select .el-input__wrapper {
+  background: var(--app-glass-bg);
+  backdrop-filter: var(--app-glass-blur);
+  box-shadow: 0 0 0 1px var(--app-glass-border) inset,
+              var(--app-shadow-sm);
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .el-select .el-input__wrapper:hover {
+  background: var(--app-bg-hover);
+  box-shadow: 0 0 0 1px var(--app-border-hover) inset;
+}
+
+html.glassmorphism .el-select .el-input__wrapper.is-focus {
+  background: var(--app-bg-elevated);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2),
+              0 0 0 1px var(--app-color-primary) inset;
+}
+
+/* 玻璃拟态 - 下拉菜单 */
+html.glassmorphism .el-select-dropdown {
+  background: var(--app-glass-bg);
+  backdrop-filter: var(--app-glass-blur);
+  -webkit-backdrop-filter: var(--app-glass-blur);
+  border: 1px solid var(--app-glass-border);
+  box-shadow: var(--app-shadow-glass);
+  border-radius: var(--app-radius-md);
+}
+
+html.glassmorphism .el-select-dropdown__item {
+  color: var(--app-text-secondary);
+  transition: all 0.2s ease;
+}
+
+html.glassmorphism .el-select-dropdown__item:hover {
+  background: var(--app-bg-hover);
+  color: var(--app-text-primary);
+}
+
+html.glassmorphism .el-select-dropdown__item.is-selected {
+  background: rgba(37, 99, 235, 0.15);
+  color: var(--app-color-primary);
+  font-weight: 500;
+}
+
+/* ==================== Switch 组件 ==================== */
+
+/* 赛博朋克主题 - Switch 霓虹效果 */
+html.cyberpunk .el-switch {
+  --el-switch-on-color: var(--app-color-primary);
+  --el-switch-off-color: var(--app-border-default);
+}
+
+html.cyberpunk .el-switch.is-checked .el-switch__core {
+  background-color: var(--app-color-primary);
+  border-color: var(--app-color-primary);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.5),
+              0 0 30px rgba(0, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-switch .el-switch__core {
+  background-color: var(--app-bg-elevated);
+  border: 1px solid var(--app-border-default);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-switch .el-switch__core:hover {
+  border-color: var(--app-color-primary);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+html.cyberpunk .el-switch .el-switch__action {
+  background-color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-switch.is-checked .el-switch__action {
+  background-color: #0a0a0f;
+}
+
+/* 玻璃拟态主题 - Switch 玻璃效果 */
+html.glassmorphism .el-switch.is-checked .el-switch__core {
+  background: var(--app-gradient-primary);
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+html.glassmorphism .el-switch .el-switch__core {
+  background: var(--app-glass-bg);
+  border: 1px solid var(--app-glass-border);
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .el-switch .el-switch__core:hover {
+  border-color: var(--app-border-hover);
+}
+
+html.glassmorphism .el-switch .el-switch__action {
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* ==================== Tabs 组件 ==================== */
+
+/* 赛博朋克主题 - Tabs 霓虹效果 */
+html.cyberpunk .el-tabs__header {
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.cyberpunk .el-tabs__nav-wrap::after {
+  background-color: var(--app-border-default);
+}
+
+html.cyberpunk .el-tabs__item {
+  color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-tabs__item:hover {
+  color: var(--app-color-primary);
+}
+
+html.cyberpunk .el-tabs__item.is-active {
+  color: var(--app-color-primary);
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+html.cyberpunk .el-tabs__active-bar {
+  background-color: var(--app-color-primary);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.6),
+              0 0 20px rgba(0, 255, 255, 0.3);
+}
+
+/* 赛博朋克 - Card 类型 Tabs */
+html.cyberpunk .el-tabs--card > .el-tabs__header {
+  border-bottom: 1px solid var(--app-border-default);
+  background-color: var(--app-bg-elevated);
+}
+
+html.cyberpunk .el-tabs--card .el-tabs__item {
+  border: 1px solid transparent;
+  background-color: transparent;
+}
+
+html.cyberpunk .el-tabs--card .el-tabs__item.is-active {
+  background-color: var(--app-bg-card);
+  border-color: var(--app-color-primary);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+}
+
+/* 玻璃拟态主题 - Tabs 玻璃效果 */
+html.glassmorphism .el-tabs__header {
+  border-bottom: 1px solid var(--app-glass-border);
+}
+
+html.glassmorphism .el-tabs__nav-wrap::after {
+  background-color: var(--app-glass-border);
+}
+
+html.glassmorphism .el-tabs__item {
+  color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .el-tabs__item:hover {
+  color: var(--app-text-primary);
+}
+
+html.glassmorphism .el-tabs__item.is-active {
+  color: var(--app-color-primary);
+  font-weight: 500;
+}
+
+html.glassmorphism .el-tabs__active-bar {
+  background: var(--app-gradient-primary);
+  border-radius: 2px;
+}
+
+/* 玻璃拟态 - Card 类型 Tabs */
+html.glassmorphism .el-tabs--card > .el-tabs__header {
+  border-bottom: 1px solid var(--app-glass-border);
+  background: var(--app-glass-bg);
+  backdrop-filter: var(--app-glass-blur);
+}
+
+html.glassmorphism .el-tabs--card .el-tabs__item {
+  border: 1px solid transparent;
+  background-color: transparent;
+}
+
+html.glassmorphism .el-tabs--card .el-tabs__item.is-active {
+  background: var(--app-bg-elevated);
+  border-color: var(--app-border-hover);
+  box-shadow: var(--app-shadow-sm);
+}
+
+/* ==================== Form 组件 ==================== */
+
+/* 赛博朋克主题 - Form 霓虹效果 */
+html.cyberpunk .el-form-item__label {
+  color: var(--app-text-secondary);
+  font-weight: 500;
+}
+
+html.cyberpunk .el-form-item.is-error .el-input__wrapper {
+  box-shadow: 0 0 0 1px var(--app-color-danger) inset,
+              0 0 15px rgba(255, 51, 102, 0.3);
+}
+
+html.cyberpunk .el-form-item__error {
+  color: var(--app-color-danger);
+  text-shadow: 0 0 8px rgba(255, 51, 102, 0.3);
+}
+
+/* 玻璃拟态主题 - Form 玻璃效果 */
+html.glassmorphism .el-form-item__label {
+  color: var(--app-text-secondary);
+  font-weight: 500;
+}
+
+html.glassmorphism .el-form-item.is-error .el-input__wrapper {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2),
+              0 0 0 1px var(--app-color-danger) inset;
+}
+
+html.glassmorphism .el-form-item__error {
+  color: var(--app-color-danger);
+}
+
+/* =========================================================
+   T10: Dialog, Drawer, Message, Tooltip, Popover 组件
+   ========================================================= */
+
+/* ==================== Dialog 组件 ==================== */
+
+/* 赛博朋克主题 - Dialog 霓虹效果 */
+html.cyberpunk .el-dialog {
+  background-color: var(--app-bg-elevated);
+  border: 1px solid var(--app-border-default);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5),
+              0 0 30px rgba(0, 255, 255, 0.1);
+  border-radius: var(--app-radius-lg);
+}
+
+html.cyberpunk .el-dialog__header {
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.cyberpunk .el-dialog__title {
+  color: var(--app-color-primary);
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+  font-weight: 600;
+}
+
+html.cyberpunk .el-dialog__headerbtn .el-dialog__close {
+  color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-dialog__headerbtn:hover .el-dialog__close {
+  color: var(--app-color-primary);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+}
+
+html.cyberpunk .el-dialog__body {
+  color: var(--app-text-primary);
+}
+
+html.cyberpunk .el-dialog__footer {
+  border-top: 1px solid var(--app-border-default);
+}
+
+/* 赛博朋克 - 遮罩层 */
+html.cyberpunk .el-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(2px);
+}
+
+/* 玻璃拟态主题 - Dialog 玻璃效果 */
+html.glassmorphism .el-dialog {
+  background: var(--app-glass-bg);
+  backdrop-filter: var(--app-glass-blur);
+  -webkit-backdrop-filter: var(--app-glass-blur);
+  border: 1px solid var(--app-glass-border);
+  box-shadow: var(--app-shadow-glass-hover);
+  border-radius: var(--app-radius-lg);
+}
+
+html.glassmorphism .el-dialog__header {
+  border-bottom: 1px solid var(--app-glass-border);
+}
+
+html.glassmorphism .el-dialog__title {
+  color: var(--app-text-primary);
+  font-weight: 600;
+}
+
+html.glassmorphism .el-dialog__headerbtn .el-dialog__close {
+  color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .el-dialog__headerbtn:hover .el-dialog__close {
+  color: var(--app-color-primary);
+}
+
+html.glassmorphism .el-dialog__body {
+  color: var(--app-text-primary);
+}
+
+html.glassmorphism .el-dialog__footer {
+  border-top: 1px solid var(--app-glass-border);
+}
+
+/* 玻璃拟态 - 遮罩层 */
+html.glassmorphism .el-overlay {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+/* ==================== Drawer 组件 ==================== */
+
+/* 赛博朋克主题 - Drawer 霓虹效果 */
+html.cyberpunk .el-drawer {
+  background-color: var(--app-bg-elevated);
+  border-left: 1px solid var(--app-border-default);
+  box-shadow: -5px 0 30px rgba(0, 0, 0, 0.4),
+              0 0 20px rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .el-drawer__header {
+  border-bottom: 1px solid var(--app-border-default);
+  color: var(--app-color-primary);
+}
+
+html.cyberpunk .el-drawer__title {
+  color: var(--app-color-primary);
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+  font-weight: 600;
+}
+
+html.cyberpunk .el-drawer__body {
+  color: var(--app-text-primary);
+}
+
+/* 玻璃拟态主题 - Drawer 玻璃效果 */
+html.glassmorphism .el-drawer {
+  background: var(--app-glass-bg);
+  backdrop-filter: var(--app-glass-blur);
+  -webkit-backdrop-filter: var(--app-glass-blur);
+  border-left: 1px solid var(--app-glass-border);
+  box-shadow: var(--app-shadow-glass);
+}
+
+html.glassmorphism .el-drawer__header {
+  border-bottom: 1px solid var(--app-glass-border);
+  color: var(--app-text-primary);
+}
+
+html.glassmorphism .el-drawer__title {
+  color: var(--app-text-primary);
+  font-weight: 600;
+}
+
+html.glassmorphism .el-drawer__body {
+  color: var(--app-text-primary);
+}
+
+/* ==================== Message 组件 ==================== */
+
+/* 赛博朋克主题 - Message 霓虹效果 */
+html.cyberpunk .el-message {
+  background-color: var(--app-bg-elevated);
+  border: 1px solid var(--app-border-default);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4),
+              0 0 15px rgba(0, 255, 255, 0.1);
+  border-radius: var(--app-radius-md);
+}
+
+html.cyberpunk .el-message--success {
+  border-color: var(--app-color-success);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4),
+              0 0 15px rgba(0, 255, 136, 0.2);
+}
+
+html.cyberpunk .el-message--success .el-message__content {
+  color: var(--app-color-success);
+}
+
+html.cyberpunk .el-message--warning {
+  border-color: var(--app-color-warning);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4),
+              0 0 15px rgba(255, 170, 0, 0.2);
+}
+
+html.cyberpunk .el-message--warning .el-message__content {
+  color: var(--app-color-warning);
+}
+
+html.cyberpunk .el-message--error {
+  border-color: var(--app-color-danger);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4),
+              0 0 15px rgba(255, 51, 102, 0.2);
+}
+
+html.cyberpunk .el-message--error .el-message__content {
+  color: var(--app-color-danger);
+}
+
+html.cyberpunk .el-message--info {
+  border-color: var(--app-color-primary);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4),
+              0 0 15px rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .el-message--info .el-message__content {
+  color: var(--app-color-primary);
+}
+
+/* 玻璃拟态主题 - Message 玻璃效果 */
+html.glassmorphism .el-message {
+  background: var(--app-glass-bg);
+  backdrop-filter: var(--app-glass-blur);
+  -webkit-backdrop-filter: var(--app-glass-blur);
+  border: 1px solid var(--app-glass-border);
+  box-shadow: var(--app-shadow-glass);
+  border-radius: var(--app-radius-md);
+}
+
+html.glassmorphism .el-message--success {
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+html.glassmorphism .el-message--success .el-message__content {
+  color: var(--app-color-success);
+}
+
+html.glassmorphism .el-message--warning {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+html.glassmorphism .el-message--warning .el-message__content {
+  color: #b45309;
+}
+
+html.glassmorphism .el-message--error {
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+html.glassmorphism .el-message--error .el-message__content {
+  color: #b91c1c;
+}
+
+html.glassmorphism .el-message--info .el-message__content {
+  color: var(--app-text-primary);
+}
+
+/* ==================== Tooltip 组件 ==================== */
+
+/* 赛博朋克主题 - Tooltip 霓虹效果 */
+html.cyberpunk .el-tooltip__popper {
+  background-color: var(--app-bg-elevated) !important;
+  border: 1px solid var(--app-color-primary) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4),
+              0 0 15px rgba(0, 255, 255, 0.3) !important;
+  color: var(--app-text-primary) !important;
+  border-radius: var(--app-radius-sm);
+}
+
+html.cyberpunk .el-tooltip__popper[data-popper-placement^="top"] .el-popper__arrow::before {
+  border-top-color: var(--app-color-primary) !important;
+}
+
+html.cyberpunk .el-tooltip__popper[data-popper-placement^="bottom"] .el-popper__arrow::before {
+  border-bottom-color: var(--app-color-primary) !important;
+}
+
+html.cyberpunk .el-tooltip__popper[data-popper-placement^="left"] .el-popper__arrow::before {
+  border-left-color: var(--app-color-primary) !important;
+}
+
+html.cyberpunk .el-tooltip__popper[data-popper-placement^="right"] .el-popper__arrow::before {
+  border-right-color: var(--app-color-primary) !important;
+}
+
+/* 玻璃拟态主题 - Tooltip 玻璃效果 */
+html.glassmorphism .el-tooltip__popper {
+  background: var(--app-glass-bg) !important;
+  backdrop-filter: var(--app-glass-blur);
+  -webkit-backdrop-filter: var(--app-glass-blur);
+  border: 1px solid var(--app-glass-border) !important;
+  box-shadow: var(--app-shadow-sm) !important;
+  color: var(--app-text-primary) !important;
+  border-radius: var(--app-radius-sm);
+}
+
+html.glassmorphism .el-tooltip__popper[data-popper-placement^="top"] .el-popper__arrow::before {
+  border-top-color: var(--app-glass-border) !important;
+}
+
+html.glassmorphism .el-tooltip__popper[data-popper-placement^="bottom"] .el-popper__arrow::before {
+  border-bottom-color: var(--app-glass-border) !important;
+}
+
+html.glassmorphism .el-tooltip__popper[data-popper-placement^="left"] .el-popper__arrow::before {
+  border-left-color: var(--app-glass-border) !important;
+}
+
+html.glassmorphism .el-tooltip__popper[data-popper-placement^="right"] .el-popper__arrow::before {
+  border-right-color: var(--app-glass-border) !important;
+}
+
+/* ==================== Popover 组件 ==================== */
+
+/* 赛博朋克主题 - Popover 霓虹效果 */
+html.cyberpunk .el-popover.el-popper {
+  background-color: var(--app-bg-elevated) !important;
+  border: 1px solid var(--app-border-default) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5),
+              0 0 20px rgba(0, 255, 255, 0.1) !important;
+  border-radius: var(--app-radius-md);
+}
+
+html.cyberpunk .el-popover__title {
+  color: var(--app-color-primary);
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+html.cyberpunk .el-popover.el-popper[data-popper-placement^="top"] .el-popper__arrow::before {
+  border-top-color: var(--app-bg-elevated) !important;
+  border-left-color: var(--app-border-default) !important;
+}
+
+html.cyberpunk .el-popover.el-popper[data-popper-placement^="bottom"] .el-popper__arrow::before {
+  border-bottom-color: var(--app-bg-elevated) !important;
+  border-right-color: var(--app-border-default) !important;
+}
+
+/* 玻璃拟态主题 - Popover 玻璃效果 */
+html.glassmorphism .el-popover.el-popper {
+  background: var(--app-glass-bg) !important;
+  backdrop-filter: var(--app-glass-blur);
+  -webkit-backdrop-filter: var(--app-glass-blur);
+  border: 1px solid var(--app-glass-border) !important;
+  box-shadow: var(--app-shadow-glass) !important;
+  border-radius: var(--app-radius-md);
+}
+
+html.glassmorphism .el-popover__title {
+  color: var(--app-text-primary);
+  font-weight: 600;
+}
+
+html.glassmorphism .el-popover.el-popper[data-popper-placement^="top"] .el-popper__arrow::before {
+  border-top-color: var(--app-glass-bg) !important;
+}
+
+html.glassmorphism .el-popover.el-popper[data-popper-placement^="bottom"] .el-popper__arrow::before {
+  border-bottom-color: var(--app-glass-bg) !important;
+}
+
+/* =========================================================
+   T11: Table, Pagination, Empty, Progress 组件
+   ========================================================= */
+
+/* ==================== Table 组件 ==================== */
+
+/* 赛博朋克主题 - Table 霓虹效果 */
+html.cyberpunk .el-table {
+  --el-table-border-color: var(--app-border-default);
+  --el-table-header-bg-color: var(--app-bg-elevated);
+  --el-table-row-hover-bg-color: rgba(0, 255, 255, 0.05);
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  background-color: transparent;
+}
+
+html.cyberpunk .el-table::before {
+  background-color: var(--app-border-default);
+}
+
+html.cyberpunk .el-table th.el-table__cell {
+  background-color: var(--app-bg-elevated);
+  color: var(--app-color-primary);
+  border-bottom: 1px solid var(--app-color-primary);
+  font-weight: 600;
+}
+
+html.cyberpunk .el-table td.el-table__cell {
+  border-bottom: 1px solid var(--app-border-default);
+  color: var(--app-text-primary);
+  transition: all 0.2s ease;
+}
+
+html.cyberpunk .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background-color: rgba(0, 255, 255, 0.02);
+}
+
+html.cyberpunk .el-table__body tr:hover > td.el-table__cell {
+  background-color: rgba(0, 255, 255, 0.08) !important;
+  box-shadow: inset 0 0 0 1px rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .el-table--border {
+  border: 1px solid var(--app-border-default);
+}
+
+html.cyberpunk .el-table--border .el-table__cell {
+  border-right: 1px solid var(--app-border-default);
+}
+
+/* 赛博朋克 - 排序图标 */
+html.cyberpunk .el-table .caret-wrapper {
+  color: var(--app-text-secondary);
+}
+
+html.cyberpunk .el-table .sort-caret.ascending {
+  border-bottom-color: var(--app-color-primary);
+}
+
+html.cyberpunk .el-table .sort-caret.descending {
+  border-top-color: var(--app-color-primary);
+}
+
+/* 玻璃拟态主题 - Table 玻璃效果 */
+html.glassmorphism .el-table {
+  --el-table-border-color: var(--app-glass-border);
+  --el-table-header-bg-color: var(--app-glass-bg);
+  --el-table-row-hover-bg-color: var(--app-bg-hover);
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  background-color: transparent;
+}
+
+html.glassmorphism .el-table::before {
+  background-color: var(--app-glass-border);
+}
+
+html.glassmorphism .el-table th.el-table__cell {
+  background: var(--app-glass-bg);
+  backdrop-filter: var(--app-glass-blur);
+  color: var(--app-text-primary);
+  border-bottom: 1px solid var(--app-glass-border);
+  font-weight: 600;
+}
+
+html.glassmorphism .el-table td.el-table__cell {
+  border-bottom: 1px solid var(--app-glass-border);
+  color: var(--app-text-primary);
+  transition: all 0.2s ease;
+}
+
+html.glassmorphism .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+html.glassmorphism .el-table__body tr:hover > td.el-table__cell {
+  background-color: var(--app-bg-hover) !important;
+}
+
+html.glassmorphism .el-table--border {
+  border: 1px solid var(--app-glass-border);
+}
+
+html.glassmorphism .el-table--border .el-table__cell {
+  border-right: 1px solid var(--app-glass-border);
+}
+
+/* ==================== Pagination 组件 ==================== */
+
+/* 赛博朋克主题 - Pagination 霓虹效果 */
+html.cyberpunk .el-pagination {
+  --el-pagination-button-bg-color: transparent;
+  --el-pagination-hover-color: var(--app-color-primary);
+}
+
+html.cyberpunk .el-pagination .el-pager li {
+  background-color: transparent;
+  color: var(--app-text-secondary);
+  border: 1px solid var(--app-border-default);
+  margin: 0 2px;
+  border-radius: var(--app-radius-sm);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-pagination .el-pager li:hover {
+  border-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+html.cyberpunk .el-pagination .el-pager li.is-active {
+  background-color: var(--app-color-primary);
+  border-color: var(--app-color-primary);
+  color: #0a0a0f;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+  font-weight: 600;
+}
+
+html.cyberpunk .el-pagination button {
+  background-color: transparent;
+  color: var(--app-text-secondary);
+  border: 1px solid var(--app-border-default);
+  border-radius: var(--app-radius-sm);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-pagination button:hover:not(:disabled) {
+  border-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+html.cyberpunk .el-pagination button:disabled {
+  color: var(--app-text-disabled);
+  border-color: var(--app-border-default);
+}
+
+html.cyberpunk .el-pagination .el-pagination__total,
+html.cyberpunk .el-pagination .el-pagination__jump {
+  color: var(--app-text-secondary);
+}
+
+html.cyberpunk .el-pagination .el-pagination__sizes .el-select .el-input__wrapper {
+  background-color: var(--app-bg-card);
+}
+
+/* 玻璃拟态主题 - Pagination 玻璃效果 */
+html.glassmorphism .el-pagination .el-pager li {
+  background: var(--app-glass-bg);
+  color: var(--app-text-secondary);
+  border: 1px solid var(--app-glass-border);
+  margin: 0 2px;
+  border-radius: var(--app-radius-sm);
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .el-pagination .el-pager li:hover {
+  background: var(--app-bg-hover);
+  border-color: var(--app-border-hover);
+  color: var(--app-text-primary);
+}
+
+html.glassmorphism .el-pagination .el-pager li.is-active {
+  background: var(--app-gradient-primary);
+  border-color: transparent;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+html.glassmorphism .el-pagination button {
+  background: var(--app-glass-bg);
+  color: var(--app-text-secondary);
+  border: 1px solid var(--app-glass-border);
+  border-radius: var(--app-radius-sm);
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .el-pagination button:hover:not(:disabled) {
+  background: var(--app-bg-hover);
+  border-color: var(--app-border-hover);
+}
+
+html.glassmorphism .el-pagination button:disabled {
+  color: var(--app-text-disabled);
+}
+
+html.glassmorphism .el-pagination .el-pagination__total,
+html.glassmorphism .el-pagination .el-pagination__jump {
+  color: var(--app-text-secondary);
+}
+
+/* ==================== Empty 组件 ==================== */
+
+/* 赛博朋克主题 - Empty 霓虹效果 */
+html.cyberpunk .el-empty {
+  --el-empty-fill-color-0: var(--app-bg-elevated);
+  --el-empty-fill-color-1: var(--app-bg-card);
+  --el-empty-fill-color-2: var(--app-bg-elevated);
+  --el-empty-fill-color-3: var(--app-bg-card);
+  --el-empty-fill-color-4: var(--app-bg-elevated);
+  --el-empty-fill-color-5: var(--app-bg-card);
+  --el-empty-fill-color-6: var(--app-bg-elevated);
+  --el-empty-fill-color-7: var(--app-bg-card);
+  --el-empty-fill-color-8: var(--app-bg-elevated);
+  --el-empty-fill-color-9: var(--app-bg-card);
+}
+
+html.cyberpunk .el-empty__description {
+  color: #d0d0e0;
+}
+
+html.cyberpunk .el-empty__description p {
+  color: #d0d0e0;
+}
+
+/* 玻璃拟态主题 - Empty 玻璃效果 */
+html.glassmorphism .el-empty {
+  --el-empty-fill-color-0: transparent;
+  --el-empty-fill-color-1: rgba(255, 255, 255, 0.05);
+  --el-empty-fill-color-2: transparent;
+  --el-empty-fill-color-3: rgba(255, 255, 255, 0.05);
+  --el-empty-fill-color-4: transparent;
+  --el-empty-fill-color-5: rgba(255, 255, 255, 0.05);
+  --el-empty-fill-color-6: transparent;
+  --el-empty-fill-color-7: rgba(255, 255, 255, 0.05);
+  --el-empty-fill-color-8: transparent;
+  --el-empty-fill-color-9: rgba(255, 255, 255, 0.05);
+}
+
+html.glassmorphism .el-empty__description {
+  color: var(--app-text-secondary);
+}
+
+html.glassmorphism .el-empty__description p {
+  color: var(--app-text-secondary);
+}
+
+/* ==================== Progress 组件 ==================== */
+
+/* 赛博朋克主题 - Progress 霓虹效果 */
+html.cyberpunk .el-progress-bar__outer {
+  background-color: var(--app-bg-elevated);
+  border: 1px solid var(--app-border-default);
+  border-radius: var(--app-radius-full);
+}
+
+html.cyberpunk .el-progress-bar__inner {
+  background: linear-gradient(90deg, var(--app-color-primary), var(--app-color-secondary));
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5),
+              0 0 20px rgba(0, 255, 255, 0.2);
+  border-radius: var(--app-radius-full);
+}
+
+html.cyberpunk .el-progress__text {
+  color: var(--app-text-secondary);
+}
+
+/* 赛博朋克 - 环形进度条 */
+html.cyberpunk .el-progress--circle .el-progress-circle__track {
+  stroke: var(--app-bg-elevated);
+}
+
+html.cyberpunk .el-progress--circle .el-progress-circle__path {
+  stroke: var(--app-color-primary);
+  filter: drop-shadow(0 0 6px rgba(0, 255, 255, 0.6));
+}
+
+/* 玻璃拟态主题 - Progress 玻璃效果 */
+html.glassmorphism .el-progress-bar__outer {
+  background: var(--app-glass-bg);
+  border: 1px solid var(--app-glass-border);
+  border-radius: var(--app-radius-full);
+}
+
+html.glassmorphism .el-progress-bar__inner {
+  background: var(--app-gradient-primary);
+  border-radius: var(--app-radius-full);
+}
+
+html.glassmorphism .el-progress__text {
+  color: var(--app-text-secondary);
+}
+
+/* 玻璃拟态 - 环形进度条 */
+html.glassmorphism .el-progress--circle .el-progress-circle__track {
+  stroke: rgba(255, 255, 255, 0.1);
+}
+
+html.glassmorphism .el-progress--circle .el-progress-circle__path {
+  stroke: var(--app-color-primary);
+}
+
+/* =========================================================
+   T12: Dropdown, Menu, Breadcrumb, Steps 组件
+   ========================================================= */
+
+/* ==================== Dropdown 组件 ==================== */
+
+/* 赛博朋克主题 - Dropdown 霓虹效果 */
+html.cyberpunk .el-dropdown-menu {
+  background-color: var(--app-bg-elevated);
+  border: 1px solid var(--app-border-default);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4),
+              0 0 15px rgba(0, 255, 255, 0.1);
+  border-radius: var(--app-radius-md);
+}
+
+html.cyberpunk .el-dropdown-menu__item {
+  color: var(--app-text-secondary);
+  transition: all 0.2s ease;
+}
+
+html.cyberpunk .el-dropdown-menu__item:hover {
+  background-color: rgba(0, 255, 255, 0.1);
+  color: var(--app-color-primary);
+}
+
+html.cyberpunk .el-dropdown-menu__item.is-disabled {
+  color: var(--app-text-disabled);
+  cursor: not-allowed;
+}
+
+html.cyberpunk .el-dropdown-menu__item--divided {
+  border-top: 1px solid var(--app-border-default);
+}
+
+/* 玻璃拟态主题 - Dropdown 玻璃效果 */
+html.glassmorphism .el-dropdown-menu {
+  background: var(--app-glass-bg);
+  backdrop-filter: var(--app-glass-blur);
+  -webkit-backdrop-filter: var(--app-glass-blur);
+  border: 1px solid var(--app-glass-border);
+  box-shadow: var(--app-shadow-glass);
+  border-radius: var(--app-radius-md);
+}
+
+html.glassmorphism .el-dropdown-menu__item {
+  color: var(--app-text-secondary);
+  transition: all 0.2s ease;
+}
+
+html.glassmorphism .el-dropdown-menu__item:hover {
+  background: var(--app-bg-hover);
+  color: var(--app-text-primary);
+}
+
+html.glassmorphism .el-dropdown-menu__item.is-disabled {
+  color: var(--app-text-disabled);
+}
+
+html.glassmorphism .el-dropdown-menu__item--divided {
+  border-top: 1px solid var(--app-glass-border);
+}
+
+/* ==================== Menu 组件 ==================== */
+
+/* 赛博朋克主题 - Menu 霓虹效果 */
+html.cyberpunk .el-menu {
+  background-color: transparent;
+  border-right: none;
+}
+
+html.cyberpunk .el-menu-item {
+  color: var(--app-text-secondary);
+  border-left: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-menu-item:hover {
+  background-color: rgba(0, 255, 255, 0.05);
+  border-left-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+}
+
+html.cyberpunk .el-menu-item.is-active {
+  background-color: rgba(0, 255, 255, 0.1);
+  border-left-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+  box-shadow: inset 0 0 0 1px rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .el-sub-menu__title {
+  color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-sub-menu__title:hover {
+  background-color: rgba(0, 255, 255, 0.05);
+  color: var(--app-color-primary);
+}
+
+html.cyberpunk .el-sub-menu.is-active > .el-sub-menu__title {
+  color: var(--app-color-primary);
+}
+
+/* 赛博朋克 - 子菜单下拉 */
+html.cyberpunk .el-menu--popup {
+  background-color: var(--app-bg-elevated);
+  border: 1px solid var(--app-border-default);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4),
+              0 0 15px rgba(0, 255, 255, 0.1);
+}
+
+/* 玻璃拟态主题 - Menu 玻璃效果 */
+html.glassmorphism .el-menu {
+  background-color: transparent;
+  border-right: none;
+}
+
+html.glassmorphism .el-menu-item {
+  color: var(--app-text-secondary);
+  border-left: 2px solid transparent;
+  border-radius: 0 var(--app-radius-sm) var(--app-radius-sm) 0;
+  margin: 2px 8px;
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .el-menu-item:hover {
+  background: var(--app-glass-bg);
+  border-left-color: var(--app-color-primary);
+  color: var(--app-text-primary);
+}
+
+html.glassmorphism .el-menu-item.is-active {
+  background: var(--app-glass-bg);
+  backdrop-filter: var(--app-glass-blur);
+  border-left-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+}
+
+html.glassmorphism .el-sub-menu__title {
+  color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .el-sub-menu__title:hover {
+  background: var(--app-glass-bg);
+  color: var(--app-text-primary);
+}
+
+html.glassmorphism .el-sub-menu.is-active > .el-sub-menu__title {
+  color: var(--app-color-primary);
+}
+
+/* 玻璃拟态 - 子菜单下拉 */
+html.glassmorphism .el-menu--popup {
+  background: var(--app-glass-bg);
+  backdrop-filter: var(--app-glass-blur);
+  -webkit-backdrop-filter: var(--app-glass-blur);
+  border: 1px solid var(--app-glass-border);
+  box-shadow: var(--app-shadow-glass);
+}
+
+/* ==================== Breadcrumb 组件 ==================== */
+
+/* 赛博朋克主题 - Breadcrumb 霓虹效果 */
+html.cyberpunk .el-breadcrumb {
+  font-size: 14px;
+}
+
+html.cyberpunk .el-breadcrumb__item {
+  color: var(--app-text-secondary);
+}
+
+html.cyberpunk .el-breadcrumb__inner {
+  color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-breadcrumb__inner:hover {
+  color: var(--app-color-primary);
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+html.cyberpunk .el-breadcrumb__item:last-child .el-breadcrumb__inner {
+  color: var(--app-color-primary);
+  font-weight: 600;
+}
+
+html.cyberpunk .el-breadcrumb__separator {
+  color: var(--app-text-placeholder);
+}
+
+/* 玻璃拟态主题 - Breadcrumb 玻璃效果 */
+html.glassmorphism .el-breadcrumb {
+  font-size: 14px;
+}
+
+html.glassmorphism .el-breadcrumb__item {
+  color: var(--app-text-secondary);
+}
+
+html.glassmorphism .el-breadcrumb__inner {
+  color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .el-breadcrumb__inner:hover {
+  color: var(--app-text-primary);
+}
+
+html.glassmorphism .el-breadcrumb__item:last-child .el-breadcrumb__inner {
+  color: var(--app-text-primary);
+  font-weight: 500;
+}
+
+html.glassmorphism .el-breadcrumb__separator {
+  color: var(--app-text-placeholder);
+}
+
+/* ==================== Steps 组件 ==================== */
+
+/* 赛博朋克主题 - Steps 霓虹效果 */
+html.cyberpunk .el-steps {
+  --el-color-primary: var(--app-color-primary);
+}
+
+html.cyberpunk .el-step__head.is-process {
+  color: var(--app-color-primary);
+  border-color: var(--app-color-primary);
+}
+
+html.cyberpunk .el-step__head.is-process .el-step__line {
+  background-color: var(--app-border-default);
+}
+
+html.cyberpunk .el-step__head.is-finish {
+  color: var(--app-color-primary);
+  border-color: var(--app-color-primary);
+}
+
+html.cyberpunk .el-step__head.is-finish .el-step__line {
+  background-color: var(--app-color-primary);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+html.cyberpunk .el-step__icon {
+  background-color: var(--app-bg-card);
+  border: 2px solid var(--app-border-default);
+  color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-step__icon.is-text {
+  border-radius: 50%;
+}
+
+html.cyberpunk .el-step.is-process .el-step__icon {
+  background-color: var(--app-color-primary);
+  border-color: var(--app-color-primary);
+  color: #0a0a0f;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.5),
+              0 0 30px rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .el-step.is-finish .el-step__icon {
+  border-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+}
+
+html.cyberpunk .el-step__title {
+  color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .el-step.is-process .el-step__title {
+  color: var(--app-color-primary);
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+html.cyberpunk .el-step.is-finish .el-step__title {
+  color: var(--app-color-primary);
+}
+
+html.cyberpunk .el-step__description {
+  color: var(--app-text-placeholder);
+}
+
+html.cyberpunk .el-step.is-process .el-step__description {
+  color: var(--app-text-secondary);
+}
+
+html.cyberpunk .el-step__line {
+  background-color: var(--app-border-default);
+}
+
+/* 玻璃拟态主题 - Steps 玻璃效果 */
+html.glassmorphism .el-steps {
+  --el-color-primary: var(--app-color-primary);
+}
+
+html.glassmorphism .el-step__head.is-process {
+  color: var(--app-color-primary);
+  border-color: var(--app-color-primary);
+}
+
+html.glassmorphism .el-step__head.is-finish {
+  color: var(--app-color-primary);
+  border-color: var(--app-color-primary);
+}
+
+html.glassmorphism .el-step__head.is-finish .el-step__line {
+  background: var(--app-gradient-primary);
+}
+
+html.glassmorphism .el-step__icon {
+  background: var(--app-glass-bg);
+  border: 2px solid var(--app-glass-border);
+  color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .el-step.is-process .el-step__icon {
+  background: var(--app-gradient-primary);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+html.glassmorphism .el-step.is-finish .el-step__icon {
+  border-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+}
+
+html.glassmorphism .el-step__title {
+  color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .el-step.is-process .el-step__title {
+  color: var(--app-text-primary);
+  font-weight: 600;
+}
+
+html.glassmorphism .el-step.is-finish .el-step__title {
+  color: var(--app-color-primary);
+}
+
+html.glassmorphism .el-step__description {
+  color: var(--app-text-placeholder);
+}
+
+html.glassmorphism .el-step__line {
+  background-color: var(--app-glass-border);
+}

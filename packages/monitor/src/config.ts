@@ -4,6 +4,8 @@
  * 端口优先级：环境变量 > 配置文件 > 默认值
  * 初始值使用环境变量/默认值，启动时会从配置文件更新
  */
+import logger from './logger.js';
+
 export const config = {
   // 现有配置
   maxMemoryRecords: parseInt(process.env.MAX_RECORDS || '1000'),
@@ -54,5 +56,5 @@ export function updatePortsFromConfig(configManager: { get: (key: string) => unk
     }
   }
   
-  console.log(`[Config] Ports: web=${config.port}, proxy=${config.proxyPort}`);
+  logger.info(`[Config] Ports: web=${config.port}, proxy=${config.proxyPort}`);
 }

@@ -1,0 +1,826 @@
+/* ==================== 过渡动画系统 ==================== */
+
+/* 主题切换颜色过渡（150ms） */
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  transition: color var(--app-transition-fast),
+              background-color var(--app-transition-fast),
+              border-color var(--app-transition-fast),
+              box-shadow var(--app-transition-fast) !important;
+}
+
+/* 页面切换动画 - fade-slide（300ms） */
+.page-fade-slide-enter-active,
+.page-fade-slide-leave-active {
+  transition: opacity var(--app-transition-slow),
+              transform var(--app-transition-slow);
+}
+
+.page-fade-slide-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.page-fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.page-fade-slide-enter-to,
+.page-fade-slide-leave-from {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* 页面切换动画 - fade-only 变体 */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity var(--app-transition-slow);
+}
+
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
+}
+
+/* 对话框/抽屉动画 - fade-scale（200ms） */
+.dialog-fade-scale-enter-active,
+.dialog-fade-scale-leave-active {
+  transition: opacity var(--app-transition-normal),
+              transform var(--app-transition-normal);
+}
+
+.dialog-fade-scale-enter-from {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.dialog-fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.dialog-fade-scale-enter-to,
+.dialog-fade-scale-leave-from {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* 抽屉滑入动画 - slide-up */
+.drawer-slide-up-enter-active,
+.drawer-slide-up-leave-active {
+  transition: opacity var(--app-transition-normal),
+              transform var(--app-transition-normal);
+}
+
+.drawer-slide-up-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.drawer-slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+/* 抽屉滑入动画 - slide-right */
+.drawer-slide-right-enter-active,
+.drawer-slide-right-leave-active {
+  transition: opacity var(--app-transition-normal),
+              transform var(--app-transition-normal);
+}
+
+.drawer-slide-right-enter-from {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.drawer-slide-right-leave-to {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+/* 遮罩层淡入淡出 */
+.mask-fade-enter-active,
+.mask-fade-leave-active {
+  transition: opacity var(--app-transition-normal);
+}
+
+.mask-fade-enter-from,
+.mask-fade-leave-to {
+  opacity: 0;
+}
+
+/* 列表项交错动画 */
+.list-stagger-enter-active {
+  transition: opacity var(--app-transition-normal),
+              transform var(--app-transition-normal);
+  transition-delay: var(--stagger-index, 0ms);
+}
+
+.list-stagger-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.list-stagger-leave-active {
+  transition: opacity var(--app-transition-fast),
+              transform var(--app-transition-fast);
+}
+
+.list-stagger-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* 元素呼吸动画 */
+@keyframes breathe {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-breathe {
+  animation: breathe 2s ease-in-out infinite;
+}
+
+/* 脉冲发光动画 */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(0, 212, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.6);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* 旋转动画 */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* 弹跳动画 */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-bounce {
+  animation: bounce 1s ease-in-out infinite;
+}
+
+/* 元素淡入 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in var(--app-transition-normal) ease-out;
+}
+
+/* 元素滑入 */
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-in-up {
+  animation: slide-in-up var(--app-transition-slow) ease-out;
+}
+
+/* ==================== 基础工具类 ==================== */
+
+/* 全局样式重置与基础工具类 */
+
+/* 应用主题背景色和文字颜色到根元素 */
+html,
+body,
+#app {
+  background-color: var(--app-bg-base);
+  color: var(--app-text-primary);
+  transition: background-color var(--app-transition-normal),
+              color var(--app-transition-normal);
+}
+
+/* 平滑滚动与字体平滑 */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 全局过渡效果类 */
+.transition-all {
+  transition: all 0.3s ease-out;
+}
+
+.transition-transform {
+  transition: transform 0.2s ease-out;
+}
+
+.transition-colors {
+  transition: color 0.2s ease-out, background-color 0.2s ease-out, border-color 0.2s ease-out;
+}
+
+/* 玻璃拟态卡片 */
+.glass-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+}
+
+.glass-card-overlay {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+/* 玻璃拟态主题下的玻璃卡片适配 */
+html.glassmorphism .glass-card {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+html.glassmorphism .glass-card-overlay {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* 霓虹边框 */
+.neon-border {
+  border: 1px solid rgba(0, 212, 255, 0.5);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.3),
+              inset 0 0 10px rgba(0, 212, 255, 0.1);
+}
+
+.neon-border:hover {
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.5),
+              inset 0 0 15px rgba(0, 212, 255, 0.15);
+}
+
+/* 玻璃拟态主题下的霓虹边框适配 */
+html.glassmorphism .neon-border {
+  border: 1px solid rgba(0, 168, 232, 0.3);
+  box-shadow: 0 0 8px rgba(0, 168, 232, 0.2);
+}
+
+html.glassmorphism .neon-border:hover {
+  box-shadow: 0 0 12px rgba(0, 168, 232, 0.3);
+}
+
+/* 悬浮上浮效果 */
+.hover-lift {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* 科技感渐变背景 */
+.tech-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #00d4ff 100%);
+}
+
+.tech-gradient-subtle {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 50%, rgba(0, 212, 255, 0.1) 100%);
+}
+
+/* ==================== 霓虹文字效果 ==================== */
+
+/* 主色霓虹文字 */
+.neon-text {
+  color: var(--app-color-primary);
+  text-shadow: 0 0 10px var(--app-color-primary),
+               0 0 20px color-mix(in srgb, var(--app-color-primary) 50%, transparent),
+               0 0 30px color-mix(in srgb, var(--app-color-primary) 30%, transparent);
+}
+
+/* 成功色霓虹文字 */
+.neon-text-success {
+  color: var(--app-color-success);
+  text-shadow: 0 0 10px var(--app-color-success),
+               0 0 20px color-mix(in srgb, var(--app-color-success) 50%, transparent),
+               0 0 30px color-mix(in srgb, var(--app-color-success) 30%, transparent);
+}
+
+/* 警告色霓虹文字 */
+.neon-text-warning {
+  color: var(--app-color-warning);
+  text-shadow: 0 0 10px var(--app-color-warning),
+               0 0 20px color-mix(in srgb, var(--app-color-warning) 50%, transparent),
+               0 0 30px color-mix(in srgb, var(--app-color-warning) 30%, transparent);
+}
+
+/* 柔和霓虹文字 */
+.neon-text-subtle {
+  color: var(--app-text-primary);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--app-color-primary) 40%, transparent);
+}
+
+/* 发光文字效果（兼容旧类名） */
+.glow-text {
+  color: var(--app-color-primary);
+  text-shadow: 0 0 10px var(--app-color-primary),
+               0 0 20px color-mix(in srgb, var(--app-color-primary) 50%, transparent),
+               0 0 30px color-mix(in srgb, var(--app-color-primary) 30%, transparent);
+}
+
+.glow-text-subtle {
+  color: var(--app-text-primary);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--app-color-primary) 40%, transparent);
+}
+
+/* ==================== 玻璃拟态主题霓虹文字适配 ==================== */
+html.glassmorphism .neon-text {
+  color: #00a8e8;
+  text-shadow: 0 0 5px rgba(0, 168, 232, 0.5);
+}
+
+html.glassmorphism .neon-text-success {
+  color: #67c23a;
+  text-shadow: 0 0 5px rgba(103, 194, 58, 0.5);
+}
+
+html.glassmorphism .neon-text-warning {
+  color: #e6a23c;
+  text-shadow: 0 0 5px rgba(230, 162, 60, 0.5);
+}
+
+html.glassmorphism .neon-text-subtle {
+  color: #303133;
+  text-shadow: none;
+}
+
+html.glassmorphism .glow-text {
+  color: #00a8e8;
+  text-shadow: 0 0 5px rgba(0, 168, 232, 0.5);
+}
+
+html.glassmorphism .glow-text-subtle {
+  color: #303133;
+  text-shadow: none;
+}
+
+/* ==================== 霓虹按钮样式 ==================== */
+
+/* 基础霓虹按钮 */
+.neon-btn {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--app-color-primary);
+  background: transparent;
+  color: var(--app-color-primary);
+  transition: all 0.3s ease;
+}
+
+.neon-btn:hover {
+  background: color-mix(in srgb, var(--app-color-primary) 10%, transparent);
+  box-shadow: 0 0 15px color-mix(in srgb, var(--app-color-primary) 40%, transparent);
+}
+
+/* 主色霓虹按钮 */
+.neon-btn-primary {
+  background: var(--app-color-primary) !important;
+  border-color: var(--app-color-primary) !important;
+  color: var(--app-text-inverse) !important;
+  box-shadow: 0 0 15px color-mix(in srgb, var(--app-color-primary) 50%, transparent);
+}
+
+.neon-btn-primary:hover {
+  box-shadow: 0 0 25px color-mix(in srgb, var(--app-color-primary) 70%, transparent),
+              0 0 50px color-mix(in srgb, var(--app-color-primary) 30%, transparent);
+}
+
+/* 次级霓虹按钮 */
+.neon-btn-secondary {
+  background: transparent !important;
+  border-color: var(--app-color-primary) !important;
+  color: var(--app-color-primary) !important;
+}
+
+.neon-btn-secondary:hover {
+  background: color-mix(in srgb, var(--app-color-primary) 15%, transparent) !important;
+  box-shadow: 0 0 15px color-mix(in srgb, var(--app-color-primary) 40%, transparent);
+}
+
+/* 成功霓虹按钮 */
+.neon-btn-success {
+  background: var(--app-color-success) !important;
+  border-color: var(--app-color-success) !important;
+  color: var(--app-text-inverse) !important;
+  box-shadow: 0 0 15px color-mix(in srgb, var(--app-color-success) 50%, transparent);
+}
+
+.neon-btn-success:hover {
+  box-shadow: 0 0 25px color-mix(in srgb, var(--app-color-success) 70%, transparent);
+}
+
+/* 信息霓虹按钮 */
+.neon-btn-info {
+  background: var(--app-color-primary) !important;
+  border-color: var(--app-color-primary) !important;
+  color: var(--app-text-inverse) !important;
+  box-shadow: 0 0 15px color-mix(in srgb, var(--app-color-primary) 50%, transparent);
+}
+
+.neon-btn-info:hover {
+  box-shadow: 0 0 25px color-mix(in srgb, var(--app-color-primary) 70%, transparent);
+}
+
+/* 警告霓虹按钮 */
+.neon-btn-warning {
+  background: var(--app-color-warning) !important;
+  border-color: var(--app-color-warning) !important;
+  color: var(--app-text-inverse) !important;
+  box-shadow: 0 0 15px color-mix(in srgb, var(--app-color-warning) 50%, transparent);
+}
+
+.neon-btn-warning:hover {
+  box-shadow: 0 0 25px color-mix(in srgb, var(--app-color-warning) 70%, transparent);
+}
+
+/* ==================== 霓虹输入框样式 ==================== */
+
+.neon-input {
+  position: relative;
+}
+
+.neon-input :deep(.el-input__wrapper) {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  box-shadow: none;
+  transition: all 0.3s ease;
+}
+
+.neon-input :deep(.el-input__wrapper:hover) {
+  border-color: var(--app-color-primary);
+}
+
+.neon-input :deep(.el-input__wrapper.is-focus) {
+  border-color: var(--app-color-primary);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--app-color-primary) 30%, transparent);
+}
+
+.neon-input :deep(.el-input__inner) {
+  color: var(--app-text-primary);
+}
+
+.neon-input :deep(.el-input__inner::placeholder) {
+  color: var(--app-text-placeholder);
+}
+
+/* 输入框前置/后置内容 */
+.neon-input :deep(.el-input-group__prepend),
+.neon-input :deep(.el-input-group__append) {
+  background: var(--app-bg-hover);
+  border-color: var(--app-border-default);
+  color: var(--app-text-secondary);
+}
+
+/* 玻璃拟态主题下的霓虹按钮适配 */
+html.glassmorphism .neon-btn {
+  border-color: #00a8e8;
+  color: #00a8e8;
+}
+
+html.glassmorphism .neon-btn:hover {
+  background: rgba(0, 168, 232, 0.1);
+  box-shadow: 0 0 10px rgba(0, 168, 232, 0.3);
+}
+
+html.glassmorphism .neon-btn-primary {
+  background: #00a8e8 !important;
+  border-color: #00a8e8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+html.glassmorphism .neon-btn-primary:hover {
+  background: #0090c8 !important;
+  box-shadow: 0 4px 12px rgba(0, 168, 232, 0.4);
+}
+
+html.glassmorphism .neon-btn-secondary {
+  background: transparent !important;
+  border-color: #00a8e8 !important;
+  color: #00a8e8 !important;
+}
+
+html.glassmorphism .neon-btn-secondary:hover {
+  background: rgba(0, 168, 232, 0.1) !important;
+}
+
+html.glassmorphism .neon-btn-success {
+  background: #67c23a !important;
+  border-color: #67c23a !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+html.glassmorphism .neon-btn-success:hover {
+  background: #5daf34 !important;
+}
+
+html.glassmorphism .neon-btn-info {
+  background: #00a8e8 !important;
+  border-color: #00a8e8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+html.glassmorphism .neon-btn-warning {
+  background: #e6a23c !important;
+  border-color: #e6a23c !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+html.glassmorphism .neon-btn-warning:hover {
+  background: #cf9236 !important;
+}
+
+/* 玻璃拟态主题下的霓虹输入框适配 */
+html.glassmorphism .neon-input :deep(.el-input__wrapper) {
+  background: #ffffff;
+  border-color: #dcdfe6;
+}
+
+html.glassmorphism .neon-input :deep(.el-input__wrapper:hover) {
+  border-color: #c0c4cc;
+}
+
+html.glassmorphism .neon-input :deep(.el-input__wrapper.is-focus) {
+  border-color: #00a8e8;
+  box-shadow: 0 0 0 2px rgba(0, 168, 232, 0.2);
+}
+
+html.glassmorphism .neon-input :deep(.el-input__inner) {
+  color: #303133;
+}
+
+html.glassmorphism .neon-input :deep(.el-input__inner::placeholder) {
+  color: #909399;
+}
+
+html.glassmorphism .neon-input :deep(.el-input-group__prepend),
+html.glassmorphism .neon-input :deep(.el-input-group__append) {
+  background: #f5f7fa;
+  border-color: #dcdfe6;
+  color: #606266;
+}
+
+/* 按钮点击反馈效果 */
+.btn-feedback {
+  transition: transform 0.1s ease-out;
+  user-select: none;
+}
+
+.btn-feedback:active {
+  transform: scale(0.97);
+}
+
+/* 主要操作按钮点击效果 */
+.btn-primary,
+.el-button--primary,
+.action-btn {
+  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+  user-select: none;
+}
+
+.btn-primary:active,
+.el-button--primary:active,
+.action-btn:active {
+  transform: scale(0.97);
+}
+
+/* 涟漪效果 - 基于 CSS pseudo-element */
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s ease-out, height 0.3s ease-out, opacity 0.3s ease-out;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ripple:active::after {
+  width: 200px;
+  height: 200px;
+  opacity: 1;
+  transition: width 0s, height 0s, opacity 0.3s ease-out;
+}
+
+/* ==================== 霓虹加载动画 ==================== */
+
+/* 霓虹旋转加载动画 - 周期 0.8s */
+@keyframes neon-spin {
+  0% {
+    transform: rotate(0deg);
+    filter: drop-shadow(0 0 4px var(--app-color-primary))
+            drop-shadow(0 0 8px var(--app-color-primary));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px var(--app-color-primary))
+            drop-shadow(0 0 16px var(--app-color-primary));
+  }
+  100% {
+    transform: rotate(360deg);
+    filter: drop-shadow(0 0 4px var(--app-color-primary))
+            drop-shadow(0 0 8px var(--app-color-primary));
+  }
+}
+
+/* 霓虹脉冲动画 - 周期 0.8s */
+@keyframes neon-pulse {
+  0%, 100% {
+    opacity: 0.6;
+    filter: drop-shadow(0 0 4px var(--app-color-primary));
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px var(--app-color-primary))
+            drop-shadow(0 0 16px var(--app-color-primary));
+  }
+}
+
+/* 霓虹旋转动画类 - 可复用的加载动画 */
+.neon-spin {
+  animation: neon-spin 0.8s linear infinite;
+}
+
+/* 霓虹脉冲动画类 */
+.neon-pulse {
+  animation: neon-pulse 0.8s ease-in-out infinite;
+}
+
+/* ==================== Element Plus 组件加载样式覆盖 ==================== */
+
+/* 表格加载状态霓虹样式 */
+.el-table--loading .el-loading-mask {
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.el-table--loading .el-loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.el-table--loading .el-loading-spinner .circular {
+  width: 32px;
+  height: 32px;
+  animation: neon-spin 0.8s linear infinite;
+}
+
+.el-table--loading .el-loading-spinner .circular .path {
+  stroke: var(--app-color-primary);
+  stroke-width: 2;
+  stroke-dasharray: 90, 126;
+  stroke-linecap: round;
+}
+
+.el-table--loading .el-loading-text {
+  color: var(--app-color-primary);
+  font-size: 13px;
+  text-shadow: 0 0 8px var(--app-color-primary);
+}
+
+/* 按钮加载状态霓虹样式 */
+.el-button.is-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.el-button.is-loading::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 212, 255, 0.4) 50%,
+    transparent 100%
+  );
+  animation: neon-btn-shimmer 0.8s ease-in-out infinite;
+}
+
+@keyframes neon-btn-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.el-button.is-loading .el-icon {
+  animation: neon-spin 0.8s linear infinite;
+}
+
+/* ==================== prefers-reduced-motion 媒体查询 ==================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* 禁用页面过渡 */
+  .page-fade-slide-enter-active,
+  .page-fade-slide-leave-active,
+  .page-fade-enter-active,
+  .page-fade-leave-active {
+    transition: none !important;
+  }
+
+  /* 禁用对话框过渡 */
+  .dialog-fade-scale-enter-active,
+  .dialog-fade-scale-leave-active,
+  .drawer-slide-up-enter-active,
+  .drawer-slide-up-leave-active,
+  .drawer-slide-right-enter-active,
+  .drawer-slide-right-leave-active,
+  .mask-fade-enter-active,
+  .mask-fade-leave-active {
+    transition: none !important;
+  }
+
+  /* 禁用主题过渡 */
+  .theme-transition,
+  .theme-transition *,
+  .theme-transition *::before,
+  .theme-transition *::after {
+    transition: none !important;
+  }
+
+  /* 禁用所有动画类 */
+  .animate-breathe,
+  .animate-pulse-glow,
+  .animate-spin,
+  .animate-bounce,
+  .animate-fade-in,
+  .animate-slide-in-up,
+  .neon-spin,
+  .neon-pulse {
+    animation: none !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}

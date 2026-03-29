@@ -14,10 +14,9 @@ import {
   parseProvider
 } from '@/services/modelStore'
 import { showError, showSuccess, confirm, AppError, ErrorCode } from '@/utils/errorHandler'
-import AppLayout from '@/components/layout/AppLayout.vue'
 
-// 页面标题
-const pageTitle = '模型管理'
+// 加载状态
+const loading = ref(true)
 
 // 模型列表数据
 const models = ref<Model[]>([])
@@ -106,9 +105,14 @@ const formRules = {
 
 // 加载模型列表
 const loadModels = async () => {
-  models.value = await listModels()
-  // 默认展开所有供应商
-  activeCollapse.value = Array.from(groupedModels.value.keys())
+  loading.value = true
+  try {
+    models.value = await listModels()
+    // 默认展开所有供应商
+    activeCollapse.value = Array.from(groupedModels.value.keys())
+  } finally {
+    loading.value = false
+  }
 }
 
 // 监听 ID 变化，自动解析 provider
@@ -225,8 +229,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <AppLayout :title="pageTitle">
-    <div class="model-manage">
+  <div class="model-manage" v-loading="loading" element-loading-text="加载模型列表...">
       <!-- 页面头部 -->
       <div class="page-header">
         <div class="header-left">
@@ -238,8 +241,13 @@ onMounted(() => {
         </el-button>
       </div>
 
+      <!-- 加载骨架屏 -->
+      <div v-if="loading" class="loading-skeleton">
+        <el-skeleton :rows="5" animated />
+      </div>
+
       <!-- 供应商分组展示 -->
-      <div class="provider-groups">
+      <div v-else class="provider-groups">
         <el-collapse v-model="activeCollapse" class="provider-collapse">
           <el-collapse-item
             v-for="provider in providers"
@@ -354,82 +362,400 @@ onMounted(() => {
         </template>
       </el-dialog>
     </div>
-  </AppLayout>
 </template>
 
 <style scoped>
+/* 容器样式 */
 .model-manage {
   max-width: 1200px;
   margin: 0 auto;
 }
 
+/* 页面头部 */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: var(--app-spacing-5);
+  padding: var(--app-spacing-4) var(--app-spacing-5);
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  border-radius: var(--app-radius-lg);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--app-spacing-3);
 }
 
 .subtitle {
-  color: #909399;
+  color: var(--app-text-tertiary);
   font-size: 14px;
 }
 
+/* 加载骨架屏 */
+.loading-skeleton {
+  padding: var(--app-spacing-6);
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  border-radius: var(--app-radius-lg);
+}
+
+/* 赛博朋克主题 - 统计信息使用更亮的灰色 */
+html.cyberpunk .subtitle {
+  color: #a0a0c0;
+}
+
+/* 霓虹发光按钮 */
+.page-header .el-button--primary {
+  background: linear-gradient(135deg, var(--app-color-primary), var(--app-color-secondary));
+  border: none;
+  box-shadow:
+    0 0 10px rgba(0, 212, 255, 0.4),
+    0 0 20px rgba(0, 212, 255, 0.2),
+    0 0 30px rgba(0, 212, 255, 0.1);
+  transition: all var(--app-transition-normal);
+}
+
+.page-header .el-button--primary:hover {
+  box-shadow:
+    0 0 15px rgba(0, 212, 255, 0.6),
+    0 0 30px rgba(0, 212, 255, 0.4),
+    0 0 45px rgba(0, 212, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+/* 供应商分组区域 */
 .provider-groups {
   min-height: 400px;
 }
 
+/* 折叠面板 - 玻璃背景 + 霓虹指示器 */
 .provider-collapse {
   border: none;
 }
 
+/* 折叠面板头部 - 玻璃拟态 */
 .provider-collapse :deep(.el-collapse-item__header) {
-  background-color: #f5f7fa;
-  border-radius: 8px;
-  padding: 0 16px;
-  margin-bottom: 8px;
-  height: 50px;
+  background: var(--app-glass-bg, rgba(18, 18, 26, 0.75));
+  backdrop-filter: var(--app-glass-blur, blur(12px));
+  -webkit-backdrop-filter: var(--app-glass-blur, blur(12px));
+  border: 1px solid var(--app-glass-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--app-radius-md);
+  padding: 0 var(--app-spacing-4);
+  margin-bottom: var(--app-spacing-2);
+  height: 56px;
   font-size: 15px;
+  color: var(--app-text-primary);
+  transition: all var(--app-transition-normal);
+}
+
+.provider-collapse :deep(.el-collapse-item__header:hover) {
+  background: var(--app-bg-elevated);
+  border-color: var(--app-border-hover);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.1);
+}
+
+/* 霓虹展开指示器 */
+.provider-collapse :deep(.el-collapse-item__arrow) {
+  color: var(--app-color-primary);
+  filter: drop-shadow(0 0 5px rgba(0, 212, 255, 0.6));
+  transition: all var(--app-transition-bounce);
+}
+
+.provider-collapse :deep(.el-collapse-item__arrow.is-active) {
+  color: var(--app-color-secondary);
+  filter: drop-shadow(0 0 8px rgba(0, 255, 213, 0.8));
+  transform: rotate(90deg);
 }
 
 .provider-collapse :deep(.el-collapse-item__wrap) {
   border: none;
+  background: transparent;
 }
 
 .provider-collapse :deep(.el-collapse-item__content) {
-  padding: 0 0 16px 0;
+  padding: var(--app-spacing-3) 0 var(--app-spacing-4) 0;
 }
 
+/* 供应商头部信息 */
 .provider-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--app-spacing-3);
+  flex: 1;
+}
+
+.provider-header .el-tag {
+  background: rgba(0, 212, 255, 0.15);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  color: var(--app-color-primary);
+  font-weight: 500;
+}
+
+/* 赛博朋克主题 - 供应商标签使用更亮的颜色 */
+html.cyberpunk .provider-header .el-tag {
+  color: #4dd0e1;
+  background: rgba(0, 255, 255, 0.15);
+  border-color: rgba(0, 255, 255, 0.4);
+}
+
+/* 玻璃拟态主题 - 供应商标签使用深蓝色 */
+html.glassmorphism .provider-header .el-tag {
+  color: #1d4ed8;
+  background: rgba(37, 99, 235, 0.15);
+  border-color: rgba(37, 99, 235, 0.4);
 }
 
 .model-count {
-  color: #909399;
+  color: var(--app-text-tertiary);
   font-size: 13px;
 }
 
+/* 表格样式 - 悬停高亮 + 斑马纹 */
+.provider-collapse :deep(.el-table) {
+  background: transparent;
+  --el-table-header-bg-color: var(--app-bg-elevated);
+  --el-table-row-hover-bg-color: rgba(0, 212, 255, 0.08);
+  --el-table-border-color: var(--app-border-default);
+  border: 1px solid var(--app-border-default);
+  border-radius: var(--app-radius-md);
+  overflow: hidden;
+}
+
+.provider-collapse :deep(.el-table__header) {
+  background: var(--app-bg-elevated);
+}
+
+.provider-collapse :deep(.el-table__header th) {
+  background: var(--app-bg-elevated);
+  color: var(--app-text-primary);
+  font-weight: 600;
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+.provider-collapse :deep(.el-table__body tr) {
+  background: var(--app-bg-card);
+  transition: background-color var(--app-transition-fast);
+}
+
+/* 斑马纹 - 交替行颜色 */
+.provider-collapse :deep(.el-table__body tr:nth-child(even)) {
+  background: var(--app-bg-base);
+}
+
+.provider-collapse :deep(.el-table__body tr:nth-child(odd)) {
+  background: var(--app-bg-card);
+}
+
+/* 悬停高亮效果 */
+.provider-collapse :deep(.el-table__body tr:hover > td) {
+  background: rgba(0, 212, 255, 0.1) !important;
+  box-shadow: inset 0 0 20px rgba(0, 212, 255, 0.05);
+}
+
+.provider-collapse :deep(.el-table__body td) {
+  color: var(--app-text-secondary);
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+/* 表格内按钮 */
+.provider-collapse :deep(.el-button--primary.is-link) {
+  color: var(--app-color-primary);
+  transition: all var(--app-transition-fast);
+}
+
+.provider-collapse :deep(.el-button--primary.is-link:hover) {
+  color: var(--app-color-secondary);
+  text-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
+}
+
+.provider-collapse :deep(.el-button--danger.is-link) {
+  color: var(--app-color-danger);
+  transition: all var(--app-transition-fast);
+}
+
+.provider-collapse :deep(.el-button--danger.is-link:hover) {
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+/* 模型 ID 代码样式 */
 .model-id {
-  background-color: #f5f7fa;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
+  background: rgba(0, 212, 255, 0.1);
+  padding: 2px var(--app-spacing-2);
+  border-radius: var(--app-radius-sm);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
   font-size: 13px;
-  color: #409eff;
+  color: var(--app-color-primary);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+/* 赛博朋克主题 - 模型ID使用更亮的青色 */
+html.cyberpunk .model-id {
+  color: #4dd0e1;
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+}
+
+/* 玻璃拟态主题 - 模型ID使用深蓝色 */
+html.glassmorphism .model-id {
+  color: #1d4ed8;
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+/* 玻璃拟态主题 - 表格内按钮增强对比度 */
+html.glassmorphism .provider-collapse :deep(.el-button--primary.is-link) {
+  color: #1d4ed8;
+  font-weight: 500;
+}
+
+html.glassmorphism .provider-collapse :deep(.el-button--primary.is-link:hover) {
+  color: #1e40af;
+  text-shadow: none;
+}
+
+html.glassmorphism .provider-collapse :deep(.el-button--danger.is-link) {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+html.glassmorphism .provider-collapse :deep(.el-button--danger.is-link:hover) {
+  color: #b91c1c;
+  text-shadow: none;
+}
+
+/* 空状态 */
+.provider-groups .el-empty {
+  --el-empty-fill-color-0: var(--app-bg-card);
+  --el-empty-fill-color-1: var(--app-bg-elevated);
+  --el-empty-description-color: var(--app-text-tertiary);
+  padding: var(--app-spacing-12) 0;
+}
+
+/* 对话框 - 玻璃效果 */
+:deep(.el-dialog) {
+  background: var(--app-glass-bg, rgba(18, 18, 26, 0.9));
+  backdrop-filter: var(--app-glass-blur, blur(20px));
+  -webkit-backdrop-filter: var(--app-glass-blur, blur(20px));
+  border: 1px solid var(--app-glass-border, rgba(255, 255, 255, 0.1));
+  border-radius: var(--app-radius-xl);
+  box-shadow:
+    0 25px 50px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(0, 212, 255, 0.1);
+}
+
+:deep(.el-dialog__header) {
+  padding: var(--app-spacing-5);
+  margin-right: 0;
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+:deep(.el-dialog__title) {
+  color: var(--app-text-primary);
+  font-weight: 600;
+  font-size: 18px;
+}
+
+:deep(.el-dialog__headerbtn .el-dialog__close) {
+  color: var(--app-text-tertiary);
+  transition: all var(--app-transition-fast);
+}
+
+:deep(.el-dialog__headerbtn:hover .el-dialog__close) {
+  color: var(--app-color-primary);
+  filter: drop-shadow(0 0 5px rgba(0, 212, 255, 0.6));
+}
+
+:deep(.el-dialog__body) {
+  padding: var(--app-spacing-5);
+  color: var(--app-text-secondary);
+}
+
+:deep(.el-dialog__footer) {
+  padding: var(--app-spacing-4) var(--app-spacing-5);
+  border-top: 1px solid var(--app-border-default);
+}
+
+/* 对话框内表单样式 */
+:deep(.el-form-item__label) {
+  color: var(--app-text-primary);
+  font-weight: 500;
+}
+
+:deep(.el-input__wrapper) {
+  background: var(--app-bg-elevated);
+  box-shadow: 0 0 0 1px var(--app-border-default) inset;
+  transition: all var(--app-transition-fast);
+}
+
+:deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px var(--app-border-hover) inset;
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  box-shadow:
+    0 0 0 1px var(--app-color-primary) inset,
+    0 0 10px rgba(0, 212, 255, 0.2);
+}
+
+:deep(.el-input__inner) {
+  color: var(--app-text-primary);
+  background: transparent;
+}
+
+:deep(.el-input__inner::placeholder) {
+  color: var(--app-text-disabled);
+}
+
+:deep(.el-input__count-inner) {
+  background: transparent;
+  color: var(--app-text-tertiary);
 }
 
 .form-tip {
   font-size: 12px;
-  color: #909399;
-  margin-top: 4px;
+  color: var(--app-text-tertiary);
+  margin-top: var(--app-spacing-1);
   line-height: 1.4;
+}
+
+/* 对话框底部按钮 */
+:deep(.el-dialog__footer .el-button:not(.el-button--primary)) {
+  background: transparent;
+  border-color: var(--app-border-default);
+  color: var(--app-text-secondary);
+}
+
+:deep(.el-dialog__footer .el-button:not(.el-button--primary):hover) {
+  border-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+}
+
+:deep(.el-dialog__footer .el-button--primary) {
+  background: linear-gradient(135deg, var(--app-color-primary), var(--app-color-secondary));
+  border: none;
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+}
+
+:deep(.el-dialog__footer .el-button--primary:hover) {
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    gap: var(--app-spacing-3);
+    align-items: stretch;
+  }
+
+  .provider-header {
+    flex-wrap: wrap;
+  }
+
+  .model-id {
+    font-size: 12px;
+  }
 }
 </style>

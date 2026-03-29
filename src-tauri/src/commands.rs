@@ -2,13 +2,17 @@
 // 提供前端与后端配置文件交互的命令
 
 use std::fs;
+use std::net::TcpStream;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Mutex;
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use tauri_plugin_shell::process::CommandChild;
+use tauri::Emitter;
+use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
+use tokio::fs as async_fs;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -76,7 +80,7 @@ struct AppSettings {
 
 /// 读取 Monitor 端口配置
 /// 返回 (web_port, proxy_port)
-fn get_monitor_ports() -> (u16, u16) {
+pub fn get_monitor_ports() -> (u16, u16) {
     // 默认端口
     let default_ports = (7100, 7101);
     
@@ -96,52 +100,66 @@ fn get_monitor_ports() -> (u16, u16) {
     default_ports
 }
 
-/// 读取应用设置
+/// 读取应用设置（异步）
 #[tauri::command]
-pub fn read_settings() -> Result<String, String> {
+pub async fn read_settings() -> Result<String, String> {
     let path = get_settings_path()?;
     if !path.exists() {
         // 返回空的 JSON 对象
         return Ok("{}".to_string());
     }
-    fs::read_to_string(&path).map_err(|e| format!("读取设置失败: {}", e))
+    async_fs::read_to_string(&path)
+        .await
+        .map_err(|e| format!("读取设置失败: {}", e))
 }
 
-/// 写入应用设置
+/// 写入应用设置（异步）
 #[tauri::command]
-pub fn write_settings(content: String) -> Result<(), String> {
+pub async fn write_settings(content: String) -> Result<(), String> {
     let path = get_settings_path()?;
     // 确保配置目录存在
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|e| format!("创建配置目录失败: {}", e))?;
+        async_fs::create_dir_all(parent)
+            .await
+            .map_err(|e| format!("创建配置目录失败: {}", e))?;
     }
-    fs::write(&path, content).map_err(|e| format!("写入设置失败: {}", e))
+    async_fs::write(&path, content)
+        .await
+        .map_err(|e| format!("写入设置失败: {}", e))
 }
 
-/// 读取主配置文件
+/// 读取主配置文件（异步）
 #[tauri::command]
-pub fn read_config() -> Result<String, String> {
+pub async fn read_config() -> Result<String, String> {
     let path = get_config_path()?;
-    fs::read_to_string(&path).map_err(|e| format!("读取配置失败: {}", e))
+    async_fs::read_to_string(&path)
+        .await
+        .map_err(|e| format!("读取配置失败: {}", e))
 }
 
-/// 读取 OpenCode 配置文件 (opencode.json)
+/// 读取 OpenCode 配置文件 (opencode.json)（异步）
 /// 用于从 provider 字段提取默认模型列表
 #[tauri::command]
-pub fn read_opencode_config() -> Result<String, String> {
+pub async fn read_opencode_config() -> Result<String, String> {
     let path = get_opencode_config_path()?;
-    fs::read_to_string(&path).map_err(|e| format!("读取 OpenCode 配置失败: {}", e))
+    async_fs::read_to_string(&path)
+        .await
+        .map_err(|e| format!("读取 OpenCode 配置失败: {}", e))
 }
 
-/// 写入主配置文件
+/// 写入主配置文件（异步）
 #[tauri::command]
-pub fn write_config(content: String) -> Result<(), String> {
+pub async fn write_config(content: String) -> Result<(), String> {
     let path = get_config_path()?;
     // 确保配置目录存在
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|e| format!("创建配置目录失败: {}", e))?;
+        async_fs::create_dir_all(parent)
+            .await
+            .map_err(|e| format!("创建配置目录失败: {}", e))?;
     }
-    fs::write(&path, content).map_err(|e| format!("写入配置失败: {}", e))
+    async_fs::write(&path, content)
+        .await
+        .map_err(|e| format!("写入配置失败: {}", e))
 }
 
 /// 启动 opencode 命令行工具
@@ -259,63 +277,302 @@ pub fn launch_opencode(
     }
 }
 
-/// 列出所有预设文件名
+/// 列出所有预设文件名（异步）
 #[tauri::command]
-pub fn list_presets() -> Result<Vec<String>, String> {
+pub async fn list_presets() -> Result<Vec<String>, String> {
     let path = get_presets_dir()?;
     if !path.exists() {
         return Ok(vec![]);
     }
-    fs::read_dir(path)
-        .map(|entries| {
-            entries
-                .filter_map(|e| e.ok())
-                .filter_map(|e| e.file_name().to_str().map(|s| s.replace(".json", "")))
-                .collect()
-        })
-        .map_err(|e| format!("读取预设列表失败: {}", e))
+    let mut entries = async_fs::read_dir(&path)
+        .await
+        .map_err(|e| format!("读取预设列表失败: {}", e))?;
+    
+    let mut names = Vec::new();
+    while let Some(entry) = entries
+        .next_entry()
+        .await
+        .map_err(|e| format!("读取预设条目失败: {}", e))?
+    {
+        if let Some(name) = entry.file_name().to_str() {
+            names.push(name.replace(".json", ""));
+        }
+    }
+    Ok(names)
 }
 
-/// 读取指定预设文件内容
+/// 读取指定预设文件内容（异步）
 #[tauri::command]
-pub fn read_preset(name: String) -> Result<String, String> {
+pub async fn read_preset(name: String) -> Result<String, String> {
     let path = get_presets_dir()?.join(format!("{}.json", name));
-    fs::read_to_string(&path).map_err(|e| format!("读取预设失败: {}", e))
+    async_fs::read_to_string(&path)
+        .await
+        .map_err(|e| format!("读取预设失败: {}", e))
 }
 
-/// 保存预设到文件
+/// 保存预设到文件（异步）
 #[tauri::command]
-pub fn save_preset(name: String, content: String) -> Result<(), String> {
+pub async fn save_preset(name: String, content: String) -> Result<(), String> {
     let presets_dir = get_presets_dir()?;
     // 确保预设目录存在
-    fs::create_dir_all(&presets_dir).map_err(|e| format!("创建预设目录失败: {}", e))?;
+    async_fs::create_dir_all(&presets_dir)
+        .await
+        .map_err(|e| format!("创建预设目录失败: {}", e))?;
     let path = presets_dir.join(format!("{}.json", name));
-    fs::write(&path, content).map_err(|e| format!("保存预设失败: {}", e))
+    async_fs::write(&path, content)
+        .await
+        .map_err(|e| format!("保存预设失败: {}", e))
 }
 
-/// 删除指定预设文件
+/// 删除指定预设文件（异步）
 #[tauri::command]
-pub fn delete_preset(name: String) -> Result<(), String> {
+pub async fn delete_preset(name: String) -> Result<(), String> {
     let path = get_presets_dir()?.join(format!("{}.json", name));
-    fs::remove_file(&path).map_err(|e| format!("删除预设失败: {}", e))
+    async_fs::remove_file(&path)
+        .await
+        .map_err(|e| format!("删除预设失败: {}", e))
 }
 
-/// 读取模型配置文件
+/// 读取模型配置文件（异步）
 #[tauri::command]
-pub fn read_models() -> Result<String, String> {
+pub async fn read_models() -> Result<String, String> {
     let path = get_models_path()?;
-    fs::read_to_string(&path).map_err(|e| format!("读取模型列表失败: {}", e))
+    async_fs::read_to_string(&path)
+        .await
+        .map_err(|e| format!("读取模型列表失败: {}", e))
 }
 
-/// 写入模型配置文件
+/// 写入模型配置文件（异步）
 #[tauri::command]
-pub fn write_models(content: String) -> Result<(), String> {
+pub async fn write_models(content: String) -> Result<(), String> {
     let path = get_models_path()?;
     // 确保配置目录存在
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|e| format!("创建配置目录失败: {}", e))?;
+        async_fs::create_dir_all(parent)
+            .await
+            .map_err(|e| format!("创建配置目录失败: {}", e))?;
     }
-    fs::write(&path, content).map_err(|e| format!("写入模型列表失败: {}", e))
+    async_fs::write(&path, content)
+        .await
+        .map_err(|e| format!("写入模型列表失败: {}", e))
+}
+
+/// 默认模型列表
+const DEFAULT_MODELS_JSON: &str = r#"[
+  {"id": "wuwen/glm-5", "name": "GLM-5", "provider": "wuwen"},
+  {"id": "wuwen/minimax-m2.5", "name": "MiniMax M2.5", "provider": "wuwen"},
+  {"id": "wuwen/minimax-m2.7", "name": "MiniMax M2.7", "provider": "wuwen"},
+  {"id": "wuwen/kimi-k2.5", "name": "Kimi K2.5", "provider": "wuwen"}
+]"#;
+
+/// 读取模型列表（合并降级逻辑，单次 IPC 调用）
+/// 优先级：models.json > opencode.json provider > 默认值
+#[tauri::command]
+pub async fn read_models_with_fallback() -> Result<String, String> {
+    let models_path = get_models_path()?;
+    
+    // 1. 尝试读取 models.json
+    if models_path.exists() {
+        if let Ok(content) = async_fs::read_to_string(&models_path).await {
+            // 检查是否为有效非空 JSON 数组
+            if !content.trim().is_empty() && content.trim() != "[]" {
+                return Ok(content);
+            }
+        }
+    }
+    
+    // 2. 尝试从 opencode.json 的 provider 字段读取
+    let opencode_path = get_opencode_config_path()?;
+    if opencode_path.exists() {
+        if let Ok(content) = async_fs::read_to_string(&opencode_path).await {
+            // 解析 opencode.json 并提取模型
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(provider) = json.get("provider") {
+                    if let Some(provider_obj) = provider.as_object() {
+                        let models: Vec<serde_json::Value> = provider_obj
+                            .iter()
+                            .flat_map(|(provider_name, provider_config)| {
+                                if let Some(models_obj) = provider_config.get("models").and_then(|m| m.as_object()) {
+                                    models_obj.iter().map(move |(model_id, model_config)| {
+                                        serde_json::json!({
+                                            "id": format!("{}/{}", provider_name, model_id),
+                                            "name": model_config.get("name").and_then(|n| n.as_str()).unwrap_or(model_id),
+                                            "provider": provider_name
+                                        })
+                                    }).collect::<Vec<_>>()
+                                } else {
+                                    vec![]
+                                }
+                            })
+                            .collect();
+                        
+                        if !models.is_empty() {
+                            return Ok(serde_json::to_string(&models).unwrap_or(DEFAULT_MODELS_JSON.to_string()));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // 3. 返回默认模型列表
+    Ok(DEFAULT_MODELS_JSON.to_string())
+}
+
+/// 读取所有预设（合并命令，避免 N+1 问题）
+/// 一次返回所有预设的完整数据
+#[tauri::command]
+pub async fn read_all_presets() -> Result<String, String> {
+    let presets_dir = get_presets_dir()?;
+    if !presets_dir.exists() {
+        return Ok("[]".to_string());
+    }
+    
+    let mut entries = async_fs::read_dir(&presets_dir)
+        .await
+        .map_err(|e| format!("读取预设目录失败: {}", e))?;
+    
+    let mut presets: Vec<serde_json::Value> = Vec::new();
+    
+    while let Some(entry) = entries
+        .next_entry()
+        .await
+        .map_err(|e| format!("读取预设条目失败: {}", e))?
+    {
+        let file_name = entry.file_name();
+        let name = file_name.to_string_lossy();
+        
+        if name.ends_with(".json") {
+            let preset_name = name.trim_end_matches(".json");
+            let path = entry.path();
+            
+            if let Ok(content) = async_fs::read_to_string(&path).await {
+                if let Ok(mut data) = serde_json::from_str::<serde_json::Value>(&content) {
+                    // 添加预设名称
+                    if let Some(obj) = data.as_object_mut() {
+                        obj.insert("name".to_string(), serde_json::json!(preset_name));
+                    }
+                    presets.push(data);
+                }
+            }
+        }
+    }
+    
+    // 按更新时间倒序排列
+    presets.sort_by(|a, b| {
+        let a_time = a.get("updatedAt").and_then(|t| t.as_str()).unwrap_or("");
+        let b_time = b.get("updatedAt").and_then(|t| t.as_str()).unwrap_or("");
+        b_time.cmp(a_time)
+    });
+    
+    Ok(serde_json::to_string(&presets).unwrap_or("[]".to_string()))
+}
+
+// ============== 端口管理工具 ==============
+
+/// 检测端口是否被占用
+pub fn is_port_in_use(port: u16) -> bool {
+    TcpStream::connect(format!("127.0.0.1:{}", port)).is_ok()
+}
+
+/// 终止占用指定端口的进程（跨平台）
+/// 返回: true 表示成功终止了进程，false 表示端口未被占用
+#[tauri::command]
+pub fn kill_port_process(port: u16) -> Result<bool, String> {
+    if !is_port_in_use(port) {
+        return Ok(false); // 端口未被占用
+    }
+
+    println!("[PortManager] 端口 {} 被占用，尝试清理...", port);
+
+    #[cfg(target_os = "windows")]
+    {
+        // Windows: 使用 netstat + taskkill
+        // 1. 查找占用端口的 PID
+        let output = Command::new("cmd")
+            .args(["/C", &format!("netstat -ano | findstr :{}", port)])
+            .output()
+            .map_err(|e| format!("执行 netstat 失败: {}", e))?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let mut killed = false;
+
+        // 解析 PID（格式："... 127.0.0.1:7100 ... PID"）
+        for line in stdout.lines() {
+            // 只处理 LISTENING 状态的行
+            if !line.contains("LISTENING") {
+                continue;
+            }
+            
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if let Some(&pid_str) = parts.last() {
+                if let Ok(pid) = pid_str.parse::<u32>() {
+                    // 排除 PID 0 (系统)
+                    if pid > 0 {
+                        // 2. 终止进程
+                        let kill_result = Command::new("taskkill")
+                            .args(["/F", "/PID", &pid.to_string()])
+                            .output();
+
+                        if let Ok(result) = kill_result {
+                            if result.status.success() {
+                                println!("[PortManager] 已终止进程 {} (占用端口 {})", pid, port);
+                                killed = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if killed {
+            // 等待端口释放
+            std::thread::sleep(Duration::from_millis(500));
+            Ok(true)
+        } else {
+            Err(format!("无法终止占用端口 {} 的进程", port))
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        // Unix: 使用 lsof + kill
+        let output = Command::new("lsof")
+            .args(["-t", "-i", &format!(":{}", port)])
+            .output()
+            .map_err(|e| format!("执行 lsof 失败: {}", e))?;
+
+        let pids = String::from_utf8_lossy(&output.stdout);
+        let mut killed = false;
+
+        for pid_str in pids.lines() {
+            if let Ok(pid) = pid_str.parse::<u32>() {
+                let _ = Command::new("kill")
+                    .args(["-9", &pid.to_string()])
+                    .status();
+                println!("[PortManager] 已终止进程 {} (占用端口 {})", pid, port);
+                killed = true;
+            }
+        }
+
+        if killed {
+            std::thread::sleep(Duration::from_millis(500));
+        }
+        Ok(killed)
+    }
+}
+
+/// 清理 Monitor 服务所需的端口
+fn cleanup_monitor_ports() -> Result<(), String> {
+    let (web_port, proxy_port) = get_monitor_ports();
+
+    for port in [web_port, proxy_port] {
+        if is_port_in_use(port) {
+            kill_port_process(port)?;
+        }
+    }
+
+    Ok(())
 }
 
 // ============== Sidecar 监控服务管理 ==============
@@ -350,6 +607,12 @@ pub async fn start_monitor_service(
     // 获取端口配置
     let (web_port, proxy_port) = get_monitor_ports();
 
+    // ★ 启动前清理端口（解决残留进程问题）
+    println!("[Monitor] 检查端口 {} 和 {}...", web_port, proxy_port);
+    if let Err(e) = cleanup_monitor_ports() {
+        println!("[Monitor] 警告: 端口清理失败: {}", e);
+    }
+
     // 创建 sidecar 命令
     let mut sidecar = app
         .shell()
@@ -361,15 +624,59 @@ pub async fn start_monitor_service(
         .env("PORT", web_port.to_string())
         .env("PROXY_PORT", proxy_port.to_string());
 
+    // 清除代理环境变量，避免 http-proxy 尝试连接上游代理
+    // Monitor 作为透明代理，不应链式代理
+    sidecar = sidecar
+        .env("HTTP_PROXY", "")
+        .env("HTTPS_PROXY", "")
+        .env("http_proxy", "")
+        .env("https_proxy", "")
+        .env("ALL_PROXY", "")
+        .env("all_proxy", "")
+        .env("NO_PROXY", "*");  // 禁用所有上游代理
+
     // 如果配置了企业代理 CA 证书，设置环境变量
     if !enterprise_ca_cert_path.is_empty() {
         sidecar = sidecar.env("ENTERPRISE_CA_CERT_PATH", &enterprise_ca_cert_path);
     }
 
     // 启动 sidecar 进程
-    let (_rx, child) = sidecar
+    let (mut rx, child) = sidecar
         .spawn()
         .map_err(|e| format!("启动 sidecar 失败: {}", e))?;
+
+    // 获取 app handle 用于在异步任务中发送事件
+    let app_handle = app.clone();
+
+    // 在后台异步读取 sidecar 输出并打印到终端
+    tauri::async_runtime::spawn(async move {
+        println!("[Monitor Sidecar] 开始监听输出...");
+        while let Some(event) = rx.recv().await {
+            match event {
+                CommandEvent::Stdout(line) => {
+                    let output = String::from_utf8_lossy(&line);
+                    println!("[Monitor] {}", output.trim());
+                    // 同时发送事件到前端（可选）
+                    let _ = app_handle.emit("monitor:log", output.trim().to_string());
+                }
+                CommandEvent::Stderr(line) => {
+                    let output = String::from_utf8_lossy(&line);
+                    eprintln!("[Monitor ERR] {}", output.trim());
+                    let _ = app_handle.emit("monitor:error", output.trim().to_string());
+                }
+                CommandEvent::Error(err) => {
+                    eprintln!("[Monitor ERROR] {}", err);
+                    let _ = app_handle.emit("monitor:error", err);
+                }
+                CommandEvent::Terminated(payload) => {
+                    println!("[Monitor] 进程已终止: code={:?}, signal={:?}", payload.code, payload.signal);
+                    let _ = app_handle.emit("monitor:terminated", payload);
+                    break;
+                }
+                _ => {}
+            }
+        }
+    });
 
     // 存储进程句柄
     {

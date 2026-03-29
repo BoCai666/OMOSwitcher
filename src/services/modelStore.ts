@@ -5,7 +5,7 @@
  * 若 models.json 不存在，则从 opencode.json 的 provider 字段读取默认模型
  */
 
-import type { Model, OpenCodeConfig } from '@/types'
+import type { Model } from '@/types'
 import { AppError, ErrorCode } from '@/utils/errorHandler'
 
 // 默认模型列表
@@ -50,7 +50,7 @@ export function parseProvider(id: string): string | null {
 }
 
 /**
- * 获取所有模型
+ * 获取所有模型（使用合并命令，单次 IPC 调用）
  */
 export async function listModels(): Promise<Model[]> {
   // 返回缓存
@@ -61,8 +61,8 @@ export async function listModels(): Promise<Model[]> {
   try {
     const invoke = await getTauriInvoke()
     if (invoke) {
-      // 尝试读取 models.json
-      const content = await invoke<string>('read_models')
+      // 使用新的合并命令，一次性完成降级逻辑
+      const content = await invoke<string>('read_models_with_fallback')
       if (content) {
         modelsCache = JSON.parse(content)
         if (modelsCache && modelsCache.length > 0) {
@@ -71,68 +71,11 @@ export async function listModels(): Promise<Model[]> {
       }
     }
   } catch (error) {
-    // models.json 不存在，尝试从 opencode.json 读取
-    console.log('读取模型列表失败，尝试从 opencode.json 读取:', error)
+    console.error('读取模型列表失败:', error)
   }
 
-  // models.json 不存在或为空，从 opencode.json 的 provider 字段读取默认模型
-  const modelsFromProvider = await loadModelsFromOpenCodeProvider()
-  if (modelsFromProvider.length > 0) {
-    modelsCache = modelsFromProvider
-    return [...modelsFromProvider]
-  }
-
-  // 如果 opencode.json 也没有 provider 字段，使用硬编码默认值
-  return [...DEFAULT_MODELS]
-}
-
-/**
- * 从 opencode.json 的 provider 字段加载模型列表
- * 遍历所有 provider，提取其中的模型信息
- */
-async function loadModelsFromOpenCodeProvider(): Promise<Model[]> {
-  try {
-    const invoke = await getTauriInvoke()
-    if (!invoke) {
-      return []
-    }
-
-    // 读取 opencode.json
-    const content = await invoke<string>('read_opencode_config')
-    if (!content) {
-      return []
-    }
-
-    const config = JSON.parse(content) as OpenCodeConfig
-    if (!config.provider) {
-      return []
-    }
-
-    const models: Model[] = []
-
-    // 遍历所有 provider
-    for (const [providerName, providerConfig] of Object.entries(config.provider)) {
-      if (!providerConfig.models) {
-        continue
-      }
-
-      // 遍历该 provider 下的所有模型
-      for (const [modelId, modelConfig] of Object.entries(providerConfig.models)) {
-        // 模型 ID 格式: provider/model-name
-        const fullId = `${providerName}/${modelId}`
-        models.push({
-          id: fullId,
-          name: modelConfig.name || modelId,
-          provider: providerName
-        })
-      }
-    }
-
-    return models
-  } catch (error) {
-    console.warn('从 opencode.json 读取 provider 失败:', error)
-    return []
-  }
+  // 如果所有方法都失败，返回空数组
+  return []
 }
 
 /**

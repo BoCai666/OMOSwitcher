@@ -1,0 +1,174 @@
+/**
+ * Light Theme - 明色主题配色方案
+ * 默认主题，适用于浅色环境
+ */
+
+html.light {
+  /* ==================== 背景色 ==================== */
+  /* 主背景 - 浅灰蓝，非纯白 */
+  --app-bg-base: #f5f7fa;
+  /* 卡片背景 - 纯白 */
+  --app-bg-card: #ffffff;
+  /* 悬浮背景 - 稍深灰 */
+  --app-bg-hover: #f0f2f5;
+  /* 深色背景 - 用于侧边栏等 */
+  --app-bg-dark: #e4e7ed;
+  /* 激活背景 */
+  --app-bg-active: #e4e7ed;
+  /* 提升背景 - 用于层级更高的元素 */
+  --app-bg-elevated: #ffffff;
+  /* 遮罩背景 */
+  --app-bg-mask: rgba(0, 0, 0, 0.3);
+
+  /* ==================== 文字色 ==================== */
+  /* 主文字 - 深灰黑 */
+  --app-text-primary: #303133;
+  /* 次级文字 */
+  --app-text-secondary: #606266;
+  /* 辅助文字 - 浅灰 */
+  --app-text-tertiary: #909399;
+  /* 占位符文字 */
+  --app-text-placeholder: #909399;
+  /* 禁用文字 */
+  --app-text-disabled: #c0c4cc;
+  /* 反色文字 - 用于深色背景上 */
+  --app-text-inverse: #ffffff;
+
+  /* ==================== 边框色 ==================== */
+  /* 默认边框 - 增强对比度 */
+  --app-border-default: #c5c9ce;
+  /* 边框基础色（别名） */
+  --app-border-base: #c5c9ce;
+  /* 悬浮边框 */
+  --app-border-hover: #a1a9b1;
+  /* 浅色边框 - 分割线 */
+  --app-border-light: #e0e3e6;
+  /* 深色边框 */
+  --app-border-dark: #9ca3ab;
+  /* 激活边框 */
+  --app-border-active: #00a8e8;
+  /* 禁用边框 */
+  --app-border-disabled: #e4e7ed;
+  /* 焦点边框 */
+  --app-border-focus: #00a8e8;
+
+  /* ==================== 主题强调色 ==================== */
+  /* 主强调色 - 科技蓝 */
+  --app-color-primary: #00a8e8;
+  /* 次强调色 - 青色 */
+  --app-color-secondary: #00c4b4;
+  /* 紫色强调 (accent) */
+  --app-color-accent: #8b5cf6;
+  --app-color-purple: #8b5cf6;
+  /* 成功色 */
+  --app-color-success: #67c23a;
+  /* 警告色 */
+  --app-color-warning: #e6a23c;
+  /* 危险色 */
+  --app-color-danger: #f56c6c;
+  /* 信息色 */
+  --app-color-info: #909399;
+
+  /* ==================== 悬浮态强调色 ==================== */
+  /* 主色悬浮 */
+  --app-color-primary-hover: #0090c8;
+  /* 主色按下 */
+  --app-color-primary-active: #0078a8;
+  /* 主色淡淡悬浮（用于背景） */
+  --app-color-primary-light: rgba(0, 168, 232, 0.1);
+
+  /* ==================== 阴影 ==================== */
+  /* 小阴影 */
+  --app-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  /* 中等阴影 */
+  --app-shadow-md: 0 2px 12px rgba(0, 0, 0, 0.08);
+  /* 大阴影 */
+  --app-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+  /* 超大阴影 */
+  --app-shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.16);
+  /* 暗阴影（模态框） */
+  --app-shadow-dark: 0 8px 32px rgba(0, 0, 0, 0.16);
+  /* 卡片阴影 */
+  --app-shadow-base: 0 2px 12px rgba(0, 0, 0, 0.08);
+  /* 悬浮阴影 */
+  --app-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.12);
+  /* 模态框阴影 */
+  --app-shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.16);
+  /* 发光阴影 - 主色 */
+  --app-shadow-glow-primary: 0 0 20px rgba(0, 168, 232, 0.15);
+  /* 发光阴影 - 次色 */
+  --app-shadow-glow-secondary: 0 0 20px rgba(0, 196, 180, 0.15);
+  /* 发光阴影 - 强调色 */
+  --app-shadow-glow-accent: 0 0 20px rgba(139, 92, 246, 0.15);
+  /* 强烈发光 */
+  --app-shadow-glow-intense: 0 0 40px rgba(0, 168, 232, 0.25);
+
+  /* ==================== 圆角 ==================== */
+  --app-radius-sm: 4px;
+  --app-radius-md: 8px;
+  --app-radius-lg: 12px;
+  --app-radius-xl: 16px;
+  --app-radius-full: 9999px;
+  --app-radius-small: 4px;
+  --app-radius-base: 6px;
+  --app-radius-large: 8px;
+  --app-radius-round: 50%;
+
+  /* ==================== 玻璃效果 ==================== */
+  --app-glass-bg: rgba(255, 255, 255, 0.85);
+  --app-glass-border: rgba(37, 99, 235, 0.25);
+  --app-glass-blur: blur(12px);
+  --app-glass-saturate: saturate(180%);
+
+  /* ==================== 滚动条 ==================== */
+  --app-scrollbar-track: #f0f2f5;
+  --app-scrollbar-thumb: #c0c4cc;
+  --app-scrollbar-thumb-hover: #909399;
+
+  /* ==================== 遮罩层 ==================== */
+  --app-overlay-bg: rgba(0, 0, 0, 0.5);
+  --app-overlay-blur: blur(4px);
+
+  /* ==================== 强调色（霓虹风格兼容） ==================== */
+  --app-accent-primary: #00a8e8;
+  --app-accent-secondary: #00c4b4;
+  --app-accent-purple: #8b5cf6;
+  --app-accent-pink: #f56c6c;
+  --app-accent-orange: #e6a23c;
+  --app-accent-green: #67c23a;
+  --app-accent-red: #f56c6c;
+  --app-accent-yellow: #e6a23c;
+
+  /* ==================== 状态色 ==================== */
+  --app-success: #67c23a;
+  --app-warning: #e6a23c;
+  --app-error: #f56c6c;
+  --app-info: #00a8e8;
+
+  /* ==================== Element Plus 变量覆盖 ==================== */
+  /* 文字颜色 - 使用明色主题的深色文字 */
+  --el-text-color-primary: #303133;
+  --el-text-color-regular: #606266;
+  --el-text-color-secondary: #909399;
+  --el-text-color-placeholder: #909399;
+  --el-text-color-disabled: #c0c4cc;
+
+  /* 背景色 */
+  --el-bg-color: #f5f7fa;
+  --el-bg-color-page: #f5f7fa;
+  --el-bg-color-overlay: #ffffff;
+
+  /* 填充色 */
+  --el-fill-color: #ffffff;
+  --el-fill-color-light: #f0f2f5;
+  --el-fill-color-lighter: #f5f7fa;
+  --el-fill-color-blank: #ffffff;
+
+  /* 边框色 */
+  --el-border-color: #dcdfe6;
+  --el-border-color-light: #e4e7ed;
+  --el-border-color-lighter: #f0f2f5;
+
+  /* 主色调 */
+  --el-color-primary: #00a8e8;
+}

@@ -5,6 +5,16 @@
  * 代理服务器模式 - 监控 LLM API 调用
  */
 
+// 清除代理环境变量 - Monitor 作为透明代理，不应通过上游代理转发请求
+// 这必须在任何 HTTP 请求发生之前执行
+delete process.env.HTTP_PROXY;
+delete process.env.HTTPS_PROXY;
+delete process.env.http_proxy;
+delete process.env.https_proxy;
+delete process.env.ALL_PROXY;
+delete process.env.all_proxy;
+process.env.NO_PROXY = '*';  // 禁用所有上游代理
+
 import { ProxyServer, CertificateManager } from './proxy/index.js';
 import { memoryStore } from './storage/memory-store.js';
 import { sqliteStorage } from './storage/sqlite-store.js';
@@ -17,6 +27,7 @@ import { ConfigManager } from './config-manager.js';
 import { LLMRequest, LLMResponse, LLMMetrics, MCPCall } from './types.js';
 import { detectMcpCall, extractMcpResult } from './parsers/mcp-detector.js';
 import { v4 as uuidv4 } from 'uuid';
+import logger from './logger.js';
 
 // 当前使用的存储
 let storage: StorageInterface = memoryStore;
@@ -50,9 +61,9 @@ function calculateMetrics(response: LLMResponse, modelFromRequest?: string, requ
     
     totalTokens = promptTokens + completionTokens;
     
-    console.log(`[Metrics] Estimated tokens: prompt=${promptTokens}, completion=${completionTokens}, total=${totalTokens}, contentLength=${content.length}`);
+    logger.debug(`[Metrics] Estimated tokens: prompt=${promptTokens}, completion=${completionTokens}, total=${totalTokens}, contentLength=${content.length}`);
   } else if (totalTokens === 0) {
-    console.log('[Metrics] No content available for estimation. Content:', content, 'Length:', content?.length);
+    logger.debug('[Metrics] No content available for estimation. Content:', content, 'Length:', content?.length);
   }
   
   // 优先使用请求中的 model，其次使用响应中的 model
@@ -71,7 +82,7 @@ function calculateMetrics(response: LLMResponse, modelFromRequest?: string, requ
   }
   const estimatedCost = totalTokens > 0 ? (totalTokens / 1000000) * costPer1M : 0;
   
-  console.log(`[Metrics] Model: ${model}, Tokens: ${totalTokens}, Cost: $${estimatedCost.toFixed(6)}, Usage:`, usage || 'N/A (estimated)');
+  logger.debug(`[Metrics] Model: ${model}, Tokens: ${totalTokens}, Cost: $${estimatedCost.toFixed(6)}, Usage:`, usage || 'N/A (estimated)');
   
   return {
     id: `metrics-${response.requestId}`,
@@ -125,36 +136,36 @@ function createMcpCall(request: LLMRequest, response?: LLMResponse): MCPCall | n
 
 // 显示使用说明
 function showUsageInstructions(caCertPath: string, proxyPort: number, webPort: number): void {
-  console.log('\n==============================================');
-  console.log('  OpenCode LLM Monitor - 代理服务器已启动');
-  console.log('==============================================\n');
+  logger.info('\n==============================================');
+  logger.info('  OpenCode LLM Monitor - 代理服务器已启动');
+  logger.info('==============================================\n');
   
-  console.log('📋 使用说明:\n');
+  logger.info('📋 使用说明:\n');
   
-  console.log('1. 安装 CA 证书 (仅首次需要):');
-  console.log(`   证书路径: ${caCertPath}`);
-  console.log('   - macOS: 双击证书 -> 添加到系统钥匙串 -> 始终信任');
-  console.log('   - Windows: 双击证书 -> 安装到受信任的根证书颁发机构');
-  console.log('   - Linux: 复制到 /usr/local/share/ca-certificates/ 并运行 update-ca-certificates\n');
+  logger.info('1. 安装 CA 证书 (仅首次需要):');
+  logger.info(`   证书路径: ${caCertPath}`);
+  logger.info('   - macOS: 双击证书 -> 添加到系统钥匙串 -> 始终信任');
+  logger.info('   - Windows: 双击证书 -> 安装到受信任的根证书颁发机构');
+  logger.info('   - Linux: 复制到 /usr/local/share/ca-certificates/ 并运行 update-ca-certificates\n');
   
-  console.log('2. 配置代理环境变量:');
-  console.log(`   export HTTP_PROXY=http://localhost:${proxyPort}`);
-  console.log(`   export HTTPS_PROXY=http://localhost:${proxyPort}`);
-  console.log(`   export http_proxy=http://localhost:${proxyPort}`);
-  console.log(`   export https_proxy=http://localhost:${proxyPort}\n`);
+  logger.info('2. 配置代理环境变量:');
+  logger.info(`   export HTTP_PROXY=http://localhost:${proxyPort}`);
+  logger.info(`   export HTTPS_PROXY=http://localhost:${proxyPort}`);
+  logger.info(`   export http_proxy=http://localhost:${proxyPort}`);
+  logger.info(`   export https_proxy=http://localhost:${proxyPort}\n`);
   
-  console.log('   或在命令前临时设置:');
-  console.log(`   HTTP_PROXY=http://localhost:${proxyPort} opencode --enable-interceptor\n`);
+  logger.info('   或在命令前临时设置:');
+  logger.info(`   HTTP_PROXY=http://localhost:${proxyPort} opencode --enable-interceptor\n`);
   
-  console.log('3. 访问 Web 界面查看监控数据:');
-  console.log(`   http://localhost:${webPort}\n`);
+  logger.info('3. 访问 Web 界面查看监控数据:');
+  logger.info(`   http://localhost:${webPort}\n`);
   
-  console.log('4. 启动 OpenCode (在另一个终端):');
-  console.log('   opencode --enable-interceptor\n');
+  logger.info('4. 启动 OpenCode (在另一个终端):');
+  logger.info('   opencode --enable-interceptor\n');
   
-  console.log('==============================================');
-  console.log('  按 Ctrl+C 停止代理服务器');
-  console.log('==============================================\n');
+  logger.info('==============================================');
+  logger.info('  按 Ctrl+C 停止代理服务器');
+  logger.info('==============================================\n');
 }
 
 // 初始化存储
@@ -162,7 +173,7 @@ async function initializeStorage(): Promise<void> {
   const storageType = config.storage.type;
   
   if (storageType === 'sqlite') {
-    console.log('[Monitor] Initializing SQLite storage...');
+    logger.info('[Monitor] Initializing SQLite storage...');
     await sqliteStorage.initialize();
     
     // 检查是否需要迁移
@@ -170,7 +181,7 @@ async function initializeStorage(): Promise<void> {
     const sqliteHasData = sqliteStorage.hasData();
     
     if (memoryData.length > 0 && !sqliteHasData) {
-      console.log('[Migration] 检测到内存数据，开始迁移...');
+      logger.info('[Migration] 检测到内存数据，开始迁移...');
       await migrateFromMemory();
     }
     
@@ -186,9 +197,9 @@ async function initializeStorage(): Promise<void> {
     await dataCleanup.initialize();
     dataCleanup.scheduleDailyCleanup();
     
-    console.log('[Monitor] SQLite storage initialized');
+    logger.info('[Monitor] SQLite storage initialized');
   } else {
-    console.log('[Monitor] Using memory storage');
+    logger.info('[Monitor] Using memory storage');
     storage = memoryStore;
   }
 }
@@ -200,7 +211,7 @@ async function migrateFromMemory(): Promise<void> {
   
   const allRequests = memoryStore.getRecentRequests(10000); // 获取尽可能多的数据
   
-  console.log(`[Migration] 发现 ${allRequests.length} 条记录需要迁移`);
+  logger.info(`[Migration] 发现 ${allRequests.length} 条记录需要迁移`);
   
   for (let i = 0; i < allRequests.length; i += batchSize) {
     const batch = allRequests.slice(i, i + batchSize);
@@ -216,10 +227,10 @@ async function migrateFromMemory(): Promise<void> {
     }
     
     migrated += batch.length;
-    console.log(`[Migration] 已迁移 ${migrated}/${allRequests.length} 条记录`);
+    logger.info(`[Migration] 已迁移 ${migrated}/${allRequests.length} 条记录`);
   }
   
-  console.log(`[Migration] 完成！共迁移 ${migrated} 条记录`);
+  logger.info(`[Migration] 完成！共迁移 ${migrated} 条记录`);
 }
 
 // 全局配置管理器
@@ -227,7 +238,8 @@ let configManager: ConfigManager;
 
 // 主函数
 async function main() {
-  console.log('[Monitor] Starting OpenCode LLM Monitor (Proxy Mode)...\n');
+  logger.info('[Monitor] Starting OpenCode LLM Monitor (Proxy Mode)...');
+  logger.info(`[Monitor] 日志文件: ${logger.getLogFilePath()}`);
   
   let proxyServer: ProxyServer | null = null;
   
@@ -235,7 +247,7 @@ async function main() {
     // 1. 初始化配置管理器并加载配置
     configManager = new ConfigManager();
     await configManager.load();
-    console.log('[Monitor] Configuration loaded');
+    logger.info('[Monitor] Configuration loaded');
     
     // 1.1 从配置文件更新端口（环境变量优先级更高）
     updatePortsFromConfig(configManager);
@@ -269,7 +281,7 @@ async function main() {
       // 广播新请求到所有连接的 Web 客户端
       broadcastNewRequest(request);
       
-      console.log(`[Monitor] Captured LLM request: ${request.provider} - ${request.model}`);
+      logger.info(`[Monitor] Captured LLM request: ${request.provider} - ${request.model}`);
     });
     
     // 6. 监听 llm-response:captured 事件
@@ -291,7 +303,7 @@ async function main() {
       // 更新 MCP 调用结果（如果存在）
       // 注意：这里简化处理，实际应该通过 requestId 关联
       
-      console.log(`[Monitor] Captured LLM response: ${metrics.totalTokens} tokens, ${metrics.duration}ms`);
+      logger.info(`[Monitor] Captured LLM response: ${metrics.totalTokens} tokens, ${metrics.duration}ms`);
     });
     
     // 7. 启动代理服务器
@@ -305,7 +317,7 @@ async function main() {
     
     // 10. 处理关闭信号
     process.on('SIGINT', async () => {
-      console.log('\n[Monitor] Shutting down...');
+      logger.info('[Monitor] Shutting down...');
       
       if (proxyServer) {
         await proxyServer.stop();
@@ -315,12 +327,12 @@ async function main() {
         configManager.destroy();
       }
       
-      console.log('[Monitor] Goodbye!');
+      logger.info('[Monitor] Goodbye!');
       process.exit(0);
     });
     
     process.on('SIGTERM', async () => {
-      console.log('\n[Monitor] Shutting down...');
+      logger.info('[Monitor] Shutting down...');
       
       if (proxyServer) {
         await proxyServer.stop();
@@ -330,12 +342,12 @@ async function main() {
         configManager.destroy();
       }
       
-      console.log('[Monitor] Goodbye!');
+      logger.info('[Monitor] Goodbye!');
       process.exit(0);
     });
     
   } catch (err) {
-    console.error('[Monitor] Failed to start:', err);
+    logger.error('[Monitor] Failed to start:', err);
     
     if (proxyServer) {
       await proxyServer.stop();

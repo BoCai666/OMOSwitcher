@@ -1,0 +1,29 @@
+/**
+ * 金色主题预设
+ * 主色调: #fbbf24
+ */
+
+html.accent-gold {
+  /* 强调色 */
+  --app-accent-primary: #fbbf24;
+  --app-accent-secondary: #f59e0b;
+  --app-accent-glow: 0 0 20px rgba(251, 191, 36, 0.5);
+
+  /* Element Plus 主色 */
+  --el-color-primary: #fbbf24;
+  --el-color-primary-light-3: rgba(251, 191, 36, 0.3);
+  --el-color-primary-light-5: rgba(251, 191, 36, 0.5);
+  --el-color-primary-light-7: rgba(251, 191, 36, 0.7);
+  --el-color-primary-light-8: rgba(251, 191, 36, 0.8);
+  --el-color-primary-light-9: rgba(251, 191, 36, 0.9);
+  --el-color-primary-dark-2: #e5a81f;
+
+  /* 霓虹发光效果 */
+  --app-shadow-glow-primary: 0 0 20px rgba(251, 191, 36, 0.4);
+  --app-shadow-glow-cyan: 0 0 20px rgba(251, 191, 36, 0.4);
+  --app-shadow-glow-intense: 0 0 40px rgba(251, 191, 36, 0.6);
+
+  /* 边框高亮 */
+  --app-border-active: #fbbf24;
+  --app-border-focus: #fbbf24;
+}

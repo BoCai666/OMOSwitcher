@@ -45,7 +45,6 @@
   },
   "pkg": {
     "assets": [
-      "config.jsonc",
       "dist/db/migrations/**/*"
     ],
     "outputPath": "dist"

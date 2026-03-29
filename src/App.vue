@@ -1,31 +1,55 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useMonitorStore } from '@/stores/monitor'
 import { getProxyConfig } from '@/services/settingsStore'
+import { listModels } from '@/services/modelStore'
+import { listPresets } from '@/services/presetStore'
 import { ElMessage } from 'element-plus'
+import AppLayout from '@/components/layout/AppLayout.vue'
 
+const route = useRoute()
 const monitorStore = useMonitorStore()
 const startupAttempted = ref(false)
 
-// 应用启动时自动启动监控服务
+// 从路由 meta 获取页面标题
+const pageTitle = computed(() => (route.meta.title as string) || 'OMOSwitcher')
+
+// 应用启动时自动启动监控服务和预加载数据
 onMounted(async () => {
-  try {
-    startupAttempted.value = true
-    
-    // 获取代理配置
-    const proxyConfig = await getProxyConfig()
-    
-    // 启动监控服务，传递企业代理 CA 证书路径
-    await monitorStore.startMonitor(proxyConfig.caCertPath)
-    console.log('[App] Monitor service started successfully')
-  } catch (error) {
-    // 启动失败不阻塞应用，用户可手动重试
-    console.warn('[App] Failed to start monitor service:', error)
-    ElMessage.warning({
-      message: '监控服务启动失败，可在监控页面手动启动',
-      duration: 5000,
-    })
-  }
+  // 并行执行所有初始化操作
+  const initPromises = [
+    // 启动监控服务
+    (async () => {
+      try {
+        startupAttempted.value = true
+        const proxyConfig = await getProxyConfig()
+        await monitorStore.startMonitor(proxyConfig.caCertPath)
+        console.log('[App] Monitor service started successfully')
+      } catch (error) {
+        console.warn('[App] Failed to start monitor service:', error)
+        ElMessage.warning({
+          message: '监控服务启动失败，可在监控页面手动启动',
+          duration: 5000,
+        })
+      }
+    })(),
+    // 预加载模型列表（后台执行，不阻塞）
+    listModels().then(() => {
+      console.log('[App] Models preloaded')
+    }).catch((e) => {
+      console.warn('[App] Failed to preload models:', e)
+    }),
+    // 预加载预设列表（后台执行，不阻塞）
+    listPresets().then(() => {
+      console.log('[App] Presets preloaded')
+    }).catch((e) => {
+      console.warn('[App] Failed to preload presets:', e)
+    }),
+  ]
+
+  // 等待所有初始化完成（不阻塞 UI）
+  await Promise.allSettled(initPromises)
 })
 
 // 应用关闭时停止监控服务
@@ -40,9 +64,13 @@ onUnmounted(async () => {
 </script>
 
 <template>
-  <div class="app-container">
-    <router-view />
-  </div>
+  <AppLayout :title="pageTitle">
+    <router-view v-slot="{ Component }">
+      <transition name="page-fade" mode="out-in">
+        <component :is="Component" />
+      </transition>
+    </router-view>
+  </AppLayout>
 </template>
 
 <style>
@@ -64,8 +92,14 @@ html, body {
   height: 100%;
 }
 
-.app-container {
-  width: 100%;
-  height: 100%;
+/* 页面切换过渡动画 */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
 }
 </style>

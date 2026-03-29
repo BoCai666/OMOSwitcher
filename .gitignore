@@ -43,3 +43,8 @@ AGENTS.md
 
 # pkg 缓存
 .pkg-cache/
+
+# Playwright 测试报告
+playwright-report/
+playwright/.cache/
+test-results/

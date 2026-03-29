@@ -13,6 +13,9 @@ const store = useMonitorStore()
 // 当前激活的标签页
 const activeTab = ref('request')
 
+// MCP 折叠面板激活项
+const activeMcpNames = ref<string[]>([])
+
 // 格式化 JSON
 function formatJSON(data: unknown): string {
   try {
@@ -28,7 +31,7 @@ function formatRequestBody(request: { body: unknown; parsedBody?: unknown }): st
   if (request.parsedBody) {
     return formatJSON(request.parsedBody)
   }
-  
+
   // 如果 body 是 Buffer 对象（序列化后为 { type: "Buffer", data: [...] }）
   if (request.body && typeof request.body === 'object') {
     const body = request.body as { type?: string; data?: number[] }
@@ -47,7 +50,7 @@ function formatRequestBody(request: { body: unknown; parsedBody?: unknown }): st
       }
     }
   }
-  
+
   return formatJSON(request.body)
 }
 
@@ -57,7 +60,7 @@ function formatResponseBody(response: { body: unknown; parsedBody?: unknown }): 
   if (response.parsedBody) {
     return formatJSON(response.parsedBody)
   }
-  
+
   // 如果 body 是 Buffer 对象
   if (response.body && typeof response.body === 'object') {
     const body = response.body as { type?: string; data?: number[] }
@@ -74,7 +77,7 @@ function formatResponseBody(response: { body: unknown; parsedBody?: unknown }): 
       }
     }
   }
-  
+
   return formatJSON(response.body)
 }
 
@@ -102,6 +105,7 @@ async function loadDetails() {
 // 监听选中请求变化
 watch(() => store.selectedRequestId, () => {
   activeTab.value = 'request'
+  activeMcpNames.value = []
   loadDetails()
 }, { immediate: true })
 </script>
@@ -113,46 +117,61 @@ watch(() => store.selectedRequestId, () => {
       v-if="!store.selectedRequestId"
       description="点击左侧请求查看详情"
       :image-size="120"
+      class="detail-empty"
     >
       <template #image>
-        <el-icon :size="60" color="#dcdfe6"><Document /></el-icon>
+        <div class="empty-icon-wrapper">
+          <el-icon :size="48" class="empty-icon"><Document /></el-icon>
+        </div>
       </template>
     </el-empty>
 
     <!-- 请求详情内容 -->
     <div v-else class="detail-content">
       <!-- 基本信息 -->
-      <el-descriptions :column="2" border size="small" class="basic-info">
-        <el-descriptions-item label="请求 ID" :span="2">
-          <code class="id-code">{{ store.selectedRequestId }}</code>
-        </el-descriptions-item>
-        <el-descriptions-item label="时间">
-          {{ store.selectedRequest ? formatTime(store.selectedRequest.timestamp) : '-' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="Provider">
-          <el-tag size="small">{{ store.selectedRequest?.provider || '-' }}</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="模型" :span="2">
-          {{ store.selectedRequest?.model || '-' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="方法">
-          <el-tag
-            :type="store.selectedRequest?.method === 'POST' ? 'primary' : 'info'"
-            size="small"
-          >
-            {{ store.selectedRequest?.method || '-' }}
-          </el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="耗时">
-          {{ formatDuration(store.selectedMetrics?.duration) }}
-        </el-descriptions-item>
-        <el-descriptions-item label="Tokens" v-if="store.selectedMetrics">
-          {{ store.selectedMetrics.totalTokens.toLocaleString() }}
-        </el-descriptions-item>
-        <el-descriptions-item label="费用" v-if="store.selectedMetrics">
-          ${{ store.selectedMetrics.estimatedCost.toFixed(4) }}
-        </el-descriptions-item>
-      </el-descriptions>
+      <div class="basic-info-panel">
+        <div class="info-header">
+          <span class="info-title">请求详情</span>
+          <el-tag size="small" effect="dark" class="id-tag">{{ store.selectedRequestId?.slice(0, 8) }}</el-tag>
+        </div>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">时间</span>
+            <span class="info-value time-value">{{ store.selectedRequest ? formatTime(store.selectedRequest.timestamp) : '-' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Provider</span>
+            <el-tag size="small" effect="dark" class="provider-tag">{{ store.selectedRequest?.provider || '-' }}</el-tag>
+          </div>
+          <div class="info-item span-2">
+            <span class="info-label">模型</span>
+            <span class="info-value model-value">{{ store.selectedRequest?.model || '-' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">方法</span>
+            <el-tag
+              :type="store.selectedRequest?.method === 'POST' ? 'primary' : 'info'"
+              size="small"
+              effect="dark"
+              class="method-tag"
+            >
+              {{ store.selectedRequest?.method || '-' }}
+            </el-tag>
+          </div>
+          <div class="info-item">
+            <span class="info-label">耗时</span>
+            <span class="info-value duration-value">{{ formatDuration(store.selectedMetrics?.duration) }}</span>
+          </div>
+          <div class="info-item" v-if="store.selectedMetrics">
+            <span class="info-label">Tokens</span>
+            <span class="info-value tokens-value">{{ store.selectedMetrics.totalTokens.toLocaleString() }}</span>
+          </div>
+          <div class="info-item" v-if="store.selectedMetrics">
+            <span class="info-label">费用</span>
+            <span class="info-value cost-value">${{ store.selectedMetrics.estimatedCost.toFixed(4) }}</span>
+          </div>
+        </div>
+      </div>
 
       <!-- 标签页内容 -->
       <el-tabs v-model="activeTab" class="detail-tabs" type="border-card">
@@ -161,12 +180,22 @@ watch(() => store.selectedRequestId, () => {
           <template #label>
             <span class="tab-label">
               <el-icon><Document /></el-icon>
-              请求体
+              <span>请求体</span>
             </span>
           </template>
-          <div class="json-content">
-            <pre v-if="store.selectedRequest"><code>{{ formatRequestBody(store.selectedRequest) }}</code></pre>
-            <el-empty v-else description="暂无请求数据" />
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-title">Request Body</span>
+              <div class="code-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+            <div class="code-content">
+              <pre v-if="store.selectedRequest"><code class="json-code">{{ formatRequestBody(store.selectedRequest) }}</code></pre>
+              <el-empty v-else description="暂无请求数据" class="code-empty" />
+            </div>
           </div>
         </el-tab-pane>
 
@@ -175,12 +204,22 @@ watch(() => store.selectedRequestId, () => {
           <template #label>
             <span class="tab-label">
               <el-icon><ChatDotRound /></el-icon>
-              响应体
+              <span>响应体</span>
             </span>
           </template>
-          <div class="json-content">
-            <pre v-if="store.selectedResponse"><code>{{ formatResponseBody(store.selectedResponse) }}</code></pre>
-            <el-empty v-else description="暂无响应数据" />
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-title">Response Body</span>
+              <div class="code-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+            <div class="code-content">
+              <pre v-if="store.selectedResponse"><code class="json-code">{{ formatResponseBody(store.selectedResponse) }}</code></pre>
+              <el-empty v-else description="暂无响应数据" class="code-empty" />
+            </div>
           </div>
         </el-tab-pane>
 
@@ -189,11 +228,12 @@ watch(() => store.selectedRequestId, () => {
           <template #label>
             <span class="tab-label">
               <el-icon><Tools /></el-icon>
-              MCP 调用
+              <span>MCP 调用</span>
               <el-tag
                 v-if="store.selectedMcpCalls.length > 0"
                 size="small"
                 type="primary"
+                effect="dark"
                 class="tab-badge"
               >
                 {{ store.selectedMcpCalls.length }}
@@ -202,39 +242,52 @@ watch(() => store.selectedRequestId, () => {
           </template>
           <div class="mcp-content">
             <div v-if="store.selectedMcpCalls.length > 0" class="mcp-list">
-              <el-collapse>
+              <el-collapse v-model="activeMcpNames" class="mcp-collapse">
                 <el-collapse-item
                   v-for="(call, index) in store.selectedMcpCalls"
                   :key="call.id"
-                  :title="`${index + 1}. ${call.toolName}`"
+                  :name="call.id"
+                  class="mcp-item"
                 >
-                  <el-descriptions :column="1" size="small" border>
-                    <el-descriptions-item label="工具名称">
-                      {{ call.toolName }}
-                    </el-descriptions-item>
-                    <el-descriptions-item label="工具标题">
-                      {{ call.toolTitle || '-' }}
-                    </el-descriptions-item>
-                    <el-descriptions-item label="Server">
-                      {{ call.serverName || '-' }}
-                    </el-descriptions-item>
-                    <el-descriptions-item label="Transport">
-                      <el-tag size="small">{{ call.transportType || 'stdio' }}</el-tag>
-                    </el-descriptions-item>
-                    <el-descriptions-item label="参数">
-                      <pre class="inline-json">{{ formatJSON(call.arguments) }}</pre>
-                    </el-descriptions-item>
-                    <el-descriptions-item label="结果">
-                      <pre class="inline-json">{{ formatJSON(call.resultContent) }}</pre>
-                    </el-descriptions-item>
-                    <el-descriptions-item label="执行耗时">
-                      {{ formatDuration(call.executionDuration) }}
-                    </el-descriptions-item>
-                  </el-descriptions>
+                  <template #title>
+                    <div class="mcp-title">
+                      <span class="mcp-index">{{ index + 1 }}</span>
+                      <span class="mcp-tool-name">{{ call.toolName }}</span>
+                      <el-tag size="small" effect="dark" class="mcp-server-tag" v-if="call.serverName">
+                        {{ call.serverName }}
+                      </el-tag>
+                    </div>
+                  </template>
+                  <div class="mcp-details">
+                    <div class="mcp-detail-item" v-if="call.toolTitle">
+                      <span class="detail-label">工具标题</span>
+                      <span class="detail-value">{{ call.toolTitle }}</span>
+                    </div>
+                    <div class="mcp-detail-item">
+                      <span class="detail-label">Transport</span>
+                      <el-tag size="small" effect="dark">{{ call.transportType || 'stdio' }}</el-tag>
+                    </div>
+                    <div class="mcp-detail-item">
+                      <span class="detail-label">参数</span>
+                      <div class="code-snippet">
+                        <pre><code>{{ formatJSON(call.arguments) }}</code></pre>
+                      </div>
+                    </div>
+                    <div class="mcp-detail-item">
+                      <span class="detail-label">结果</span>
+                      <div class="code-snippet">
+                        <pre><code>{{ formatJSON(call.resultContent) }}</code></pre>
+                      </div>
+                    </div>
+                    <div class="mcp-detail-item">
+                      <span class="detail-label">执行耗时</span>
+                      <span class="detail-value duration">{{ formatDuration(call.executionDuration) }}</span>
+                    </div>
+                  </div>
                 </el-collapse-item>
               </el-collapse>
             </div>
-            <el-empty v-else description="该请求没有 MCP 调用" />
+            <el-empty v-else description="该请求没有 MCP 调用" class="mcp-empty" />
           </div>
         </el-tab-pane>
       </el-tabs>
@@ -245,93 +298,692 @@ watch(() => store.selectedRequestId, () => {
 <style scoped>
 .request-detail {
   height: 100%;
-  padding: 16px;
+  padding: 20px;
   overflow-y: auto;
+  background: var(--app-bg-card);
+  border-radius: 16px;
+  border: 1px solid var(--app-border-default);
 }
 
+/* 空状态 */
+.detail-empty :deep(.el-empty__description) {
+  color: var(--app-text-tertiary);
+  margin-top: 16px;
+}
+
+.empty-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100px;
+  height: 100px;
+  background: var(--app-bg-hover);
+  border: 2px dashed var(--app-border-default);
+  border-radius: 20px;
+}
+
+.empty-icon {
+  color: var(--app-text-tertiary);
+}
+
+/* 详情内容 */
 .detail-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
-.basic-info {
-  background-color: #fff;
+/* 基本信息面板 */
+.basic-info-panel {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--app-border-default);
+  border-radius: 12px;
+  overflow: hidden;
 }
 
-.id-code {
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  color: #409eff;
+.info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid var(--app-border-default);
 }
 
+.info-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--app-text-primary);
+  letter-spacing: 0.5px;
+}
+
+.id-tag {
+  background: rgba(0, 212, 255, 0.15) !important;
+  border: 1px solid rgba(0, 212, 255, 0.3) !important;
+  color: var(--app-color-primary) !important;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--app-border-default);
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 18px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.info-item.span-2 {
+  grid-column: span 2;
+}
+
+.info-label {
+  font-size: 11px;
+  color: var(--app-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: 13px;
+  color: var(--app-text-secondary);
+}
+
+.time-value {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--app-text-secondary);
+}
+
+.model-value {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--app-color-primary);
+}
+
+.duration-value {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--app-color-warning);
+}
+
+.tokens-value {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--app-color-success);
+  font-weight: 600;
+}
+
+.cost-value {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--app-color-warning);
+  font-weight: 600;
+}
+
+.provider-tag {
+  background: rgba(0, 212, 255, 0.15) !important;
+  border: 1px solid rgba(0, 212, 255, 0.3) !important;
+  color: var(--app-color-primary) !important;
+  width: fit-content;
+}
+
+.method-tag {
+  width: fit-content;
+}
+
+/* 标签页 */
 .detail-tabs {
   flex: 1;
+}
+
+.detail-tabs :deep(.el-tabs__header) {
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--app-border-default);
+  margin: 0;
+}
+
+.detail-tabs :deep(.el-tabs__nav) {
+  border: none !important;
+}
+
+.detail-tabs :deep(.el-tabs__item) {
+  color: var(--app-text-tertiary);
+  border: none !important;
+  padding: 0 20px !important;
+  height: 44px;
+  line-height: 44px;
+  transition: all 0.3s ease;
+}
+
+.detail-tabs :deep(.el-tabs__item:hover) {
+  color: var(--app-text-tertiary);
+}
+
+.detail-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--app-color-primary);
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.detail-tabs :deep(.el-tabs__active-bar) {
+  background: var(--app-color-primary);
+  height: 2px;
+  box-shadow: 0 0 10px var(--app-color-primary);
+}
+
+.detail-tabs :deep(.el-tabs__content) {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .tab-label {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .tab-badge {
   margin-left: 4px;
+  background: rgba(0, 212, 255, 0.2) !important;
+  border: 1px solid rgba(0, 212, 255, 0.4) !important;
+  color: var(--app-color-primary) !important;
 }
 
-.json-content {
-  background-color: #f5f7fa;
-  border-radius: 4px;
-  padding: 16px;
+/* 代码块 */
+.code-block {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--app-bg-hover);
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+.code-title {
+  font-size: 11px;
+  color: var(--app-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.code-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.code-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.code-dots span:nth-child(1) {
+  background: #ff5f56;
+}
+
+.code-dots span:nth-child(2) {
+  background: #ffbd2e;
+}
+
+.code-dots span:nth-child(3) {
+  background: #27c93f;
+}
+
+.code-content {
   max-height: 400px;
   overflow-y: auto;
+  padding: 16px;
 }
 
-.json-content pre {
+.code-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.code-content::-webkit-scrollbar-track {
+  background: var(--app-bg-hover);
+}
+
+.code-content::-webkit-scrollbar-thumb {
+  background: var(--app-border-default);
+  border-radius: 4px;
+}
+
+.code-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 212, 255, 0.3);
+}
+
+.json-code {
   margin: 0;
-  font-family: 'Courier New', monospace;
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
   font-size: 12px;
-  line-height: 1.5;
-  color: #303133;
+  line-height: 1.6;
+  color: var(--app-text-tertiary);
   white-space: pre-wrap;
   word-break: break-all;
 }
 
+/* JSON 语法高亮模拟 */
+.json-code :deep(*) {
+  color: inherit;
+}
+
+.code-empty :deep(.el-empty__description) {
+  color: var(--app-text-tertiary);
+}
+
+/* MCP 内容 */
 .mcp-content {
-  max-height: 400px;
+  max-height: 500px;
   overflow-y: auto;
 }
 
-.mcp-list {
+.mcp-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.mcp-content::-webkit-scrollbar-track {
+  background: var(--app-bg-hover);
+}
+
+.mcp-content::-webkit-scrollbar-thumb {
+  background: var(--app-border-default);
+  border-radius: 4px;
+}
+
+.mcp-empty :deep(.el-empty__description) {
+  color: var(--app-text-tertiary);
+}
+
+/* MCP 折叠面板 */
+.mcp-collapse {
+  border: none;
+  background: transparent;
+}
+
+.mcp-collapse :deep(.el-collapse-item) {
+  margin-bottom: 12px;
+  border: 1px solid var(--app-border-default);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.mcp-collapse :deep(.el-collapse-item:hover) {
+  border-color: rgba(0, 212, 255, 0.3);
+}
+
+.mcp-collapse :deep(.el-collapse-item__header) {
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid var(--app-border-default);
+  padding: 14px 16px;
+  height: auto;
+  line-height: 1.5;
+  transition: all 0.3s ease;
+}
+
+.mcp-collapse :deep(.el-collapse-item__header:hover) {
+  background: rgba(0, 212, 255, 0.05);
+}
+
+.mcp-collapse :deep(.el-collapse-item__arrow) {
+  color: var(--app-text-tertiary);
+  transition: all 0.3s ease;
+}
+
+.mcp-collapse :deep(.el-collapse-item.is-active .el-collapse-item__arrow) {
+  color: var(--app-color-primary);
+}
+
+.mcp-collapse :deep(.el-collapse-item__wrap) {
+  background: transparent;
+  border: none;
+}
+
+.mcp-collapse :deep(.el-collapse-item__content) {
+  padding: 0;
+}
+
+.mcp-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.mcp-index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(0, 212, 255, 0.15);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--app-color-primary);
+}
+
+.mcp-tool-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text-primary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.mcp-server-tag {
+  background: rgba(0, 245, 160, 0.15) !important;
+  border: 1px solid rgba(0, 245, 160, 0.3) !important;
+  color: var(--app-color-success) !important;
+  margin-left: auto;
+}
+
+.mcp-details {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mcp-detail-item {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.inline-json {
-  margin: 0;
-  font-family: 'Courier New', monospace;
+.detail-label {
   font-size: 11px;
-  line-height: 1.4;
-  color: #606266;
-  background-color: #f5f7fa;
-  padding: 8px;
-  border-radius: 4px;
+  color: var(--app-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-value {
+  font-size: 13px;
+  color: var(--app-text-secondary);
+}
+
+.detail-value.duration {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--app-color-warning);
+}
+
+.code-snippet {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  border-radius: 8px;
+  padding: 12px;
+  overflow-x: auto;
+}
+
+.code-snippet pre {
+  margin: 0;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--app-text-secondary);
   white-space: pre-wrap;
   word-break: break-all;
-  max-height: 200px;
-  overflow-y: auto;
 }
 
-:deep(.el-descriptions__cell) {
-  padding: 8px 12px;
+/* ========== Cyberpunk 主题 ========== */
+html.cyberpunk .request-detail {
+  background: linear-gradient(135deg, rgba(10, 15, 30, 0.95), rgba(5, 10, 25, 0.98));
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  box-shadow: 0 0 30px rgba(0, 212, 255, 0.15);
 }
 
-:deep(.el-collapse-item__header) {
-  font-weight: 500;
+html.cyberpunk .empty-icon-wrapper {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: rgba(0, 212, 255, 0.4);
+  box-shadow: 0 0 25px rgba(0, 212, 255, 0.2);
 }
 
-:deep(.el-empty) {
-  padding: 40px 0;
+html.cyberpunk .empty-icon {
+  color: var(--app-color-primary);
+  filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.5));
+}
+
+html.cyberpunk .basic-info-panel {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(255, 0, 128, 0.05));
+  border-color: rgba(0, 212, 255, 0.35);
+}
+
+html.cyberpunk .info-header {
+  background: linear-gradient(90deg, rgba(0, 212, 255, 0.15), transparent);
+  border-bottom-color: rgba(0, 212, 255, 0.3);
+}
+
+html.cyberpunk .id-tag {
+  background: rgba(0, 212, 255, 0.2) !important;
+  border-color: rgba(0, 212, 255, 0.5) !important;
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+}
+
+html.cyberpunk .info-item {
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(0, 212, 255, 0.15);
+}
+
+html.cyberpunk .provider-tag {
+  background: rgba(0, 212, 255, 0.2) !important;
+  border-color: rgba(0, 212, 255, 0.5) !important;
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+}
+
+html.cyberpunk .model-value,
+html.cyberpunk .tokens-value,
+html.cyberpunk .cost-value,
+html.cyberpunk .duration-value {
+  text-shadow: 0 0 10px currentColor;
+}
+
+html.cyberpunk .detail-tabs :deep(.el-tabs__header) {
+  background: linear-gradient(180deg, rgba(0, 212, 255, 0.12), rgba(0, 0, 0, 0.2));
+  border-bottom-color: rgba(0, 212, 255, 0.3);
+}
+
+html.cyberpunk .detail-tabs :deep(.el-tabs__item.is-active) {
+  background: rgba(0, 212, 255, 0.15);
+  color: var(--app-color-primary);
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+html.cyberpunk .detail-tabs :deep(.el-tabs__active-bar) {
+  box-shadow: 0 0 20px var(--app-color-primary), 0 0 40px rgba(255, 0, 128, 0.3);
+}
+
+html.cyberpunk .detail-tabs :deep(.el-tabs__content) {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+html.cyberpunk .tab-badge {
+  background: rgba(0, 212, 255, 0.25) !important;
+  border-color: rgba(0, 212, 255, 0.5) !important;
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+}
+
+html.cyberpunk .code-block {
+  background: linear-gradient(135deg, rgba(10, 15, 30, 0.9), rgba(5, 10, 25, 0.95));
+  border-color: rgba(0, 212, 255, 0.35);
+  box-shadow: inset 0 0 30px rgba(0, 212, 255, 0.05);
+}
+
+html.cyberpunk .code-header {
+  background: rgba(0, 212, 255, 0.1);
+  border-bottom-color: rgba(0, 212, 255, 0.25);
+}
+
+html.cyberpunk .mcp-collapse :deep(.el-collapse-item) {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(255, 0, 128, 0.04));
+  border-color: rgba(0, 212, 255, 0.35);
+}
+
+html.cyberpunk .mcp-collapse :deep(.el-collapse-item:hover) {
+  border-color: rgba(0, 212, 255, 0.6);
+  box-shadow: 0 0 25px rgba(0, 212, 255, 0.2);
+}
+
+html.cyberpunk .mcp-collapse :deep(.el-collapse-item__header) {
+  background: rgba(0, 212, 255, 0.1);
+  border-bottom-color: rgba(0, 212, 255, 0.25);
+}
+
+html.cyberpunk .mcp-index {
+  background: rgba(0, 212, 255, 0.2);
+  border-color: rgba(0, 212, 255, 0.5);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+}
+
+html.cyberpunk .mcp-server-tag {
+  background: rgba(0, 245, 160, 0.2) !important;
+  border-color: rgba(0, 245, 160, 0.5) !important;
+  box-shadow: 0 0 15px rgba(0, 245, 160, 0.3);
+}
+
+html.cyberpunk .code-snippet {
+  background: rgba(0, 212, 255, 0.08);
+  border-color: rgba(0, 212, 255, 0.25);
+}
+
+/* ========== Glassmorphism 主题 ========== */
+html.glassmorphism .request-detail {
+  background: var(--app-glass-bg, rgba(255, 255, 255, 0.25));
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+html.glassmorphism .empty-icon-wrapper {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+html.glassmorphism .empty-icon {
+  filter: none;
+  color: var(--app-text-secondary);
+}
+
+html.glassmorphism .basic-info-panel {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+}
+
+html.glassmorphism .info-header {
+  background: rgba(255, 255, 255, 0.2);
+  border-bottom-color: rgba(255, 255, 255, 0.25);
+}
+
+html.glassmorphism .id-tag {
+  background: rgba(255, 255, 255, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+html.glassmorphism .info-grid {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+html.glassmorphism .info-item {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+html.glassmorphism .provider-tag {
+  background: rgba(255, 255, 255, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+html.glassmorphism .model-value,
+html.glassmorphism .tokens-value,
+html.glassmorphism .cost-value,
+html.glassmorphism .duration-value {
+  text-shadow: none;
+}
+
+html.glassmorphism .detail-tabs :deep(.el-tabs__header) {
+  background: rgba(255, 255, 255, 0.15);
+  border-bottom-color: rgba(255, 255, 255, 0.25);
+}
+
+html.glassmorphism .detail-tabs :deep(.el-tabs__item) {
+  color: var(--app-text-secondary);
+}
+
+html.glassmorphism .detail-tabs :deep(.el-tabs__item.is-active) {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--app-color-primary);
+}
+
+html.glassmorphism .detail-tabs :deep(.el-tabs__active-bar) {
+  box-shadow: none;
+}
+
+html.glassmorphism .detail-tabs :deep(.el-tabs__content) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html.glassmorphism .tab-badge {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+html.glassmorphism .code-block {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+html.glassmorphism .code-header {
+  background: rgba(255, 255, 255, 0.2);
+  border-bottom-color: rgba(255, 255, 255, 0.25);
+}
+
+html.glassmorphism .mcp-collapse :deep(.el-collapse-item) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+html.glassmorphism .mcp-collapse :deep(.el-collapse-item:hover) {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+html.glassmorphism .mcp-collapse :deep(.el-collapse-item__header) {
+  background: rgba(255, 255, 255, 0.15);
+  border-bottom-color: rgba(255, 255, 255, 0.2);
+}
+
+html.glassmorphism .mcp-index {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+html.glassmorphism .mcp-server-tag {
+  background: rgba(0, 245, 160, 0.2) !important;
+  border-color: rgba(0, 245, 160, 0.4) !important;
+}
+
+html.glassmorphism .code-snippet {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 </style>

@@ -1,0 +1,123 @@
+/**
+ * 扫描线效果 (Scanlines)
+ * CRT 显示器风格的水平扫描线
+ */
+
+/* 扫描线覆盖层 */
+.scanlines-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 255, 255, 0.03) 2px,
+    rgba(0, 255, 255, 0.03) 4px
+  );
+  animation: scanlines-move 8s linear infinite;
+}
+
+@keyframes scanlines-move {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100%; }
+}
+
+/* 扫描线容器（用于局部元素） */
+.scanlines-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.scanlines-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 1px,
+    rgba(0, 0, 0, 0.15) 1px,
+    rgba(0, 0, 0, 0.15) 2px
+  );
+}
+
+/* 移动扫描线动画 */
+.scanlines-moving::after {
+  animation: scanlines-scroll 10s linear infinite;
+}
+
+@keyframes scanlines-scroll {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(20px); }
+}
+
+/* 粗扫描线 */
+.scanlines-thick {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 4px,
+    rgba(0, 255, 255, 0.05) 4px,
+    rgba(0, 255, 255, 0.05) 8px
+  );
+}
+
+/* 细扫描线 */
+.scanlines-fine {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 1px,
+    rgba(0, 255, 255, 0.02) 1px,
+    rgba(0, 255, 255, 0.02) 2px
+  );
+}
+
+/* 水平扫描光束 */
+.scan-beam {
+  position: relative;
+  overflow: hidden;
+}
+
+.scan-beam::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(0, 255, 255, 0.4),
+    rgba(0, 255, 255, 0.6),
+    rgba(0, 255, 255, 0.4),
+    transparent
+  );
+  animation: scan-beam 4s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes scan-beam {
+  0% { top: -10%; }
+  100% { top: 110%; }
+}
+
+/* 闪烁扫描线 */
+.scanlines-flicker {
+  animation: scanlines-flicker 0.1s infinite;
+}
+
+@keyframes scanlines-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.98; }
+}

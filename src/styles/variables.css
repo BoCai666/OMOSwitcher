@@ -1,0 +1,164 @@
+/**
+ * OMOSwitcher CSS 设计变量系统
+ * 命名规范: --app-{category}-{name}
+ * 
+ * 注意：:root 中定义的是默认值（暗色主题）
+ * 明色主题变量在 themes/light.css 中的 html.light 选择器下覆盖
+ */
+
+:root {
+  /* ==================== 颜色系统 ==================== */
+
+  /* 主强调色 */
+  --app-color-primary: #00d4ff;
+  --app-color-secondary: #00ffd5;
+  --app-color-accent: #a855f7;
+  --app-color-success: #10b981;
+  --app-color-warning: #f59e0b;
+  --app-color-danger: #ef4444;
+  --app-color-info: #3b82f6;
+
+  /* 主背景色 - 暗色主题默认值 */
+  --app-bg-base: #0a0a0f;
+  --app-bg-card: #12121a;
+  --app-bg-elevated: #1a1a2e;
+  --app-bg-hover: #1f1f35;
+  --app-bg-active: #252540;
+
+  /* 文字颜色 - 暗色主题默认值（浅色文字） */
+  --app-text-primary: #e5eaf3;
+  --app-text-secondary: #cfd3dc;
+  --app-text-tertiary: #a3a6ad;
+  --app-text-disabled: #6b7280;
+  --app-text-inverse: #0a0a0f;
+
+  /* 边框颜色 */
+  --app-border-default: #2a2a3e;
+  --app-border-hover: #3a3a50;
+  --app-border-active: #00d4ff;
+  --app-border-disabled: #1f1f2e;
+
+  /* ==================== 阴影系统 ==================== */
+
+  --app-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --app-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --app-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+  --app-shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6);
+
+  /* 发光阴影 */
+  --app-shadow-glow-primary: 0 0 20px rgba(0, 212, 255, 0.3);
+  --app-shadow-glow-secondary: 0 0 20px rgba(0, 255, 213, 0.3);
+  --app-shadow-glow-accent: 0 0 20px rgba(168, 85, 247, 0.3);
+  --app-shadow-glow-intense: 0 0 40px rgba(0, 212, 255, 0.5);
+
+  /* ==================== 圆角系统 ==================== */
+
+  --app-radius-sm: 4px;
+  --app-radius-md: 8px;
+  --app-radius-lg: 12px;
+  --app-radius-xl: 16px;
+  --app-radius-full: 9999px;
+
+  /* ==================== 间距系统 (8px 基准网格) ==================== */
+
+  --app-spacing-1: 4px;
+  --app-spacing-2: 8px;
+  --app-spacing-3: 12px;
+  --app-spacing-4: 16px;
+  --app-spacing-5: 20px;
+  --app-spacing-6: 24px;
+  --app-spacing-8: 32px;
+  --app-spacing-10: 40px;
+  --app-spacing-12: 48px;
+  --app-spacing-16: 64px;
+
+  /* ==================== 过渡时间（兼容旧命名）==================== */
+
+  --app-transition-fast: 150ms ease;
+  --app-transition-normal: 200ms ease;
+  --app-transition-slow: 300ms ease;
+  --app-transition-bounce: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ==================== 霓虹颜色系统（赛博朋克风格）==================== */
+
+  --app-color-neon-cyan: #00ffff;
+  --app-color-neon-magenta: #ff00ff;
+  --app-color-neon-purple: #a855f7;
+  --app-color-neon-gold: #fbbf24;
+  --app-color-neon-pink: #ff6b9d;
+  --app-color-neon-orange: #ff9f43;
+  --app-color-neon-green: #10b981;
+  --app-color-neon-red: #ef4444;
+  --app-color-neon-blue: #3b82f6;
+
+  /* ==================== 玻璃效果颜色系统（玻璃拟态风格）==================== */
+
+  --app-color-glass-white: rgba(255, 255, 255, 0.7);
+  --app-color-glass-white-10: rgba(255, 255, 255, 0.1);
+  --app-color-glass-white-20: rgba(255, 255, 255, 0.2);
+  --app-color-glass-white-50: rgba(255, 255, 255, 0.5);
+  --app-color-glass-border: rgba(255, 255, 255, 0.5);
+  --app-color-glass-border-light: rgba(255, 255, 255, 0.3);
+  --app-color-glass-shadow: rgba(0, 0, 0, 0.3);
+  --app-color-glass-bg: rgba(255, 255, 255, 0.1);
+
+  /* ==================== 特效变量系统 ==================== */
+
+  /* 发光效果 */
+  --app-effect-glow-intensity: 0.5;
+  --app-effect-glow-spread: 20px;
+  --app-effect-glow-intensity-strong: 0.8;
+  --app-effect-glow-intensity-soft: 0.3;
+
+  /* 模糊效果 */
+  --app-effect-blur-amount: 12px;
+  --app-effect-blur-amount-sm: 8px;
+  --app-effect-blur-amount-lg: 20px;
+
+  /* 玻璃模糊（组合值） */
+  --app-effect-glass-blur: blur(12px) saturate(180%);
+  --app-effect-glass-blur-light: blur(8px) saturate(150%);
+
+  /* ==================== 动画时间变量 ==================== */
+
+  --app-duration-instant: 100ms;
+  --app-duration-fast: 150ms;
+  --app-duration-normal: 300ms;
+  --app-duration-slow: 500ms;
+  --app-duration-slower: 700ms;
+
+  /* ==================== 缓动函数变量 ==================== */
+
+  --app-easing-default: ease;
+  --app-easing-out: ease-out;
+  --app-easing-in: ease-in;
+  --app-easing-in-out: ease-in-out;
+  --app-easing-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --app-easing-sharp: cubic-bezier(0.4, 0, 0.2, 1);
+  --app-easing-smooth: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* 明色主题系统偏好回退（用于没有 light/dark class 时的系统偏好） */
+@media (prefers-color-scheme: light) {
+  :root:not(.dark):not(.light):not(.cyberpunk):not(.glassmorphism) {
+    /* 明色主题背景色 */
+    --app-bg-base: #f5f7fa;
+    --app-bg-card: #ffffff;
+    --app-bg-elevated: #ffffff;
+    --app-bg-hover: #f0f2f5;
+    --app-bg-active: #e4e7ed;
+
+    /* 明色主题文字颜色（深色文字） */
+    --app-text-primary: #303133;
+    --app-text-secondary: #606266;
+    --app-text-tertiary: #909399;
+    --app-text-disabled: #c0c4cc;
+    --app-text-inverse: #ffffff;
+
+    /* 明色主题边框颜色 */
+    --app-border-default: #dcdfe6;
+    --app-border-hover: #c0c4cc;
+    --app-border-active: #00a8e8;
+    --app-border-disabled: #e4e7ed;
+  }
+}

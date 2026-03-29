@@ -7,7 +7,6 @@ import { listPresets, loadPreset } from '@/services/presetStore'
 import { getWorkingPath, setWorkingPath, getProxyConfig, setProxyConfig } from '@/services/settingsStore'
 import { AGENT_NAMES, CATEGORY_NAMES, type OhMyOpenCodeConfig } from '@/types'
 import { showSuccess, showError } from '@/utils/errorHandler'
-import AppLayout from '@/components/layout/AppLayout.vue'
 import { useOpenCode } from '@/composables/useOpenCode'
 import { open } from '@tauri-apps/plugin-dialog'
 
@@ -206,28 +205,28 @@ onMounted(() => {
 </script>
 
 <template>
-  <AppLayout title="仪表盘">
-    <div class="home-dashboard">
+  <div class="home-dashboard">
       <!-- 欢迎区域 -->
       <el-row :gutter="20" class="welcome-section">
         <el-col :span="24">
-          <div class="welcome-card">
+          <div class="welcome-card glass-card neon-border">
             <div class="welcome-content">
               <h1 class="welcome-title">欢迎使用 OMOSwitcher</h1>
               <p class="welcome-subtitle">OhMyOpenCode 模型配置管理工具</p>
               <div class="welcome-status">
-                <el-tag :type="!configStore.hasUnsavedChanges ? 'success' : 'warning'" effect="dark" size="large">
+                <el-tag :type="!configStore.hasUnsavedChanges ? 'success' : 'warning'" effect="dark" size="large" class="status-tag">
                   <el-icon v-if="!configStore.hasUnsavedChanges"><Check /></el-icon>
                   <el-icon v-else><Warning /></el-icon>
                   {{ !configStore.hasUnsavedChanges ? '配置已保存' : '配置未保存' }}
                 </el-tag>
                 <span v-if="activePresetName" class="active-preset">
-                  当前预设: <strong>{{ activePresetName }}</strong>
+                  <span class="preset-label">当前预设:</span>
+                  <strong class="preset-name neon-text">{{ activePresetName }}</strong>
                 </span>
               </div>
             </div>
             <div class="welcome-icon">
-              <el-icon :size="64" color="#409eff"><Setting /></el-icon>
+              <el-icon :size="64" class="setting-icon"><Setting /></el-icon>
             </div>
           </div>
         </el-col>
@@ -236,39 +235,39 @@ onMounted(() => {
       <!-- 统计概览卡片 -->
       <el-row :gutter="20" class="stats-section">
         <el-col :xs="24" :sm="12" :md="8">
-          <el-card class="stat-card" shadow="hover">
+          <el-card class="stat-card hover-lift" shadow="never">
             <div class="stat-content">
               <div class="stat-icon agent-icon">
                 <el-icon :size="32"><User /></el-icon>
               </div>
               <div class="stat-info">
-                <div class="stat-value">{{ stats.agentCount }}/{{ stats.totalAgents }}</div>
+                <div class="stat-value neon-text">{{ stats.agentCount }}/{{ stats.totalAgents }}</div>
                 <div class="stat-label">Agent 配置</div>
               </div>
             </div>
           </el-card>
         </el-col>
         <el-col :xs="24" :sm="12" :md="8">
-          <el-card class="stat-card" shadow="hover">
+          <el-card class="stat-card hover-lift" shadow="never">
             <div class="stat-content">
               <div class="stat-icon category-icon">
                 <el-icon :size="32"><Folder /></el-icon>
               </div>
               <div class="stat-info">
-                <div class="stat-value">{{ stats.categoryCount }}/{{ stats.totalCategories }}</div>
+                <div class="stat-value neon-text-success">{{ stats.categoryCount }}/{{ stats.totalCategories }}</div>
                 <div class="stat-label">Category 配置</div>
               </div>
             </div>
           </el-card>
         </el-col>
         <el-col :xs="24" :sm="12" :md="8">
-          <el-card class="stat-card" shadow="hover">
+          <el-card class="stat-card hover-lift" shadow="never">
             <div class="stat-content">
               <div class="stat-icon preset-icon">
                 <el-icon :size="32"><Collection /></el-icon>
               </div>
               <div class="stat-info">
-                <div class="stat-value">{{ stats.presetCount }}</div>
+                <div class="stat-value neon-text-warning">{{ stats.presetCount }}</div>
                 <div class="stat-label">已保存预设</div>
               </div>
             </div>
@@ -279,10 +278,10 @@ onMounted(() => {
       <!-- 快速操作区域 -->
       <el-row :gutter="20" class="actions-section">
         <el-col :span="24">
-          <el-card shadow="never">
+          <el-card class="actions-card" shadow="never">
             <template #header>
               <div class="section-header">
-                <span class="section-title">快速操作</span>
+                <span class="section-title neon-text-subtle">快速操作</span>
               </div>
             </template>
             <div class="quick-actions">
@@ -292,14 +291,14 @@ onMounted(() => {
                    v-model="workingPath"
                    placeholder="输入工作目录路径（留空使用用户主目录）"
                    clearable
-                   class="path-input"
+                   class="path-input neon-input"
                  >
                    <template #prepend>
                      <el-icon><Folder /></el-icon>
                      <span>工作路径</span>
                    </template>
                    <template #append>
-                     <el-button @click="browseFolder">
+                     <el-button class="neon-btn-secondary" @click="browseFolder">
                        <el-icon><FolderOpened /></el-icon>
                        浏览
                      </el-button>
@@ -308,14 +307,14 @@ onMounted(() => {
                </div>
                
                <!-- 代理配置区域 -->
-               <div class="proxy-config-wrapper">
+               <div class="proxy-config-wrapper glass-card-overlay">
                  <div class="proxy-switch-row">
                    <el-switch
                      v-model="proxyEnabled"
                      active-text="启用监控代理"
                      inactive-text="直连模式"
                    />
-                   <el-tag v-if="proxyEnabled" :type="proxyCaCertPath ? 'success' : 'warning'" size="small">
+                   <el-tag v-if="proxyEnabled" :type="proxyCaCertPath ? 'success' : 'warning'" size="small" effect="dark">
                      {{ proxyCaCertPath ? '已配置证书' : '未配置证书' }}
                    </el-tag>
                  </div>
@@ -326,14 +325,14 @@ onMounted(() => {
                        v-model="proxyCaCertPath"
                        placeholder="企业代理 CA 证书路径（可选，用于信任自签名证书）"
                        clearable
-                       class="cert-input"
+                       class="cert-input neon-input"
                      >
                        <template #prepend>
                          <el-icon><Key /></el-icon>
                          <span>CA 证书</span>
                        </template>
                        <template #append>
-                         <el-button @click="browseCertFile">
+                         <el-button class="neon-btn-secondary" @click="browseCertFile">
                            <el-icon><FolderOpened /></el-icon>
                            浏览
                          </el-button>
@@ -348,7 +347,7 @@ onMounted(() => {
                </div>
                
                <el-button 
-                 type="primary" 
+                 class="action-btn neon-btn-primary" 
                  size="large" 
                  :loading="isLaunching"
                  @click="handleLaunchOpenCode"
@@ -356,20 +355,20 @@ onMounted(() => {
                  <el-icon><VideoPlay /></el-icon>
                  启动 OpenCode
                </el-button>
-               <el-button type="primary" size="large" @click="goToAgents">
+               <el-button class="action-btn neon-btn-secondary" size="large" @click="goToAgents">
                  <el-icon><User /></el-icon>
                  配置 Agents
                </el-button>
-               <el-button type="success" size="large" @click="goToCategories">
+               <el-button class="action-btn neon-btn-success" size="large" @click="goToCategories">
                  <el-icon><Folder /></el-icon>
                  配置 Categories
                </el-button>
-               <el-button type="info" size="large" @click="goToPresets">
+               <el-button class="action-btn neon-btn-info" size="large" @click="goToPresets">
                  <el-icon><Collection /></el-icon>
                  管理预设
                </el-button>
                <el-button 
-                 type="warning" 
+                 class="action-btn neon-btn-warning" 
                  size="large" 
                  :disabled="!configStore.hasUnsavedChanges"
                  @click="saveConfig"
@@ -385,11 +384,11 @@ onMounted(() => {
       <!-- 最近预设区域 -->
       <el-row :gutter="20" class="presets-section">
         <el-col :span="24">
-          <el-card shadow="never">
+          <el-card class="presets-card" shadow="never">
             <template #header>
               <div class="section-header">
-                <span class="section-title">最近使用的预设</span>
-                <el-button link type="primary" @click="goToPresets">
+                <span class="section-title neon-text-subtle">最近使用的预设</span>
+                <el-button link class="view-all-btn" @click="goToPresets">
                   查看全部
                   <el-icon class="el-icon--right"><ArrowRight /></el-icon>
                 </el-button>
@@ -398,16 +397,20 @@ onMounted(() => {
             
             <div v-if="recentPresets.length > 0" class="preset-list">
               <div
-                v-for="preset in recentPresets"
+                v-for="(preset, index) in recentPresets"
                 :key="preset.name"
-                class="preset-item"
+                class="preset-item glass-card-overlay"
                 :class="{ active: preset.name === activePresetName }"
+                :style="{ '--stagger-delay': `${index * 50}ms` }"
                 @click="applyPreset(preset.name)"
               >
                 <div class="preset-info">
                   <div class="preset-name">
-                    <el-icon><Document /></el-icon>
-                    {{ preset.name }}
+                    <el-icon class="preset-icon"><Document /></el-icon>
+                    <span class="preset-name-text">{{ preset.name }}</span>
+                    <el-tag v-if="preset.name === activePresetName" size="small" effect="dark" class="active-badge">
+                      当前
+                    </el-tag>
                   </div>
                   <div v-if="preset.description" class="preset-desc">
                     {{ preset.description }}
@@ -416,7 +419,7 @@ onMounted(() => {
                 <div class="preset-meta">
                   <span class="preset-date">{{ formatDate(preset.updatedAt) }}</span>
                   <el-button 
-                    type="primary" 
+                    class="apply-btn neon-btn-primary" 
                     link 
                     size="small"
                     @click.stop="applyPreset(preset.name)"
@@ -427,8 +430,8 @@ onMounted(() => {
               </div>
             </div>
             
-            <el-empty v-else description="暂无预设">
-              <el-button type="primary" @click="createPreset">
+            <el-empty v-else description="暂无预设" class="empty-presets">
+              <el-button class="neon-btn-primary" @click="createPreset">
                 创建第一个预设
               </el-button>
             </el-empty>
@@ -436,11 +439,10 @@ onMounted(() => {
         </el-col>
       </el-row>
     </div>
-  </AppLayout>
 </template>
 
 <style scoped>
-/* 仪表盘容器 */
+/* ==================== 基础样式 ==================== */
 .home-dashboard {
   padding: 0;
 }
@@ -450,48 +452,98 @@ onMounted(() => {
 .stats-section,
 .actions-section,
 .presets-section {
-  margin-bottom: 20px;
+  margin-bottom: var(--app-spacing-5);
+}
+
+/* ==================== 赛博朋克主题 - 欢迎卡片 ==================== */
+html.cyberpunk .welcome-card {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(255, 0, 255, 0.05) 100%);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  box-shadow: 
+    0 0 20px rgba(0, 255, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* 赛博朋克欢迎卡片文字 - 使用浅色确保对比度 */
+html.cyberpunk .welcome-title {
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+html.cyberpunk .welcome-subtitle {
+  color: #e0e0ff;
+}
+
+html.cyberpunk .welcome-status,
+html.cyberpunk .active-preset,
+html.cyberpunk .active-preset strong {
+  color: #ffffff;
+}
+
+/* ==================== 玻璃拟态主题 - 欢迎卡片 ==================== */
+html.glassmorphism .welcome-card {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(14, 165, 233, 0.1) 100%);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* 玻璃拟态欢迎卡片文字 - 使用深色确保对比度 */
+html.glassmorphism .welcome-title {
+  color: #1e293b;
+}
+
+html.glassmorphism .welcome-subtitle {
+  color: #475569;
+}
+
+html.glassmorphism .welcome-status,
+html.glassmorphism .active-preset,
+html.glassmorphism .active-preset strong {
+  color: #1e293b;
 }
 
 /* 欢迎区域 */
 .welcome-card {
-  background: linear-gradient(135deg, #409eff 0%, #67c23a 100%);
-  border-radius: 12px;
-  padding: 32px;
+  background: linear-gradient(135deg, var(--app-color-primary) 0%, var(--app-color-success) 100%);
+  border-radius: var(--app-radius-lg);
+  padding: var(--app-spacing-8);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: white;
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+  color: var(--app-text-inverse);
+  box-shadow: var(--app-shadow-lg);
+  transition: all 0.3s ease;
 }
 
 .welcome-title {
   font-size: 28px;
   font-weight: 600;
-  margin: 0 0 8px 0;
-  color: white;
+  margin: 0 0 var(--app-spacing-2) 0;
+  color: var(--app-text-inverse);
 }
 
 .welcome-subtitle {
   font-size: 16px;
-  margin: 0 0 20px 0;
+  margin: 0 0 var(--app-spacing-5) 0;
   opacity: 0.9;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--app-text-inverse);
 }
 
 .welcome-status {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--app-spacing-4);
 }
 
 .active-preset {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--app-text-inverse);
 }
 
 .active-preset strong {
-  color: white;
+  color: var(--app-text-inverse);
   font-weight: 600;
 }
 
@@ -499,54 +551,102 @@ onMounted(() => {
   opacity: 0.3;
 }
 
-/* 统计卡片 */
+/* ==================== 霓虹文字效果 - 赛博朋克 ==================== */
+html.cyberpunk .neon-text {
+  color: var(--app-color-primary);
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+html.cyberpunk .neon-text-success {
+  color: var(--app-color-success);
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+html.cyberpunk .neon-text-warning {
+  color: var(--app-color-warning);
+  text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+}
+
+html.cyberpunk .neon-text-subtle {
+  color: var(--app-color-primary);
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+/* ==================== 霓虹文字效果 - 玻璃拟态 ==================== */
+html.glassmorphism .neon-text {
+  color: var(--app-color-primary);
+}
+
+html.glassmorphism .neon-text-success {
+  color: var(--app-color-success);
+}
+
+html.glassmorphism .neon-text-warning {
+  color: var(--app-color-warning);
+}
+
+html.glassmorphism .neon-text-subtle {
+  color: var(--app-color-primary);
+}
+
+/* ==================== 统计卡片 ==================== */
 .stat-card {
-  transition: transform 0.3s ease;
+  transition: transform var(--app-transition-normal), box-shadow 0.3s ease;
 }
 
 .stat-card:hover {
   transform: translateY(-4px);
 }
 
+/* 赛博朋克主题 - 统计卡片悬停 */
+html.cyberpunk .stat-card:hover {
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+}
+
+/* 玻璃拟态主题 - 统计卡片悬停 */
+html.glassmorphism .stat-card:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
 .stat-content {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--app-spacing-4);
 }
 
 .stat-icon {
   width: 56px;
   height: 56px;
-  border-radius: 12px;
+  border-radius: var(--app-radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--app-text-inverse);
 }
 
 .agent-icon {
-  background: linear-gradient(135deg, #409eff 0%, #79bbff 100%);
+  background: linear-gradient(135deg, var(--app-color-primary) 0%, color-mix(in srgb, var(--app-color-primary) 70%, white) 100%);
 }
 
 .category-icon {
-  background: linear-gradient(135deg, #67c23a 0%, #95d475 100%);
+  background: linear-gradient(135deg, var(--app-color-success) 0%, color-mix(in srgb, var(--app-color-success) 70%, white) 100%);
 }
 
 .preset-icon {
-  background: linear-gradient(135deg, #e6a23c 0%, #f3d19e 100%);
+  background: linear-gradient(135deg, var(--app-color-warning) 0%, color-mix(in srgb, var(--app-color-warning) 70%, white) 100%);
 }
 
 .stat-value {
   font-size: 24px;
   font-weight: 700;
-  color: #303133;
+  color: var(--app-text-primary);
   line-height: 1.2;
 }
 
 .stat-label {
   font-size: 14px;
-  color: #909399;
-  margin-top: 4px;
+  color: var(--app-text-tertiary);
+  margin-top: var(--app-spacing-1);
 }
 
 /* 区块标题 */
@@ -559,19 +659,19 @@ onMounted(() => {
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  color: #303133;
+  color: var(--app-text-primary);
 }
 
-/* 快速操作 */
+/* ==================== 快速操作 ==================== */
 .quick-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--app-spacing-3);
 }
 
 .path-input-wrapper {
   width: 100%;
-  margin-bottom: 8px;
+  margin-bottom: var(--app-spacing-2);
 }
 
 .path-input {
@@ -581,27 +681,41 @@ onMounted(() => {
 .path-input :deep(.el-input-group__prepend) {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-spacing-2);
 }
 
-/* 代理配置区域 */
+/* ==================== 代理配置区域 ==================== */
 .proxy-config-wrapper {
   width: 100%;
-  margin-bottom: 12px;
-  padding: 12px;
-  background-color: #f5f7fa;
-  border-radius: 8px;
+  margin-bottom: var(--app-spacing-3);
+  padding: var(--app-spacing-3);
+  background-color: var(--app-bg-hover);
+  border-radius: var(--app-radius-md);
+  transition: all 0.3s ease;
+}
+
+/* 赛博朋克主题 - 代理配置区域 */
+html.cyberpunk .proxy-config-wrapper {
+  background: rgba(0, 255, 255, 0.05);
+  border: 1px solid rgba(0, 255, 255, 0.15);
+}
+
+/* 玻璃拟态主题 - 代理配置区域 */
+html.glassmorphism .proxy-config-wrapper {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  backdrop-filter: blur(8px);
 }
 
 .proxy-switch-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: var(--app-spacing-3);
+  margin-bottom: var(--app-spacing-2);
 }
 
 .proxy-cert-config {
-  margin-top: 12px;
+  margin-top: var(--app-spacing-3);
 }
 
 .cert-input {
@@ -611,20 +725,33 @@ onMounted(() => {
 .cert-input :deep(.el-input-group__prepend) {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-spacing-2);
 }
 
 .proxy-info {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  margin-top: 8px;
-  padding: 8px 12px;
-  background-color: #ecf5ff;
-  border-radius: 4px;
+  gap: var(--app-spacing-2);
+  margin-top: var(--app-spacing-2);
+  padding: var(--app-spacing-2) var(--app-spacing-3);
+  background-color: color-mix(in srgb, var(--app-color-primary) 10%, transparent);
+  border-radius: var(--app-radius-sm);
   font-size: 12px;
-  color: #409eff;
+  color: var(--app-color-primary);
   line-height: 1.5;
+  transition: all 0.3s ease;
+}
+
+/* 赛博朋克主题 - 代理信息 */
+html.cyberpunk .proxy-info {
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+/* 玻璃拟态主题 - 代理信息 */
+html.glassmorphism .proxy-info {
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.2);
 }
 
 .proxy-info .el-icon {
@@ -632,63 +759,242 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-/* 预设列表 */
+/* ==================== 霓虹按钮样式 ==================== */
+/* 赛博朋克主题 - 主按钮 */
+html.cyberpunk .neon-btn-primary {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.15), rgba(0, 255, 255, 0.05));
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  color: var(--app-color-primary);
+  box-shadow: 
+    0 0 10px rgba(0, 255, 255, 0.2),
+    inset 0 0 10px rgba(0, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .neon-btn-primary:hover {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.25), rgba(0, 255, 255, 0.1));
+  box-shadow: 
+    0 0 20px rgba(0, 255, 255, 0.4),
+    0 0 40px rgba(0, 255, 255, 0.2),
+    inset 0 0 15px rgba(0, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+html.cyberpunk .neon-btn-secondary {
+  background: linear-gradient(135deg, rgba(255, 0, 255, 0.15), rgba(255, 0, 255, 0.05));
+  border: 1px solid rgba(255, 0, 255, 0.4);
+  color: var(--app-color-secondary);
+  box-shadow: 
+    0 0 10px rgba(255, 0, 255, 0.2),
+    inset 0 0 10px rgba(255, 0, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .neon-btn-secondary:hover {
+  background: linear-gradient(135deg, rgba(255, 0, 255, 0.25), rgba(255, 0, 255, 0.1));
+  box-shadow: 
+    0 0 20px rgba(255, 0, 255, 0.4),
+    0 0 40px rgba(255, 0, 255, 0.2),
+    inset 0 0 15px rgba(255, 0, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+html.cyberpunk .neon-btn-success {
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.15), rgba(0, 255, 136, 0.05));
+  border: 1px solid rgba(0, 255, 136, 0.4);
+  color: var(--app-color-success);
+  box-shadow: 
+    0 0 10px rgba(0, 255, 136, 0.2),
+    inset 0 0 10px rgba(0, 255, 136, 0.05);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .neon-btn-success:hover {
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.25), rgba(0, 255, 136, 0.1));
+  box-shadow: 
+    0 0 20px rgba(0, 255, 136, 0.4),
+    0 0 40px rgba(0, 255, 136, 0.2),
+    inset 0 0 15px rgba(0, 255, 136, 0.1);
+  transform: translateY(-1px);
+}
+
+html.cyberpunk .neon-btn-info {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.05));
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  color: var(--app-color-accent);
+  box-shadow: 
+    0 0 10px rgba(251, 191, 36, 0.2),
+    inset 0 0 10px rgba(251, 191, 36, 0.05);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .neon-btn-info:hover {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.25), rgba(251, 191, 36, 0.1));
+  box-shadow: 
+    0 0 20px rgba(251, 191, 36, 0.4),
+    0 0 40px rgba(251, 191, 36, 0.2),
+    inset 0 0 15px rgba(251, 191, 36, 0.1);
+  transform: translateY(-1px);
+}
+
+html.cyberpunk .neon-btn-warning {
+  background: linear-gradient(135deg, rgba(255, 170, 0, 0.15), rgba(255, 170, 0, 0.05));
+  border: 1px solid rgba(255, 170, 0, 0.4);
+  color: var(--app-color-warning);
+  box-shadow: 
+    0 0 10px rgba(255, 170, 0, 0.2),
+    inset 0 0 10px rgba(255, 170, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .neon-btn-warning:hover {
+  background: linear-gradient(135deg, rgba(255, 170, 0, 0.25), rgba(255, 170, 0, 0.1));
+  box-shadow: 
+    0 0 20px rgba(255, 170, 0, 0.4),
+    0 0 40px rgba(255, 170, 0, 0.2),
+    inset 0 0 15px rgba(255, 170, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+/* 玻璃拟态主题 - 按钮 */
+html.glassmorphism .neon-btn-primary {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(37, 99, 235, 0.05));
+  border: 1px solid rgba(37, 99, 235, 0.4);
+  color: var(--app-color-primary);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15);
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .neon-btn-primary:hover {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.25), rgba(37, 99, 235, 0.1));
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
+  transform: translateY(-1px);
+}
+
+html.glassmorphism .neon-btn-secondary,
+html.glassmorphism .neon-btn-success,
+html.glassmorphism .neon-btn-info,
+html.glassmorphism .neon-btn-warning {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+}
+
+/* ==================== 预设列表 ==================== */
 .preset-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--app-spacing-2);
 }
 
 .preset-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  background-color: #f5f7fa;
-  border-radius: 8px;
+  padding: var(--app-spacing-3) var(--app-spacing-4);
+  background-color: var(--app-bg-hover);
+  border-radius: var(--app-radius-md);
   cursor: pointer;
   transition: all 0.3s ease;
   border: 2px solid transparent;
 }
 
+/* 赛博朋克主题 - 预设项 */
+html.cyberpunk .preset-item {
+  background: rgba(26, 26, 46, 0.8);
+  border: 1px solid rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .preset-item:hover {
+  background: rgba(0, 255, 255, 0.08);
+  border-color: rgba(0, 255, 255, 0.4);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);
+  transform: translateX(4px);
+}
+
+html.cyberpunk .preset-item.active {
+  background: rgba(0, 255, 255, 0.12);
+  border-color: var(--app-color-primary);
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
+}
+
+/* 玻璃拟态主题 - 预设项 */
+html.glassmorphism .preset-item {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  backdrop-filter: blur(8px);
+}
+
+html.glassmorphism .preset-item:hover {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(37, 99, 235, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  transform: translateX(4px);
+}
+
+html.glassmorphism .preset-item.active {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: var(--app-color-primary);
+}
+
 .preset-item:hover {
-  background-color: #ecf5ff;
-  border-color: #409eff;
+  background-color: color-mix(in srgb, var(--app-color-primary) 8%, transparent);
+  border-color: var(--app-color-primary);
 }
 
 .preset-item.active {
-  background-color: #ecf5ff;
-  border-color: #409eff;
+  background-color: color-mix(in srgb, var(--app-color-primary) 8%, transparent);
+  border-color: var(--app-color-primary);
 }
 
 .preset-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--app-spacing-1);
 }
 
 .preset-name {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-spacing-2);
   font-weight: 500;
-  color: #303133;
+  color: var(--app-text-primary);
 }
 
 .preset-desc {
   font-size: 12px;
-  color: #909399;
+  color: var(--app-text-tertiary);
 }
 
 .preset-meta {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--app-spacing-3);
 }
 
 .preset-date {
   font-size: 12px;
-  color: #c0c4cc;
+  color: var(--app-text-disabled);
+}
+
+/* 当前标签 */
+html.cyberpunk .active-badge {
+  background: rgba(0, 255, 136, 0.2) !important;
+  border: 1px solid rgba(0, 255, 136, 0.4) !important;
+  color: var(--app-color-success) !important;
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+}
+
+html.glassmorphism .active-badge {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  color: var(--app-color-success) !important;
+}
+
+/* 空状态 */
+.empty-presets {
+  padding: var(--app-spacing-8) 0;
 }
 
 /* 响应式适配 */
@@ -696,7 +1002,7 @@ onMounted(() => {
   .welcome-card {
     flex-direction: column;
     text-align: center;
-    gap: 20px;
+    gap: var(--app-spacing-5);
   }
 
   .welcome-icon {
@@ -704,7 +1010,7 @@ onMounted(() => {
   }
 
   .stat-card {
-    margin-bottom: 12px;
+    margin-bottom: var(--app-spacing-3);
   }
 
   .quick-actions {
@@ -714,7 +1020,7 @@ onMounted(() => {
   .preset-item {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: var(--app-spacing-2);
   }
 
   .preset-meta {

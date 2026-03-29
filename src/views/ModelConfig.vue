@@ -4,7 +4,6 @@
  * 合并了 Agent 和 Category 的配置管理
  */
 import { ref, onMounted, computed, watch } from 'vue'
-import AppLayout from '@/components/layout/AppLayout.vue'
 import ConfigCard from '@/components/ConfigCard.vue'
 import ConfigDetailDialog from '@/components/ConfigDetailDialog.vue'
 import ModelSelectDrawer from '@/components/ModelSelectDrawer.vue'
@@ -12,9 +11,6 @@ import { listModels } from '@/services/modelStore'
 import { useConfigStore } from '@/stores/config'
 import type { Model, AgentName, CategoryName, OhMyOpenCodeConfig } from '@/types'
 import { AGENT_NAMES, AGENT_INFO, CATEGORY_NAMES, CATEGORY_INFO, createDefaultConfig } from '@/types'
-
-// 页面标题
-const pageTitle = '模型配置'
 
 // 使用共享的配置 store
 const configStore = useConfigStore()
@@ -149,8 +145,7 @@ watch(() => configStore.error, (newError) => {
 </script>
 
 <template>
-  <AppLayout :title="pageTitle">
-    <div class="model-config">
+  <div class="model-config">
       <!-- 页面头部 -->
       <div class="page-header">
         <div class="header-left">
@@ -252,52 +247,272 @@ watch(() => configStore.error, (newError) => {
         @select="handleSelectModel"
       />
     </div>
-  </AppLayout>
 </template>
 
 <style scoped>
+/* ==================== 基础布局 ==================== */
 .model-config {
   max-width: 1200px;
   margin: 0 auto;
+  padding: var(--app-spacing-4);
 }
 
+/* ==================== 页面头部 ==================== */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: var(--app-spacing-5);
+  padding: var(--app-spacing-4) 0;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--app-spacing-3);
 }
 
+/* ==================== 赛博朋克主题 - 未保存标签 ==================== */
+html.cyberpunk .page-header :deep(.el-tag--warning) {
+  background: rgba(255, 170, 0, 0.15);
+  border: 1px solid rgba(255, 170, 0, 0.4);
+  color: var(--app-color-warning);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 0 10px rgba(255, 170, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .page-header :deep(.el-tag--warning:hover) {
+  box-shadow: 0 0 16px rgba(255, 170, 0, 0.4);
+  border-color: rgba(255, 170, 0, 0.6);
+}
+
+/* ==================== 玻璃拟态主题 - 未保存标签 ==================== */
+html.glassmorphism .page-header :deep(.el-tag--warning) {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: var(--app-color-warning);
+}
+
+/* ==================== 赛博朋克主题 - 保存按钮 ==================== */
+html.cyberpunk .page-header :deep(.el-button--primary) {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.2) 0%, rgba(255, 0, 255, 0.15) 100%);
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  color: var(--app-color-primary);
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: var(--app-radius-md);
+  box-shadow:
+    0 0 15px rgba(0, 255, 255, 0.3),
+    inset 0 0 10px rgba(0, 255, 255, 0.05);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+html.cyberpunk .page-header :deep(.el-button--primary::before) {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+html.cyberpunk .page-header :deep(.el-button--primary:hover) {
+  box-shadow:
+    0 0 25px rgba(0, 255, 255, 0.5),
+    0 0 50px rgba(0, 255, 255, 0.2),
+    inset 0 0 15px rgba(0, 255, 255, 0.1);
+  transform: translateY(-1px);
+  border-color: rgba(0, 255, 255, 0.6);
+}
+
+html.cyberpunk .page-header :deep(.el-button--primary:hover::before) {
+  left: 100%;
+}
+
+html.cyberpunk .page-header :deep(.el-button--primary:active) {
+  transform: translateY(0);
+  box-shadow:
+    0 0 10px rgba(0, 255, 255, 0.3),
+    inset 0 0 10px rgba(0, 255, 255, 0.1);
+}
+
+/* ==================== 玻璃拟态主题 - 保存按钮 ==================== */
+html.glassmorphism .page-header :deep(.el-button--primary) {
+  background: linear-gradient(135deg, var(--app-color-primary) 0%, var(--app-color-secondary) 100%);
+  border: none;
+  color: white;
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: var(--app-radius-md);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.25);
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .page-header :deep(.el-button--primary:hover) {
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+
+/* ==================== Alert 提示 ==================== */
 .save-alert {
-  margin-bottom: 20px;
+  margin-bottom: var(--app-spacing-5);
+  border-radius: var(--app-radius-lg);
+  backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
 }
 
+/* 赛博朋克主题 - Alert */
+html.cyberpunk .save-alert {
+  background: rgba(0, 255, 136, 0.1) !important;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 20px rgba(0, 255, 136, 0.1);
+}
+
+html.cyberpunk .save-alert:deep(.el-alert__title) {
+  color: var(--app-color-success);
+  font-weight: 500;
+}
+
+html.cyberpunk .save-alert:deep(.el-alert__icon) {
+  color: var(--app-color-success);
+}
+
+html.cyberpunk .save-alert:deep(.el-alert--error) {
+  background: rgba(255, 51, 102, 0.1) !important;
+  border-color: rgba(255, 51, 102, 0.3);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(255, 51, 102, 0.1);
+}
+
+html.cyberpunk .save-alert:deep(.el-alert--error .el-alert__title),
+html.cyberpunk .save-alert:deep(.el-alert--error .el-alert__icon) {
+  color: var(--app-color-danger);
+}
+
+/* 玻璃拟态主题 - Alert */
+html.glassmorphism .save-alert {
+  background: rgba(16, 185, 129, 0.08) !important;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+html.glassmorphism .save-alert:deep(.el-alert__title) {
+  color: var(--app-color-success);
+}
+
+html.glassmorphism .save-alert:deep(.el-alert--error) {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+/* ==================== Tab 切换 ==================== */
 .config-tabs {
-  margin-bottom: 20px;
+  margin-bottom: var(--app-spacing-5);
 }
 
+.config-tabs :deep(.el-tabs__header) {
+  margin-bottom: var(--app-spacing-5);
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+.config-tabs :deep(.el-tabs__nav-wrap::after) {
+  background: transparent;
+}
+
+/* Tab 项基础样式 */
+.config-tabs :deep(.el-tabs__item) {
+  color: var(--app-text-tertiary);
+  font-size: 15px;
+  font-weight: 500;
+  padding: 0 var(--app-spacing-6);
+  height: 48px;
+  line-height: 48px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+/* 赛博朋克主题 - Tab */
+html.cyberpunk .config-tabs :deep(.el-tabs__item:hover) {
+  color: var(--app-text-secondary);
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 255, 255, 0.05) 100%);
+}
+
+html.cyberpunk .config-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--app-color-primary);
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+html.cyberpunk .config-tabs :deep(.el-tabs__active-bar) {
+  background: linear-gradient(90deg, var(--app-color-primary) 0%, var(--app-color-secondary) 100%);
+  height: 3px;
+  border-radius: 2px;
+  box-shadow:
+    0 0 10px var(--app-color-primary),
+    0 0 20px rgba(0, 255, 255, 0.5);
+}
+
+/* 玻璃拟态主题 - Tab */
+html.glassmorphism .config-tabs :deep(.el-tabs__item:hover) {
+  color: var(--app-text-secondary);
+}
+
+html.glassmorphism .config-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--app-color-primary);
+}
+
+html.glassmorphism .config-tabs :deep(.el-tabs__active-bar) {
+  background: var(--app-color-primary);
+  height: 3px;
+  border-radius: 2px;
+}
+
+/* ==================== Tab 内容区域 ==================== */
 .tab-header {
-  margin-bottom: 16px;
+  margin-bottom: var(--app-spacing-5);
+  padding: var(--app-spacing-3) var(--app-spacing-4);
+  background: var(--app-bg-card);
+  border-radius: var(--app-radius-md);
+  border: 1px solid var(--app-border-default);
+  transition: all 0.3s ease;
+}
+
+/* 赛博朋克主题 - Tab 头部 */
+html.cyberpunk .tab-header {
+  background: rgba(26, 26, 46, 0.8);
+  border: 1px solid rgba(0, 255, 255, 0.1);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.05);
+}
+
+/* 玻璃拟态主题 - Tab 头部 */
+html.glassmorphism .tab-header {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(8px);
 }
 
 .subtitle {
-  color: #909399;
+  color: var(--app-text-tertiary);
   font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
 }
 
+/* ==================== 配置网格 ==================== */
 .config-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
+  gap: var(--app-spacing-5);
+  padding: var(--app-spacing-2);
 }
 
-/* 响应式布局：大屏幕显示 3 列 */
+/* 大屏幕显示 3 列 */
 @media (min-width: 992px) {
   .config-grid {
     grid-template-columns: repeat(3, 1fr);
@@ -315,6 +530,15 @@ watch(() => configStore.error, (newError) => {
 @media (max-width: 767px) {
   .config-grid {
     grid-template-columns: 1fr;
+    gap: var(--app-spacing-4);
+  }
+}
+
+/* 超大屏幕优化 */
+@media (min-width: 1400px) {
+  .config-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--app-spacing-6);
   }
 }
 </style>

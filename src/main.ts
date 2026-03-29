@@ -1,8 +1,33 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import 'element-plus/dist/index.css'
+
+// 设计系统样式引入（顺序重要）
+import '@/styles/variables.css'
+import '@/styles/element-override.css'
+// 新主题系统
+import '@/styles/themes/cyberpunk.css'
+import '@/styles/themes/glassmorphism.css'
+// 主题色预设
+import '@/styles/theme-colors/cyan.css'
+import '@/styles/theme-colors/magenta.css'
+import '@/styles/theme-colors/purple.css'
+import '@/styles/theme-colors/gold.css'
+// 特效系统
+import '@/styles/effects/neon.css'
+import '@/styles/effects/glitch.css'
+import '@/styles/effects/scanlines.css'
+import '@/styles/effects/grid.css'
+// 全局样式
+import '@/styles/global.css'
+
+// 主题初始化 - 必须在 CSS 加载后、应用挂载前导入
+// 这会触发 useTheme.ts 中的 IIFE，立即设置 html 元素的 light/dark class
+import '@/composables/useTheme'
+
 import App from './App.vue'
 import router from './router'
 import { globalErrorHandler, setupGlobalErrorHandling } from './utils/errorHandler'
@@ -33,6 +58,11 @@ app.use(router)
 
 // 使用 Element Plus UI 组件库（中文语言包）
 app.use(ElementPlus, { locale: zhCn })
+
+// 全局注册 Element Plus 图标
+for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+  app.component(key, component)
+}
 
 // 挂载应用
 app.mount('#app')

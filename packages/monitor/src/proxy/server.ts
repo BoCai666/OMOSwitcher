@@ -20,6 +20,19 @@ import { MITMHandler } from './mitm.js';
 import type { LLMRequest, LLMResponse } from '../types.js';
 import { ConfigManager } from '../config-manager.js';
 
+// 创建不使用代理的自定义 Agent
+// 避免代理服务器自己再通过上游代理转发请求
+const noProxyHttpAgent = new http.Agent({
+  keepAlive: true,
+  maxSockets: 100,
+});
+
+const noProxyHttpsAgent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 100,
+  rejectUnauthorized: false, // 允许自签名证书
+});
+
 // 临时的 CertificateManager 接口（后续任务实现）
 export interface CertificateManager {
   getCertificateForDomain(domain: string): { key: string; cert: string; ca: string };
@@ -50,6 +63,19 @@ export class ProxyServer extends EventEmitter {
     // 初始化 provider patterns
     this.updateProviderPatterns();
     
+    // 全局错误处理：防止 http-proxy 错误导致进程崩溃
+    this.proxy.on('error', (err, req, res) => {
+      console.error('[Proxy] http-proxy error:', err.message);
+      // res 可能是 ServerResponse 或 Socket
+      if (res && typeof (res as http.ServerResponse).writeHead === 'function') {
+        const serverRes = res as http.ServerResponse;
+        if (!serverRes.headersSent) {
+          serverRes.writeHead(502, { 'Content-Type': 'text/plain' });
+          serverRes.end('Bad Gateway');
+        }
+      }
+    });
+    
     // 监听配置变更，动态更新域名列表
     this.options.configManager.watch((key) => {
       if (key === 'domains') {
@@ -76,10 +102,17 @@ export class ProxyServer extends EventEmitter {
   }
 
   private createProxy(): httpProxy {
+    // 创建完全不使用代理的代理服务器
+    // 注意：http-proxy 默认会读取环境变量中的代理设置
+    // 我们需要显式禁用它
     return httpProxy.createProxyServer({
-      secure: false,
-      changeOrigin: true,
-      ws: true
+      secure: false,        // 不验证 SSL 证书
+      changeOrigin: true,   // 修改 Origin 头
+      ws: true,             // 支持 WebSocket
+      // 使用自定义 Agent，禁用上游代理
+      agent: noProxyHttpAgent,
+      // 额外的选项确保不使用系统代理
+      followRedirects: false,
     });
   }
 
@@ -123,7 +156,20 @@ export class ProxyServer extends EventEmitter {
       
       await this.forwardWithCapture(req, res, target, llmRequest);
     } else {
-      this.proxy.web(req, res, { target: `http://${target}` });
+      // 非LLM请求直接转发，带错误处理
+      this.proxy.web(req, res, { 
+        target: `http://${target}`,
+        agent: noProxyHttpAgent,  // 使用自定义 agent 避免上游代理
+      }, (err) => {
+        if (err) {
+          // 连接失败时返回 502 错误，不崩溃整个进程
+          console.error(`[Proxy] 转发请求到 ${target} 失败:`, err.message);
+          if (!res.headersSent) {
+            res.writeHead(502, { 'Content-Type': 'text/plain' });
+            res.end(`Bad Gateway: 无法连接到 ${target}`);
+          }
+        }
+      });
     }
   }
 
@@ -388,9 +434,17 @@ export class ProxyServer extends EventEmitter {
       }
     });
     
-    this.proxy.web(req, res, { target: `http://${target}` }, (err) => {
+    // 使用自定义 agent 避免上游代理
+    this.proxy.web(req, res, { 
+      target: `http://${target}`,
+      agent: noProxyHttpAgent,
+    }, (err) => {
       if (err) {
-        console.error('[Proxy] Forward error:', err);
+        console.error(`[Proxy] Forward error to ${target}:`, err.message);
+        if (!res.headersSent) {
+          res.writeHead(502, { 'Content-Type': 'text/plain' });
+          res.end(`Bad Gateway: 无法连接到 ${target}`);
+        }
       }
     });
   }
@@ -402,13 +456,30 @@ export class ProxyServer extends EventEmitter {
 
   public start(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.httpServer.listen(this.options.port, () => {
+      // 错误处理：端口占用时给出明确提示
+      this.httpServer.once('error', (err: NodeJS.ErrnoException) => {
+        if (err.code === 'EADDRINUSE') {
+          console.error(`[Proxy] 端口 ${this.options.port} 已被占用`);
+          reject(new Error(`端口 ${this.options.port} 已被占用，请检查是否有其他 Monitor 进程在运行`));
+        } else {
+          reject(err);
+        }
+      });
+
+      // 监听成功
+      this.httpServer.once('listening', () => {
         this.isRunning = true;
         console.log(`[Proxy] Server started on port ${this.options.port}`);
         resolve();
       });
 
-      this.httpServer.on('error', reject);
+      // 启动监听
+      // exclusive: false 允许端口复用（在 Windows 上需要）
+      this.httpServer.listen({
+        port: this.options.port,
+        host: '0.0.0.0',
+        exclusive: false,
+      });
     });
   }
 

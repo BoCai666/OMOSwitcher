@@ -1,0 +1,163 @@
+/**
+ * 赛博朋克主题配色方案
+ * 霓虹灯光 + 深紫黑背景 + 科技感
+ */
+
+html.cyberpunk {
+  /* ==================== 背景色 - 深紫黑 ==================== */
+  --app-bg-base: #0a0a1a;
+  --app-bg-card: #12121f;
+  --app-bg-elevated: #1a1a2e;
+  --app-bg-hover: #1f1f35;
+  --app-bg-active: #252545;
+  --app-bg-dark: #050510;
+  --app-bg-mask: rgba(10, 10, 26, 0.85);
+
+  /* ==================== 文字色 - 浅紫白 ==================== */
+  --app-text-primary: #e0e0ff;
+  --app-text-secondary: #b0b0d0;
+  --app-text-tertiary: #8080a0;
+  --app-text-disabled: #505070;
+  --app-text-placeholder: #606080;
+  --app-text-inverse: #0a0a1a;
+
+  /* ==================== 边框色 ==================== */
+  --app-border-default: #2a2a4a;
+  --app-border-base: #2a2a4a;
+  --app-border-hover: #3a3a6a;
+  --app-border-active: #00ffff;
+  --app-border-focus: #00ffff;
+  --app-border-disabled: #1a1a2a;
+  --app-border-light: #1a1a2a;
+  --app-border-dark: #3a3a6a;
+
+  /* ==================== 霓虹主题强调色 ==================== */
+  --app-color-primary: #00ffff;
+  --app-color-secondary: #ff00ff;
+  --app-color-accent: #fbbf24;
+  --app-color-purple: #a855f7;
+  --app-color-success: #00ff88;
+  --app-color-warning: #ffaa00;
+  --app-color-danger: #ff3366;
+  --app-color-info: #00ffff;
+
+  /* ==================== 悬浮态强调色 ==================== */
+  --app-color-primary-hover: #00dddd;
+  --app-color-primary-active: #00bbbb;
+  --app-color-primary-light: rgba(0, 255, 255, 0.15);
+
+  /* ==================== 强调色（霓虹风格） ==================== */
+  --app-accent-primary: #00ffff;
+  --app-accent-secondary: #ff00ff;
+  --app-accent-purple: #a855f7;
+  --app-accent-pink: #ff00ff;
+  --app-accent-orange: #ff8800;
+  --app-accent-green: #00ff88;
+  --app-accent-red: #ff3366;
+  --app-accent-yellow: #fbbf24;
+  --app-accent-cyan: #00ffff;
+  --app-accent-magenta: #ff00ff;
+
+  /* ==================== 状态色 ==================== */
+  --app-success: #00ff88;
+  --app-warning: #ffaa00;
+  --app-error: #ff3366;
+  --app-info: #00ffff;
+
+  /* ==================== 阴影 - 霓虹发光效果 ==================== */
+  --app-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --app-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --app-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --app-shadow-xl: 0 12px 48px rgba(0, 0, 0, 0.7);
+  --app-shadow-base: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --app-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --app-shadow-dark: 0 8px 32px rgba(0, 0, 0, 0.7);
+  --app-shadow-modal: 0 12px 48px rgba(0, 0, 0, 0.8);
+
+  /* 霓虹发光阴影 */
+  --app-shadow-glow-primary: 0 0 20px rgba(0, 255, 255, 0.5);
+  --app-shadow-glow-secondary: 0 0 20px rgba(255, 0, 255, 0.5);
+  --app-shadow-glow-accent: 0 0 20px rgba(251, 191, 36, 0.5);
+  --app-shadow-glow-intense: 0 0 40px rgba(0, 255, 255, 0.7);
+  --app-shadow-glow-cyan: 0 0 20px rgba(0, 255, 255, 0.5);
+  --app-shadow-glow-magenta: 0 0 20px rgba(255, 0, 255, 0.5);
+  --app-shadow-glow-purple: 0 0 20px rgba(168, 85, 247, 0.5);
+  --app-shadow-glow-pink: 0 0 20px rgba(255, 0, 255, 0.5);
+  --app-shadow-glow-green: 0 0 20px rgba(0, 255, 136, 0.5);
+  --app-shadow-glow-red: 0 0 20px rgba(255, 51, 102, 0.5);
+  --app-shadow-glow-yellow: 0 0 20px rgba(251, 191, 36, 0.5);
+  --app-shadow-glow-orange: 0 0 20px rgba(255, 136, 0, 0.5);
+
+  /* ==================== 圆角 ==================== */
+  --app-radius-sm: 4px;
+  --app-radius-md: 8px;
+  --app-radius-lg: 12px;
+  --app-radius-xl: 16px;
+  --app-radius-full: 9999px;
+  --app-radius-small: 4px;
+  --app-radius-base: 6px;
+  --app-radius-large: 8px;
+  --app-radius-round: 50%;
+
+  /* ==================== 玻璃效果 - 暗色玻璃 ==================== */
+  --app-glass-bg: rgba(18, 18, 31, 0.75);
+  --app-glass-border: rgba(0, 255, 255, 0.1);
+  --app-glass-blur: blur(12px);
+  --app-glass-saturate: saturate(180%);
+
+  /* ==================== 滚动条 ==================== */
+  --app-scrollbar-track: #0a0a1a;
+  --app-scrollbar-thumb: #2a2a4a;
+  --app-scrollbar-thumb-hover: #3a3a6a;
+
+  /* ==================== 遮罩层 ==================== */
+  --app-overlay-bg: rgba(5, 5, 16, 0.9);
+  --app-overlay-blur: blur(4px);
+
+  /* ==================== 赛博朋克特效 ==================== */
+  /* 网格背景参数 */
+  --app-grid-color: rgba(0, 255, 255, 0.08);
+  --app-grid-size: 40px;
+  --app-grid-line-width: 1px;
+
+  /* 扫描线参数 */
+  --app-scanline-color: rgba(0, 255, 255, 0.03);
+  --app-scanline-height: 2px;
+  --app-scanline-gap: 4px;
+
+  /* 霓虹边框 */
+  --app-neon-border-primary: 1px solid rgba(0, 255, 255, 0.5);
+  --app-neon-border-secondary: 1px solid rgba(255, 0, 255, 0.5);
+  --app-neon-border-accent: 1px solid rgba(251, 191, 36, 0.5);
+
+  /* ==================== Element Plus 变量覆盖 ==================== */
+  /* 文字颜色 */
+  --el-text-color-primary: #e0e0ff;
+  --el-text-color-regular: #b0b0d0;
+  --el-text-color-secondary: #8080a0;
+  --el-text-color-placeholder: #606080;
+  --el-text-color-disabled: #505070;
+
+  /* 背景色 */
+  --el-bg-color: #0a0a1a;
+  --el-bg-color-page: #0a0a1a;
+  --el-bg-color-overlay: #12121f;
+
+  /* 填充色 */
+  --el-fill-color: #1a1a2e;
+  --el-fill-color-light: #1f1f35;
+  --el-fill-color-lighter: #252545;
+  --el-fill-color-blank: #12121f;
+
+  /* 边框色 */
+  --el-border-color: #2a2a4a;
+  --el-border-color-light: #2a2a4a;
+  --el-border-color-lighter: #1a1a2a;
+
+  /* 主色调 - 霓虹青色 */
+  --el-color-primary: #00ffff;
+  --el-color-success: #00ff88;
+  --el-color-warning: #ffaa00;
+  --el-color-danger: #ff3366;
+  --el-color-info: #00ffff;
+}

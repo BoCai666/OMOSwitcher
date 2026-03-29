@@ -1,17 +1,13 @@
 <script setup lang="ts">
 /**
  * 监控页面
- * 监控服务控制和数据展示主页面
+ * 监控服务控制和数据展示主页面 - 暗黑科技风格
  */
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useMonitorStore } from '@/stores/monitor'
-import AppLayout from '@/components/layout/AppLayout.vue'
 import StatsCard from '@/components/monitor/StatsCard.vue'
 import RequestList from '@/components/monitor/RequestList.vue'
 import RequestDetail from '@/components/monitor/RequestDetail.vue'
-
-// 页面标题
-const pageTitle = '监控'
 
 // 使用状态管理
 const store = useMonitorStore()
@@ -96,228 +92,1110 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <AppLayout :title="pageTitle">
-    <div class="monitor-page">
-      <!-- 控制卡片 -->
-      <el-card class="control-card" shadow="hover">
-        <template #header>
-          <div class="card-header">
-            <div class="header-title">
-              <el-icon :size="20"><VideoCamera /></el-icon>
-              <span>监控服务控制</span>
+  <div class="monitor-page">
+      <!-- 控制卡片 - 玻璃效果 + 状态指示 -->
+      <div class="control-card">
+        <div class="card-header">
+          <div class="header-title">
+            <div class="title-icon-wrapper">
+              <el-icon class="title-icon"><VideoCamera /></el-icon>
             </div>
-            <div class="header-actions">
-              <el-button-group>
-                <el-button
-                  type="primary"
-                  @click="handleStart"
-                  :loading="loading"
-                  :disabled="store.isRunning"
-                >
-                  <el-icon><VideoPlay /></el-icon>
-                  启动
-                </el-button>
-                <el-button
-                  type="danger"
-                  @click="handleStop"
-                  :loading="loading"
-                  :disabled="!store.isRunning"
-                >
-                  <el-icon><VideoPause /></el-icon>
-                  停止
-                </el-button>
-              </el-button-group>
-              <el-divider direction="vertical" />
-              <el-button @click="handleRefresh" :loading="loading">
-                <el-icon><Refresh /></el-icon>
-                刷新
-              </el-button>
-              <el-popconfirm
-                title="确定要清空所有监控数据吗？此操作不可恢复。"
-                confirm-button-text="确定"
-                cancel-button-text="取消"
-                @confirm="handleClear"
+            <span class="title-text">监控服务控制</span>
+          </div>
+          <div class="header-actions">
+            <div class="neon-button-group">
+              <button
+                class="neon-btn neon-btn-start"
+                @click="handleStart"
+                :disabled="loading || store.isRunning"
               >
-                <template #reference>
-                  <el-button type="warning">
-                    <el-icon><Delete /></el-icon>
-                    清空
-                  </el-button>
-                </template>
-              </el-popconfirm>
+                <el-icon class="btn-icon"><VideoPlay /></el-icon>
+                <span>启动</span>
+              </button>
+              <button
+                class="neon-btn neon-btn-stop"
+                @click="handleStop"
+                :disabled="loading || !store.isRunning"
+              >
+                <el-icon class="btn-icon"><VideoPause /></el-icon>
+                <span>停止</span>
+              </button>
             </div>
-          </div>
-        </template>
-
-        <div class="status-info">
-          <div class="status-item">
-            <span class="status-label">服务状态:</span>
-            <el-tag :type="store.isRunning ? 'success' : 'info'" size="large" effect="light">
-              <el-icon v-if="store.isRunning"><CircleCheck /></el-icon>
-              <el-icon v-else><CircleClose /></el-icon>
-              {{ store.isRunning ? '运行中' : '已停止' }}
-            </el-tag>
-          </div>
-          <div class="status-item">
-            <span class="status-label">监听端口:</span>
-            <el-tag type="info" size="large" effect="plain">
-              {{ store.status.port }}
-            </el-tag>
-          </div>
-          <div class="status-item">
-            <span class="status-label">自动刷新:</span>
-            <el-switch
-              v-model="autoRefresh"
-              @change="toggleAutoRefresh"
-              :disabled="!store.isRunning"
-            />
-          </div>
-          <div v-if="store.error" class="status-item error">
-            <el-alert :title="store.error" type="error" :closable="false" show-icon />
+            <div class="divider-vertical"></div>
+            <button
+              class="neon-btn neon-btn-secondary"
+              @click="handleRefresh"
+              :disabled="loading"
+            >
+              <el-icon class="btn-icon"><Refresh /></el-icon>
+              <span>刷新</span>
+            </button>
+            <el-popconfirm
+              title="确定要清空所有监控数据吗？此操作不可恢复。"
+              confirm-button-text="确定"
+              cancel-button-text="取消"
+              @confirm="handleClear"
+            >
+              <template #reference>
+                <button class="neon-btn neon-btn-warning">
+                  <el-icon class="btn-icon"><Delete /></el-icon>
+                  <span>清空</span>
+                </button>
+              </template>
+            </el-popconfirm>
           </div>
         </div>
-      </el-card>
+
+        <div class="status-section">
+          <div class="status-grid">
+            <!-- 服务状态 -->
+            <div class="status-card">
+              <div class="status-indicator" :class="{ active: store.isRunning }">
+                <div class="indicator-pulse"></div>
+                <div class="indicator-core"></div>
+              </div>
+              <div class="status-content">
+                <div class="status-label">服务状态</div>
+                <div class="status-value" :class="{ active: store.isRunning }">
+                  {{ store.isRunning ? '运行中' : '已停止' }}
+                </div>
+              </div>
+            </div>
+
+            <!-- 监听端口 -->
+            <div class="status-card">
+              <div class="status-icon">
+                <el-icon><Connection /></el-icon>
+              </div>
+              <div class="status-content">
+                <div class="status-label">监听端口</div>
+                <div class="status-value port-value">{{ store.status.port || '-' }}</div>
+              </div>
+            </div>
+
+            <!-- 自动刷新 -->
+            <div class="status-card">
+              <div class="status-icon auto-refresh-icon" :class="{ active: autoRefresh }">
+                <el-icon><Timer /></el-icon>
+              </div>
+              <div class="status-content">
+                <div class="status-label">自动刷新</div>
+                <el-switch
+                  v-model="autoRefresh"
+                  @change="toggleAutoRefresh"
+                  :disabled="!store.isRunning"
+                  class="glass-switch"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- 错误提示 -->
+          <div v-if="store.error" class="error-alert">
+            <el-icon class="error-icon"><Warning /></el-icon>
+            <span>{{ store.error }}</span>
+          </div>
+        </div>
+      </div>
 
       <!-- 统计卡片行 -->
-      <el-row :gutter="20" class="stats-row">
-        <el-col :span="8">
+      <div class="stats-row">
+        <div class="stats-col">
           <StatsCard title="今日" :stats="store.todayStats" />
-        </el-col>
-        <el-col :span="8">
+        </div>
+        <div class="stats-col">
           <StatsCard title="本周" :stats="store.weekStats" />
-        </el-col>
-        <el-col :span="8">
+        </div>
+        <div class="stats-col">
           <StatsCard title="本月" :stats="store.monthStats" />
-        </el-col>
-      </el-row>
+        </div>
+      </div>
 
-      <!-- 请求列表和详情 -->
-      <el-row :gutter="20" class="content-row">
-        <el-col :span="14">
-          <el-card class="requests-card" shadow="hover">
-            <template #header>
-              <div class="section-header">
+      <!-- 请求列表和详情 - 自适应高度 + 分割线 -->
+      <div class="content-row">
+        <div class="content-col requests-section">
+          <div class="section-card">
+            <div class="section-header">
+              <div class="header-icon-wrapper list-icon">
                 <el-icon><List /></el-icon>
-                <span>请求列表</span>
               </div>
-            </template>
-            <RequestList />
-          </el-card>
-        </el-col>
-        <el-col :span="10">
-          <el-card class="detail-card" shadow="hover">
-            <template #header>
-              <div class="section-header">
+              <span class="header-title">请求列表</span>
+              <div class="header-badge" v-if="store.requests.length > 0">
+                {{ store.requests.length }}
+              </div>
+            </div>
+            <div class="section-divider"></div>
+            <div class="section-body">
+              <RequestList />
+            </div>
+          </div>
+        </div>
+        <div class="divider-glow"></div>
+        <div class="content-col detail-section">
+          <div class="section-card">
+            <div class="section-header">
+              <div class="header-icon-wrapper detail-icon">
                 <el-icon><Document /></el-icon>
-                <span>请求详情</span>
               </div>
-            </template>
-            <RequestDetail />
-          </el-card>
-        </el-col>
-      </el-row>
+              <span class="header-title">请求详情</span>
+            </div>
+            <div class="section-divider"></div>
+            <div class="section-body">
+              <RequestDetail />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-  </AppLayout>
 </template>
 
 <style scoped>
+/* ==================== CSS 变量 ==================== */
 .monitor-page {
   max-width: 1400px;
   margin: 0 auto;
+  padding: 20px;
+  background: var(--app-bg-base);
+  min-height: 100%;
 }
 
+/* ==================== 控制卡片 - 玻璃效果 ==================== */
 .control-card {
-  margin-bottom: 20px;
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  border-radius: 20px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  margin-bottom: 24px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.card-header {
+.control-card:hover {
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-color: var(--app-color-primary);
+}
+
+/* 卡片头部 */
+.control-card > .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--app-border-default);
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.05) 0%, transparent 50%);
 }
 
 .header-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 16px;
+  gap: 14px;
+}
+
+.title-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, var(--app-color-primary) 20%, transparent 100%);
+  border: 1px solid var(--app-color-primary);
+  border-radius: 12px;
+  box-shadow:
+    0 0 20px rgba(0, 212, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.title-icon {
+  font-size: 22px;
+  color: var(--app-color-primary);
+  filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.6));
+}
+
+.title-text {
+  font-size: 17px;
   font-weight: 600;
+  color: var(--app-text-primary);
+  letter-spacing: 0.5px;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
-.status-info {
+.divider-vertical {
+  width: 1px;
+  height: 32px;
+  background: linear-gradient(180deg, transparent, var(--app-border-default), transparent);
+}
+
+/* ==================== 霓虹按钮组 ==================== */
+.neon-button-group {
   display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-  align-items: center;
+  gap: 2px;
+  background: var(--app-bg-hover);
+  border-radius: 12px;
+  padding: 4px;
+  border: 1px solid var(--app-border-default);
 }
 
-.status-item {
+.neon-btn {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: transparent;
+  color: var(--app-text-secondary);
+  position: relative;
+  overflow: hidden;
 }
 
-.status-item.error {
+.neon-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.neon-btn:hover::before {
+  opacity: 1;
+}
+
+.neon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-icon {
+  font-size: 16px;
+}
+
+/* 启动按钮 */
+.neon-btn-start {
+  background: linear-gradient(135deg, rgba(0, 245, 160, 0.15), rgba(0, 245, 160, 0.05));
+  border: 1px solid rgba(0, 245, 160, 0.3);
+  color: var(--app-color-success);
+  text-shadow: 0 0 10px rgba(0, 245, 160, 0.5);
+}
+
+.neon-btn-start:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(0, 245, 160, 0.25), rgba(0, 245, 160, 0.1));
+  box-shadow:
+    0 0 20px rgba(0, 245, 160, 0.4),
+    0 4px 15px rgba(0, 245, 160, 0.2);
+  transform: translateY(-2px);
+}
+
+/* 停止按钮 */
+.neon-btn-stop {
+  background: linear-gradient(135deg, rgba(255, 71, 87, 0.15), rgba(255, 71, 87, 0.05));
+  border: 1px solid rgba(255, 71, 87, 0.3);
+  color: var(--app-color-danger);
+  text-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
+}
+
+.neon-btn-stop:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(255, 71, 87, 0.25), rgba(255, 71, 87, 0.1));
+  box-shadow:
+    0 0 20px rgba(255, 71, 87, 0.4),
+    0 4px 15px rgba(255, 71, 87, 0.2);
+  transform: translateY(-2px);
+}
+
+/* 次要按钮 */
+.neon-btn-secondary {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(0, 212, 255, 0.03));
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  color: var(--app-color-primary);
+}
+
+.neon-btn-secondary:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 212, 255, 0.08));
+  box-shadow:
+    0 0 20px rgba(0, 212, 255, 0.3),
+    0 4px 15px rgba(0, 212, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+/* 警告按钮 */
+.neon-btn-warning {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.03));
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  color: var(--app-color-warning);
+}
+
+.neon-btn-warning:hover {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.08));
+  box-shadow:
+    0 0 20px rgba(255, 215, 0, 0.3),
+    0 4px 15px rgba(255, 215, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+/* ==================== 状态区域 - 状态指示 ==================== */
+.status-section {
+  padding: 24px;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.status-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  background: var(--app-bg-hover);
+  border: 1px solid var(--app-border-default);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.status-card:hover {
+  background: var(--app-bg-active);
+  border-color: var(--app-color-primary);
+  transform: translateX(4px);
+}
+
+/* 状态指示器 */
+.status-indicator {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.indicator-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(128, 128, 128, 0.2);
+  border: 2px solid rgba(128, 128, 128, 0.4);
+  transition: all 0.3s ease;
+}
+
+.indicator-core {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--app-text-disabled);
+  box-shadow: 0 0 10px rgba(128, 128, 128, 0.5);
+  transition: all 0.3s ease;
+}
+
+.status-indicator.active .indicator-pulse {
+  background: rgba(0, 245, 160, 0.15);
+  border-color: rgba(0, 245, 160, 0.5);
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+.status-indicator.active .indicator-core {
+  background: var(--app-color-success);
+  box-shadow:
+    0 0 20px rgba(0, 245, 160, 0.8),
+    0 0 40px rgba(0, 245, 160, 0.4);
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* 状态图标 */
+.status-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(0, 212, 255, 0.05));
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  border-radius: 12px;
+  font-size: 24px;
+  color: var(--app-color-primary);
+  transition: all 0.3s ease;
+}
+
+.status-icon.auto-refresh-icon.active {
+  background: linear-gradient(135deg, rgba(0, 245, 160, 0.15), rgba(0, 245, 160, 0.05));
+  border-color: rgba(0, 245, 160, 0.3);
+  color: var(--app-color-success);
+  animation: rotate-slow 3s linear infinite;
+}
+
+@keyframes rotate-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.status-content {
   flex: 1;
-  min-width: 300px;
 }
 
 .status-label {
-  color: #606266;
+  font-size: 12px;
+  color: var(--app-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.status-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--app-text-secondary);
+  transition: all 0.3s ease;
+}
+
+.status-value.active {
+  color: var(--app-color-success);
+  text-shadow: 0 0 20px rgba(0, 245, 160, 0.5);
+}
+
+.port-value {
+  color: var(--app-color-primary);
+  font-family: 'Consolas', monospace;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+/* 错误提示 */
+.error-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(255, 71, 87, 0.1), rgba(255, 71, 87, 0.03));
+  border: 1px solid rgba(255, 71, 87, 0.3);
+  border-radius: 12px;
+  color: var(--app-color-danger);
   font-size: 14px;
 }
 
+.error-icon {
+  font-size: 20px;
+  filter: drop-shadow(0 0 8px rgba(255, 71, 87, 0.5));
+}
+
+/* ==================== 统计行 ==================== */
 .stats-row {
-  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
 }
 
+.stats-col {
+  min-width: 0;
+}
+
+/* ==================== 内容区 - 自适应高度 + 分割线 ==================== */
 .content-row {
-  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 20px;
+  min-height: 600px;
 }
 
-.requests-card,
-.detail-card {
-  height: 600px;
+.content-col {
+  min-width: 0;
+}
+
+.divider-glow {
+  width: 2px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 212, 255, 0.3) 20%,
+    rgba(0, 212, 255, 0.5) 50%,
+    rgba(0, 212, 255, 0.3) 80%,
+    transparent 100%
+  );
+  position: relative;
+}
+
+.divider-glow::before {
+  content: '';
+  position: absolute;
+  inset: -20px -4px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 212, 255, 0.1) 20%,
+    rgba(0, 212, 255, 0.2) 50%,
+    rgba(0, 212, 255, 0.1) 80%,
+    transparent 100%
+  );
+  filter: blur(8px);
+}
+
+/* 区域卡片 */
+.section-card {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  border-radius: 16px;
+  height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.requests-card :deep(.el-card__body),
-.detail-card :deep(.el-card__body) {
-  flex: 1;
-  padding: 0;
   overflow: hidden;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .section-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 600;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.03) 0%, transparent 50%);
 }
 
-/* 响应式布局 */
+.header-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 18px;
+}
+
+.header-icon-wrapper.list-icon {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(0, 212, 255, 0.05));
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  color: var(--app-color-primary);
+}
+
+.header-icon-wrapper.detail-icon {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.05));
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  color: var(--color-warning);
+}
+
+.section-header .header-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--app-text-primary);
+}
+
+.header-badge {
+  margin-left: auto;
+  padding: 4px 12px;
+  background: rgba(0, 212, 255, 0.15);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-color-primary);
+}
+
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--app-border-default), transparent);
+}
+
+.section-body {
+  flex: 1;
+  padding: 0;
+  overflow: hidden;
+}
+
+.requests-section .section-card {
+  border-left: 3px solid rgba(0, 212, 255, 0.3);
+}
+
+.detail-section .section-card {
+  border-right: 3px solid rgba(255, 215, 0, 0.3);
+}
+
+/* ==================== 玻璃开关 ==================== */
+:deep(.glass-switch) {
+  --el-switch-on-color: var(--app-color-success);
+  --el-switch-off-color: var(--app-bg-hover);
+}
+
+:deep(.glass-switch .el-switch__core) {
+  border-color: var(--app-border-default);
+  background: var(--app-bg-hover);
+}
+
+:deep(.glass-switch.is-checked .el-switch__core) {
+  background: rgba(0, 245, 160, 0.2);
+  border-color: rgba(0, 245, 160, 0.4);
+  box-shadow: 0 0 15px rgba(0, 245, 160, 0.3);
+}
+
+:deep(.glass-switch .el-switch__action) {
+  background: linear-gradient(135deg, var(--app-text-inverse), var(--app-text-tertiary));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ==================== 响应式布局 ==================== */
 @media (max-width: 1200px) {
-  .stats-row .el-col {
-    margin-bottom: 16px;
+  .status-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
+  
+  .content-row {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+  
+  .divider-glow {
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 212, 255, 0.3) 20%,
+      rgba(0, 212, 255, 0.5) 50%,
+      rgba(0, 212, 255, 0.3) 80%,
+      transparent 100%
+    );
+  }
+  
+  .divider-glow::before {
+    inset: -4px -20px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 212, 255, 0.1) 20%,
+      rgba(0, 212, 255, 0.2) 50%,
+      rgba(0, 212, 255, 0.1) 80%,
+      transparent 100%
+    );
+  }
+  
+  .section-card {
+    min-height: 400px;
+  }
+}
 
-  .stats-row .el-col:last-child {
-    margin-bottom: 0;
+@media (max-width: 768px) {
+  .monitor-page {
+    padding: 12px;
   }
+  
+  .control-card > .card-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  
+  .header-actions {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .neon-button-group {
+    order: -1;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  
+  .neon-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
 
-  .content-row .el-col {
-    margin-bottom: 16px;
-  }
+/* ==================== 赛博朋克主题 ==================== */
+html.cyberpunk .monitor-page {
+  background: linear-gradient(180deg, rgba(10, 10, 18, 0.95) 0%, rgba(18, 18, 26, 0.9) 100%);
+}
 
-  .content-row .el-col:last-child {
-    margin-bottom: 0;
-  }
+html.cyberpunk .control-card {
+  background: rgba(26, 26, 46, 0.85);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .control-card:hover {
+  border-color: rgba(0, 255, 255, 0.4);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.6),
+    0 0 60px rgba(0, 255, 255, 0.15);
+}
+
+html.cyberpunk .control-card > .card-header {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.08) 0%, rgba(255, 0, 255, 0.05) 50%, transparent 100%);
+  border-bottom: 1px solid rgba(0, 255, 255, 0.15);
+}
+
+html.cyberpunk .title-icon-wrapper {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.2) 20%, transparent 100%);
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  box-shadow:
+    0 0 25px rgba(0, 255, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+html.cyberpunk .title-icon {
+  filter: drop-shadow(0 0 12px rgba(0, 255, 255, 0.8));
+}
+
+html.cyberpunk .title-text {
+  text-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+}
+
+html.cyberpunk .neon-button-group {
+  background: rgba(0, 255, 255, 0.05);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .neon-btn-start {
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(0, 255, 136, 0.05));
+  border: 1px solid rgba(0, 255, 136, 0.4);
+  text-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
+}
+
+html.cyberpunk .neon-btn-start:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.3), rgba(0, 255, 136, 0.1));
+  box-shadow:
+    0 0 30px rgba(0, 255, 136, 0.5),
+    0 0 60px rgba(0, 255, 136, 0.2);
+}
+
+html.cyberpunk .neon-btn-stop {
+  background: linear-gradient(135deg, rgba(255, 51, 102, 0.2), rgba(255, 51, 102, 0.05));
+  border: 1px solid rgba(255, 51, 102, 0.4);
+  text-shadow: 0 0 15px rgba(255, 51, 102, 0.6);
+}
+
+html.cyberpunk .neon-btn-stop:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(255, 51, 102, 0.3), rgba(255, 51, 102, 0.1));
+  box-shadow:
+    0 0 30px rgba(255, 51, 102, 0.5),
+    0 0 60px rgba(255, 51, 102, 0.2);
+}
+
+html.cyberpunk .neon-btn-secondary {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.15), rgba(0, 255, 255, 0.05));
+  border: 1px solid rgba(0, 255, 255, 0.3);
+}
+
+html.cyberpunk .neon-btn-secondary:hover:not(:disabled) {
+  box-shadow:
+    0 0 30px rgba(0, 255, 255, 0.4),
+    0 0 60px rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .neon-btn-warning {
+  background: linear-gradient(135deg, rgba(255, 170, 0, 0.15), rgba(255, 170, 0, 0.05));
+  border: 1px solid rgba(255, 170, 0, 0.3);
+}
+
+html.cyberpunk .neon-btn-warning:hover {
+  box-shadow:
+    0 0 30px rgba(255, 170, 0, 0.4),
+    0 0 60px rgba(255, 170, 0, 0.2);
+}
+
+html.cyberpunk .status-card {
+  background: rgba(26, 26, 46, 0.7);
+  border: 1px solid rgba(0, 255, 255, 0.15);
+}
+
+html.cyberpunk .status-card:hover {
+  background: rgba(0, 255, 255, 0.08);
+  border-color: rgba(0, 255, 255, 0.4);
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .status-icon {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(0, 255, 255, 0.05));
+  border: 1px solid rgba(0, 255, 255, 0.3);
+}
+
+html.cyberpunk .status-value.active {
+  text-shadow: 0 0 25px rgba(0, 255, 136, 0.6);
+}
+
+html.cyberpunk .port-value {
+  text-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+}
+
+html.cyberpunk .divider-glow {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 255, 255, 0.4) 20%,
+    rgba(255, 0, 255, 0.3) 50%,
+    rgba(0, 255, 255, 0.4) 80%,
+    transparent 100%
+  );
+}
+
+html.cyberpunk .divider-glow::before {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 255, 255, 0.15) 20%,
+    rgba(255, 0, 255, 0.1) 50%,
+    rgba(0, 255, 255, 0.15) 80%,
+    transparent 100%
+  );
+}
+
+html.cyberpunk .section-card {
+  background: rgba(26, 26, 46, 0.85);
+  border: 1px solid rgba(0, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+html.cyberpunk .section-header {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.05) 0%, transparent 50%);
+}
+
+html.cyberpunk .header-icon-wrapper.list-icon {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(0, 255, 255, 0.05));
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+}
+
+html.cyberpunk .header-icon-wrapper.detail-icon {
+  background: linear-gradient(135deg, rgba(255, 170, 0, 0.2), rgba(255, 170, 0, 0.05));
+  border: 1px solid rgba(255, 170, 0, 0.3);
+  box-shadow: 0 0 15px rgba(255, 170, 0, 0.3);
+}
+
+html.cyberpunk .header-badge {
+  background: rgba(0, 255, 255, 0.15);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .requests-section .section-card {
+  border-left: 3px solid rgba(0, 255, 255, 0.5);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .detail-section .section-card {
+  border-right: 3px solid rgba(255, 0, 255, 0.5);
+  box-shadow: 0 0 20px rgba(255, 0, 255, 0.1);
+}
+
+html.cyberpunk :deep(.glass-switch.is-checked .el-switch__core) {
+  background: rgba(0, 255, 136, 0.25);
+  border-color: rgba(0, 255, 136, 0.5);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+}
+
+/* ==================== 玻璃拟态主题 ==================== */
+html.glassmorphism .monitor-page {
+  background: linear-gradient(180deg, rgba(241, 245, 249, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%);
+}
+
+html.glassmorphism .control-card {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+html.glassmorphism .control-card:hover {
+  border-color: rgba(37, 99, 235, 0.3);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.1);
+}
+
+html.glassmorphism .control-card > .card-header {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, transparent 50%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+html.glassmorphism .title-icon-wrapper {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 20%, transparent 100%);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15);
+}
+
+html.glassmorphism .title-icon {
+  color: var(--app-color-primary);
+  filter: none;
+}
+
+html.glassmorphism .neon-button-group {
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+html.glassmorphism .neon-btn-start {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--app-color-success);
+  text-shadow: none;
+}
+
+html.glassmorphism .neon-btn-start:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(16, 185, 129, 0.1));
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);
+}
+
+html.glassmorphism .neon-btn-stop {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--app-color-danger);
+  text-shadow: none;
+}
+
+html.glassmorphism .neon-btn-stop:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.1));
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
+}
+
+html.glassmorphism .neon-btn-secondary {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: var(--app-color-primary);
+}
+
+html.glassmorphism .neon-btn-secondary:hover:not(:disabled) {
+  background: rgba(37, 99, 235, 0.1);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15);
+}
+
+html.glassmorphism .neon-btn-warning {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: var(--app-color-warning);
+}
+
+html.glassmorphism .neon-btn-warning:hover {
+  background: rgba(245, 158, 11, 0.1);
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.15);
+}
+
+html.glassmorphism .status-card {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+html.glassmorphism .status-card:hover {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(37, 99, 235, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+html.glassmorphism .status-icon {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(37, 99, 235, 0.03));
+  border: 1px solid rgba(37, 99, 235, 0.15);
+}
+
+html.glassmorphism .status-value.active {
+  color: var(--app-color-success);
+  text-shadow: none;
+}
+
+html.glassmorphism .port-value {
+  text-shadow: none;
+}
+
+html.glassmorphism .divider-glow {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(37, 99, 235, 0.2) 20%,
+    rgba(37, 99, 235, 0.3) 50%,
+    rgba(37, 99, 235, 0.2) 80%,
+    transparent 100%
+  );
+}
+
+html.glassmorphism .divider-glow::before {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(37, 99, 235, 0.08) 20%,
+    rgba(37, 99, 235, 0.12) 50%,
+    rgba(37, 99, 235, 0.08) 80%,
+    transparent 100%
+  );
+}
+
+html.glassmorphism .section-card {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+}
+
+html.glassmorphism .section-header {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.03) 0%, transparent 50%);
+}
+
+html.glassmorphism .header-icon-wrapper.list-icon {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(37, 99, 235, 0.03));
+  border: 1px solid rgba(37, 99, 235, 0.15);
+  box-shadow: none;
+}
+
+html.glassmorphism .header-icon-wrapper.detail-icon {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.03));
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  box-shadow: none;
+}
+
+html.glassmorphism .header-badge {
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  box-shadow: none;
+}
+
+html.glassmorphism .requests-section .section-card {
+  border-left: 3px solid rgba(37, 99, 235, 0.3);
+}
+
+html.glassmorphism .detail-section .section-card {
+  border-right: 3px solid rgba(245, 158, 11, 0.3);
+}
+
+html.glassmorphism :deep(.glass-switch.is-checked .el-switch__core) {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+}
+
+html.glassmorphism .error-alert {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.02));
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 </style>

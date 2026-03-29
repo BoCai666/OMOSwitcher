@@ -1,0 +1,29 @@
+/**
+ * 品红主题预设
+ * 主色调: #ff00ff
+ */
+
+html.accent-magenta {
+  /* 强调色 */
+  --app-accent-primary: #ff00ff;
+  --app-accent-secondary: #e500e5;
+  --app-accent-glow: 0 0 20px rgba(255, 0, 255, 0.5);
+
+  /* Element Plus 主色 */
+  --el-color-primary: #ff00ff;
+  --el-color-primary-light-3: rgba(255, 0, 255, 0.3);
+  --el-color-primary-light-5: rgba(255, 0, 255, 0.5);
+  --el-color-primary-light-7: rgba(255, 0, 255, 0.7);
+  --el-color-primary-light-8: rgba(255, 0, 255, 0.8);
+  --el-color-primary-light-9: rgba(255, 0, 255, 0.9);
+  --el-color-primary-dark-2: #cc00cc;
+
+  /* 霓虹发光效果 */
+  --app-shadow-glow-primary: 0 0 20px rgba(255, 0, 255, 0.4);
+  --app-shadow-glow-cyan: 0 0 20px rgba(255, 0, 255, 0.4);
+  --app-shadow-glow-intense: 0 0 40px rgba(255, 0, 255, 0.6);
+
+  /* 边框高亮 */
+  --app-border-active: #ff00ff;
+  --app-border-focus: #ff00ff;
+}

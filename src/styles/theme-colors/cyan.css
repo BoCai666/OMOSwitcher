@@ -1,0 +1,29 @@
+/**
+ * 青色主题预设
+ * 主色调: #00ffff
+ */
+
+html.accent-cyan {
+  /* 强调色 */
+  --app-accent-primary: #00ffff;
+  --app-accent-secondary: #00e5e5;
+  --app-accent-glow: 0 0 20px rgba(0, 255, 255, 0.5);
+
+  /* Element Plus 主色 */
+  --el-color-primary: #00ffff;
+  --el-color-primary-light-3: rgba(0, 255, 255, 0.3);
+  --el-color-primary-light-5: rgba(0, 255, 255, 0.5);
+  --el-color-primary-light-7: rgba(0, 255, 255, 0.7);
+  --el-color-primary-light-8: rgba(0, 255, 255, 0.8);
+  --el-color-primary-light-9: rgba(0, 255, 255, 0.9);
+  --el-color-primary-dark-2: #00cccc;
+
+  /* 霓虹发光效果 */
+  --app-shadow-glow-primary: 0 0 20px rgba(0, 255, 255, 0.4);
+  --app-shadow-glow-cyan: 0 0 20px rgba(0, 255, 255, 0.4);
+  --app-shadow-glow-intense: 0 0 40px rgba(0, 255, 255, 0.6);
+
+  /* 边框高亮 */
+  --app-border-active: #00ffff;
+  --app-border-focus: #00ffff;
+}

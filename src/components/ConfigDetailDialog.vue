@@ -194,10 +194,50 @@ watch(dialogVisible, (val) => {
 </template>
 
 <style scoped>
+/* 对话框玻璃效果 - 深色背景 + 模糊 */
+.config-detail-dialog :deep(.el-dialog) {
+  background-color: rgba(18, 18, 26, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--app-border-default, #2a2a3a);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* 对话框标题霓虹下划线 */
+.config-detail-dialog :deep(.el-dialog__header) {
+  border-bottom: 2px solid var(--app-color-primary, #00d4ff);
+  box-shadow: 0 2px 10px rgba(0, 212, 255, 0.3);
+  margin-right: 0;
+  padding: 20px;
+}
+
+.config-detail-dialog :deep(.el-dialog__title) {
+  color: var(--app-text-primary, #e5eaf3);
+  font-weight: 600;
+}
+
+/* 关闭按钮样式 */
+.config-detail-dialog :deep(.el-dialog__headerbtn .el-dialog__close) {
+  color: var(--app-text-tertiary);
+  transition: all 0.3s;
+}
+
+.config-detail-dialog :deep(.el-dialog__headerbtn:hover .el-dialog__close) {
+  color: var(--app-color-primary, #00d4ff);
+}
+
+/* 对话框内容区域 */
 .config-detail-dialog :deep(.el-dialog__body) {
   max-height: 70vh;
   overflow-y: auto;
   padding: 20px;
+  background: transparent;
+}
+
+/* 底部按钮区域 */
+.config-detail-dialog :deep(.el-dialog__footer) {
+  border-top: 1px solid var(--app-border-default, #2a2a3a);
+  padding: 15px 20px;
 }
 
 .detail-content {
@@ -206,15 +246,31 @@ watch(dialogVisible, (val) => {
   gap: 20px;
 }
 
+/* 基本信息区域样式 */
 .basic-info {
   margin-bottom: 0;
 }
 
-.info-value {
-  font-weight: 500;
-  color: #303133;
+.basic-info :deep(.el-descriptions__body) {
+  background-color: var(--app-bg-card, #12121a);
 }
 
+.basic-info :deep(.el-descriptions__label) {
+  background-color: rgba(0, 212, 255, 0.05);
+  color: var(--app-text-tertiary);
+}
+
+.basic-info :deep(.el-descriptions__content) {
+  background-color: var(--app-bg-card, #12121a);
+  color: var(--app-text-primary, #e5eaf3);
+}
+
+.info-value {
+  font-weight: 500;
+  color: var(--app-text-primary, #e5eaf3);
+}
+
+/* 模型信息 - 霓虹边框 + 悬停发光 */
 .model-info {
   display: flex;
   align-items: center;
@@ -223,34 +279,40 @@ watch(dialogVisible, (val) => {
 
 .model-info.clickable {
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px 12px;
   margin: -4px -8px;
-  border-radius: 4px;
-  transition: all 0.2s;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: linear-gradient(var(--app-bg-card, #12121a), var(--app-bg-card, #12121a)) padding-box,
+              linear-gradient(135deg, var(--app-color-primary, #00d4ff), #00a8ff) border-box;
+  transition: all 0.3s ease;
 }
 
 .model-info.clickable:hover {
-  background-color: #ecf5ff;
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.4),
+              inset 0 0 10px rgba(0, 212, 255, 0.1);
+  transform: translateY(-1px);
 }
 
 .model-info.clickable:hover .edit-icon {
   opacity: 1;
+  color: var(--app-color-primary, #00d4ff);
 }
 
 .model-name {
   font-weight: 500;
-  color: #409eff;
+  color: var(--app-color-primary, #00d4ff);
 }
 
 .edit-icon {
-  color: #409eff;
+  color: var(--app-text-tertiary);
   font-size: 14px;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: all 0.3s;
 }
 
 .description-text {
-  color: #606266;
+  color: var(--app-text-secondary);
   line-height: 1.6;
 }
 
@@ -268,10 +330,11 @@ watch(dialogVisible, (val) => {
 .section-title {
   font-size: 15px;
   font-weight: 600;
-  color: #303133;
+  color: var(--app-text-primary, #e5eaf3);
   margin: 0 0 10px 0;
   padding-left: 10px;
-  border-left: 3px solid #409eff;
+  border-left: 3px solid var(--app-color-primary, #00d4ff);
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
 }
 
 .section-header .section-title {
@@ -289,59 +352,62 @@ watch(dialogVisible, (val) => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
-  background-color: #fafafa;
-  border: 1px solid #ebeef5;
-  border-radius: 4px;
-  transition: all 0.2s;
+  padding: 10px 14px;
+  background-color: var(--app-bg-card, #12121a);
+  border: 1px solid var(--app-border-default, #2a2a3a);
+  border-radius: 6px;
+  transition: all 0.3s;
 }
 
 .fallback-item:hover {
-  background-color: #f0f7ff;
-  border-color: #c0c4cc;
+  border-color: rgba(0, 212, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 212, 255, 0.1);
 }
 
 .fallback-item.current {
-  background-color: #ecf5ff;
-  border-color: #409eff;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(0, 168, 255, 0.05));
+  border-color: var(--app-color-primary, #00d4ff);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.2);
 }
 
 .fallback-item.current .fallback-index {
-  background-color: #409eff;
+  background: linear-gradient(135deg, var(--app-color-primary, #00d4ff), #00a8ff);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
 }
 
 .fallback-index {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  height: 22px;
-  background-color: #909399;
+  min-width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #606266, var(--app-text-tertiary));
   color: white;
   border-radius: 50%;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
+  transition: all 0.3s;
 }
 
 .fallback-model {
   font-weight: 500;
-  color: #303133;
+  color: var(--app-text-primary, #e5eaf3);
   font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
   font-size: 13px;
 }
 
 .variant-badge {
   font-size: 11px;
-  color: #67c23a;
-  background-color: #f0f9eb;
-  padding: 2px 6px;
-  border-radius: 3px;
-  border: 1px solid #e1f3d8;
+  color: var(--app-color-success);
+  background-color: rgba(103, 194, 58, 0.1);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(103, 194, 58, 0.3);
 }
 
 .providers {
   font-size: 12px;
-  color: #909399;
+  color: var(--app-text-tertiary);
   margin-left: auto;
 }
 
@@ -350,7 +416,7 @@ watch(dialogVisible, (val) => {
 .avoid-list {
   margin: 0;
   padding-left: 20px;
-  color: #606266;
+  color: var(--app-text-secondary);
   line-height: 1.8;
 }
 
@@ -360,22 +426,36 @@ watch(dialogVisible, (val) => {
   margin-bottom: 6px;
 }
 
+.use-when-list li::marker,
+.trigger-list li::marker {
+  color: var(--app-color-primary, #00d4ff);
+}
+
+.avoid-list li::marker {
+  color: var(--app-color-danger);
+}
+
 .trigger-list {
-  background-color: #f0f9eb;
-  padding: 12px 12px 12px 32px;
-  border-radius: 4px;
+  background: linear-gradient(135deg, rgba(103, 194, 58, 0.05), rgba(103, 194, 58, 0.02));
+  padding: 14px 14px 14px 32px;
+  border-radius: 6px;
+  border: 1px solid rgba(103, 194, 58, 0.2);
 }
 
 .avoid-list {
-  background-color: #fef0f0;
-  padding: 12px 12px 12px 32px;
-  border-radius: 4px;
+  background: linear-gradient(135deg, rgba(245, 108, 108, 0.05), rgba(245, 108, 108, 0.02));
+  padding: 14px 14px 14px 32px;
+  border-radius: 6px;
+  border: 1px solid rgba(245, 108, 108, 0.2);
 }
 
+/* 系统提示词区域 - 代码块样式 + 霓虹边框 */
 .prompt-content {
-  background-color: #f5f7fa;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
+  background-color: var(--app-bg-card, #12121a);
+  border: 1px solid var(--app-color-primary, #00d4ff);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.15),
+              inset 0 0 30px rgba(0, 212, 255, 0.03);
+  border-radius: 8px;
   padding: 16px;
   max-height: 400px;
   overflow-y: auto;
@@ -387,7 +467,379 @@ watch(dialogVisible, (val) => {
   word-wrap: break-word;
   font-family: 'SF Mono', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
   font-size: 13px;
-  line-height: 1.6;
-  color: #303133;
+  line-height: 1.7;
+  color: #c0c0d0;
+}
+
+/* 语言切换按钮组样式 */
+:deep(.el-radio-button__inner) {
+  background-color: var(--app-bg-card, #12121a);
+  border-color: var(--app-border-default, #2a2a3a);
+  color: var(--app-text-tertiary);
+}
+
+:deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 168, 255, 0.1));
+  border-color: var(--app-color-primary, #00d4ff);
+  color: var(--app-color-primary, #00d4ff);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+/* 关闭按钮样式 */
+:deep(.el-button) {
+  background-color: transparent;
+  border-color: var(--app-border-default, #2a2a3a);
+  color: var(--app-text-tertiary);
+}
+
+:deep(.el-button:hover) {
+  border-color: var(--app-color-primary, #00d4ff);
+  color: var(--app-color-primary, #00d4ff);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+}
+
+/* ==================== 赛博朋克主题 ==================== */
+html.cyberpunk .config-detail-dialog :deep(.el-dialog) {
+  background-color: rgba(26, 26, 46, 0.95);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  box-shadow:
+    0 25px 50px rgba(0, 0, 0, 0.6),
+    0 0 40px rgba(0, 255, 255, 0.15);
+}
+
+html.cyberpunk .config-detail-dialog :deep(.el-dialog__header) {
+  border-bottom: 2px solid rgba(0, 255, 255, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .config-detail-dialog :deep(.el-dialog__title) {
+  text-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+}
+
+html.cyberpunk .config-detail-dialog :deep(.el-dialog__headerbtn:hover .el-dialog__close) {
+  color: var(--app-color-primary);
+  filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.6));
+}
+
+html.cyberpunk .config-detail-dialog :deep(.el-dialog__footer) {
+  border-top: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .basic-info :deep(.el-descriptions__body) {
+  background-color: rgba(26, 26, 46, 0.8);
+}
+
+html.cyberpunk .basic-info :deep(.el-descriptions__label) {
+  background-color: rgba(0, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(0, 255, 255, 0.15);
+}
+
+html.cyberpunk .basic-info :deep(.el-descriptions__content) {
+  background-color: rgba(26, 26, 46, 0.6);
+  border-bottom: 1px solid rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .model-info.clickable {
+  background: linear-gradient(var(--app-bg-card, #1a1a2e), var(--app-bg-card, #1a1a2e)) padding-box,
+              linear-gradient(135deg, var(--app-color-primary, #00ffff), #ff00ff) border-box;
+}
+
+html.cyberpunk .model-info.clickable:hover {
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.5),
+              inset 0 0 15px rgba(0, 255, 255, 0.15);
+}
+
+html.cyberpunk .model-name {
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+html.cyberpunk .section-title {
+  border-left: 3px solid var(--app-color-primary, #00ffff);
+  text-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+}
+
+html.cyberpunk .fallback-item {
+  background-color: rgba(26, 26, 46, 0.7);
+  border: 1px solid rgba(0, 255, 255, 0.15);
+}
+
+html.cyberpunk .fallback-item:hover {
+  border-color: rgba(0, 255, 255, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 255, 255, 0.15);
+}
+
+html.cyberpunk .fallback-item.current {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.15), rgba(255, 0, 255, 0.08));
+  border-color: var(--app-color-primary);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+}
+
+html.cyberpunk .fallback-item.current .fallback-index {
+  background: linear-gradient(135deg, var(--app-color-primary, #00ffff), #00ccff);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+}
+
+html.cyberpunk .trigger-list {
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 255, 136, 0.03));
+  border: 1px solid rgba(0, 255, 136, 0.25);
+}
+
+html.cyberpunk .avoid-list {
+  background: linear-gradient(135deg, rgba(255, 51, 102, 0.1), rgba(255, 51, 102, 0.03));
+  border: 1px solid rgba(255, 51, 102, 0.25);
+}
+
+html.cyberpunk .prompt-content {
+  background-color: rgba(26, 26, 46, 0.9);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  box-shadow:
+    0 0 25px rgba(0, 255, 255, 0.2),
+    inset 0 0 40px rgba(0, 255, 255, 0.05);
+}
+
+html.cyberpunk :deep(.el-radio-button__inner) {
+  background-color: rgba(26, 26, 46, 0.8);
+  border-color: rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.25), rgba(255, 0, 255, 0.15));
+  border-color: var(--app-color-primary);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+}
+
+html.cyberpunk :deep(.el-button:hover) {
+  border-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+}
+
+/* ==================== 玻璃拟态主题 ==================== */
+html.glassmorphism .config-detail-dialog :deep(.el-dialog) {
+  background-color: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
+}
+
+html.glassmorphism .config-detail-dialog :deep(.el-dialog__header) {
+  border-bottom: 2px solid rgba(37, 99, 235, 0.2);
+  box-shadow: none;
+}
+
+html.glassmorphism .config-detail-dialog :deep(.el-dialog__title) {
+  text-shadow: none;
+}
+
+html.glassmorphism .config-detail-dialog :deep(.el-dialog__headerbtn:hover .el-dialog__close) {
+  color: var(--app-color-primary);
+  filter: none;
+}
+
+html.glassmorphism .config-detail-dialog :deep(.el-dialog__footer) {
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+html.glassmorphism .basic-info :deep(.el-descriptions__body) {
+  background-color: rgba(248, 250, 252, 0.8);
+}
+
+html.glassmorphism .basic-info :deep(.el-descriptions__label) {
+  background-color: rgba(37, 99, 235, 0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+html.glassmorphism .basic-info :deep(.el-descriptions__content) {
+  background-color: rgba(255, 255, 255, 0.6);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+html.glassmorphism .model-info.clickable {
+  background: linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8)) padding-box,
+              linear-gradient(135deg, var(--app-color-primary, #2563eb), #8b5cf6) border-box;
+}
+
+html.glassmorphism .model-info.clickable:hover {
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15);
+}
+
+html.glassmorphism .model-name {
+  text-shadow: none;
+}
+
+html.glassmorphism .section-title {
+  border-left: 3px solid var(--app-color-primary, #2563eb);
+  text-shadow: none;
+}
+
+html.glassmorphism .fallback-item {
+  background-color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+html.glassmorphism .fallback-item:hover {
+  border-color: rgba(37, 99, 235, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+html.glassmorphism .fallback-item.current {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(139, 92, 246, 0.04));
+  border-color: var(--app-color-primary);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.1);
+}
+
+html.glassmorphism .fallback-item.current .fallback-index {
+  background: linear-gradient(135deg, var(--app-color-primary, #2563eb), #3b82f6);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+html.glassmorphism .trigger-list {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.06), rgba(16, 185, 129, 0.02));
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+html.glassmorphism .avoid-list {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.06), rgba(239, 68, 68, 0.02));
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+html.glassmorphism .prompt-content {
+  background-color: rgba(248, 250, 252, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: none;
+}
+
+html.glassmorphism .prompt-content pre {
+  color: #374151;
+}
+
+html.glassmorphism :deep(.el-radio-button__inner) {
+  background-color: rgba(255, 255, 255, 0.8);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+html.glassmorphism :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(139, 92, 246, 0.1));
+  border-color: var(--app-color-primary);
+  box-shadow: none;
+}
+
+html.glassmorphism :deep(.el-button:hover) {
+  border-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+
+/* ==================== 明色主题 (html.light - 非玻璃拟态) ==================== */
+html.light .config-detail-dialog :deep(.el-dialog) {
+  background-color: rgba(255, 255, 255, 0.98);
+  border: 1px solid var(--app-border-default);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+}
+
+html.light .config-detail-dialog :deep(.el-dialog__header) {
+  border-bottom: 2px solid var(--app-color-primary);
+  box-shadow: none;
+}
+
+html.light .config-detail-dialog :deep(.el-dialog__title) {
+  color: var(--app-text-primary);
+  text-shadow: none;
+}
+
+html.light .config-detail-dialog :deep(.el-dialog__footer) {
+  border-top: 1px solid var(--app-border-default);
+}
+
+html.light .basic-info :deep(.el-descriptions__body) {
+  background-color: rgba(248, 250, 252, 0.9);
+}
+
+html.light .basic-info :deep(.el-descriptions__label) {
+  background-color: rgba(0, 168, 232, 0.05);
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.light .basic-info :deep(.el-descriptions__content) {
+  background-color: rgba(255, 255, 255, 0.8);
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.light .model-info.clickable {
+  background: linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)) padding-box,
+              linear-gradient(135deg, var(--app-color-primary), #3b82f6) border-box;
+}
+
+html.light .model-info.clickable:hover {
+  box-shadow: 0 4px 16px rgba(0, 168, 232, 0.2);
+}
+
+html.light .model-name {
+  color: var(--app-color-primary);
+  text-shadow: none;
+}
+
+html.light .section-title {
+  border-left: 3px solid var(--app-color-primary);
+  color: var(--app-text-primary);
+  text-shadow: none;
+}
+
+html.light .fallback-item {
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--app-border-default);
+}
+
+html.light .fallback-item:hover {
+  border-color: var(--app-color-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+html.light .fallback-item.current {
+  background: linear-gradient(135deg, rgba(0, 168, 232, 0.1), rgba(59, 130, 246, 0.05));
+  border-color: var(--app-color-primary);
+  box-shadow: 0 4px 16px rgba(0, 168, 232, 0.15);
+}
+
+html.light .fallback-item.current .fallback-index {
+  background: linear-gradient(135deg, var(--app-color-primary), #3b82f6);
+  box-shadow: 0 4px 12px rgba(0, 168, 232, 0.3);
+}
+
+html.light .trigger-list {
+  background: linear-gradient(135deg, rgba(103, 194, 58, 0.08), rgba(103, 194, 58, 0.03));
+  border: 1px solid rgba(103, 194, 58, 0.2);
+}
+
+html.light .avoid-list {
+  background: linear-gradient(135deg, rgba(245, 108, 108, 0.08), rgba(245, 108, 108, 0.03));
+  border: 1px solid rgba(245, 108, 108, 0.2);
+}
+
+html.light .prompt-content {
+  background-color: rgba(248, 250, 252, 0.95);
+  border: 1px solid var(--app-border-default);
+  box-shadow: none;
+}
+
+html.light .prompt-content pre {
+  color: #374151;
+}
+
+html.light :deep(.el-radio-button__inner) {
+  background-color: rgba(255, 255, 255, 0.9);
+  border-color: var(--app-border-default);
+}
+
+html.light :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  background: linear-gradient(135deg, rgba(0, 168, 232, 0.15), rgba(59, 130, 246, 0.1));
+  border-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+  box-shadow: none;
+}
+
+html.light :deep(.el-button:hover) {
+  border-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+  box-shadow: 0 4px 12px rgba(0, 168, 232, 0.15);
 }
 </style>

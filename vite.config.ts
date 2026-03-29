@@ -13,7 +13,7 @@ export default defineConfig({
   },
   
   server: {
-    port: 1420, // Tauri 默认端口
+    port: 7200, // Tauri 开发服务器端口
     strictPort: true,
     host: 'localhost'
   },

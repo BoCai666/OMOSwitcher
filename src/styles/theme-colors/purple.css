@@ -1,0 +1,29 @@
+/**
+ * 紫色主题预设
+ * 主色调: #a855f7
+ */
+
+html.accent-purple {
+  /* 强调色 */
+  --app-accent-primary: #a855f7;
+  --app-accent-secondary: #9333ea;
+  --app-accent-glow: 0 0 20px rgba(168, 85, 247, 0.5);
+
+  /* Element Plus 主色 */
+  --el-color-primary: #a855f7;
+  --el-color-primary-light-3: rgba(168, 85, 247, 0.3);
+  --el-color-primary-light-5: rgba(168, 85, 247, 0.5);
+  --el-color-primary-light-7: rgba(168, 85, 247, 0.7);
+  --el-color-primary-light-8: rgba(168, 85, 247, 0.8);
+  --el-color-primary-light-9: rgba(168, 85, 247, 0.9);
+  --el-color-primary-dark-2: #8b44d6;
+
+  /* 霓虹发光效果 */
+  --app-shadow-glow-primary: 0 0 20px rgba(168, 85, 247, 0.4);
+  --app-shadow-glow-purple: 0 0 20px rgba(168, 85, 247, 0.4);
+  --app-shadow-glow-intense: 0 0 40px rgba(168, 85, 247, 0.6);
+
+  /* 边框高亮 */
+  --app-border-active: #a855f7;
+  --app-border-focus: #a855f7;
+}
