@@ -35,11 +35,6 @@ coverage/
 # 临时目录
 tmp/
 
-# 临时截图（调试用）
-*-issue.png
-*-fix.png
-*-verification.png
-
 # 环境变量文件
 .env
 .env.local
