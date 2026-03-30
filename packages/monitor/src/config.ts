@@ -15,9 +15,10 @@ export const config = {
   
   // 新增存储配置
   storage: {
-    type: (process.env.STORAGE_TYPE || 'memory') as 'memory' | 'sqlite', // 'memory' | 'sqlite' (memory 用于 pkg 打包)
+    // 使用 sql.js（纯 WASM SQLite），支持 pkg 打包
+    type: (process.env.STORAGE_TYPE || 'sqlite') as 'memory' | 'sqlite',
     sqlite: {
-      path: process.env.SQLITE_PATH || './data/opencode.db',
+      path: process.env.SQLITE_PATH || '', // 留空，由 dbManager 根据用户配置目录设置
       walMode: true, // 启用 WAL 模式提高并发性能
       busyTimeout: 5000, // 5秒超时
     }

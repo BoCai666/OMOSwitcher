@@ -19,6 +19,7 @@ import { ProxyServer, CertificateManager } from './proxy/index.js';
 import { memoryStore } from './storage/memory-store.js';
 import { sqliteStorage } from './storage/sqlite-store.js';
 import { StorageInterface } from './storage/interface.js';
+import { setStorage } from './storage/storage-manager.js';
 import { DatabaseBackup } from './db/backup.js';
 import { DataCleanupTask } from './tasks/data-cleanup.js';
 import { startServer, broadcastNewRequest, broadcastResponse, broadcastMetrics } from './server/index.js';
@@ -187,6 +188,9 @@ async function initializeStorage(): Promise<void> {
     
     storage = sqliteStorage;
     
+    // 设置存储管理器（关键：让 routes.ts 能访问实际存储）
+    setStorage(sqliteStorage);
+    
     // 初始化备份
     dbBackup = new DatabaseBackup(sqliteStorage.getDatabase());
     await dbBackup.initialize();
@@ -201,6 +205,9 @@ async function initializeStorage(): Promise<void> {
   } else {
     logger.info('[Monitor] Using memory storage');
     storage = memoryStore;
+    
+    // 设置存储管理器
+    setStorage(memoryStore);
   }
 }
 

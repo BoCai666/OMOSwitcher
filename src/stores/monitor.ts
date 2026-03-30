@@ -58,27 +58,40 @@ export const useMonitorStore = defineStore('monitor', () => {
   // 今日统计
   const todayStats = computed(() => {
     return stats.value?.today ?? {
-      requestCount: 0,
+      count: 0,
       totalTokens: 0,
-      totalCost: 0
+      totalCost: 0,
+      modelStats: {}
     }
   })
 
   // 本周统计
   const weekStats = computed(() => {
-    return stats.value?.week ?? {
-      requestCount: 0,
+    return stats.value?.thisWeek ?? {
+      count: 0,
       totalTokens: 0,
-      totalCost: 0
+      totalCost: 0,
+      modelStats: {}
     }
   })
 
   // 本月统计
   const monthStats = computed(() => {
-    return stats.value?.month ?? {
-      requestCount: 0,
+    return stats.value?.thisMonth ?? {
+      count: 0,
       totalTokens: 0,
-      totalCost: 0
+      totalCost: 0,
+      modelStats: {}
+    }
+  })
+
+  // 全部统计
+  const allTimeStats = computed(() => {
+    return stats.value?.allTime ?? {
+      count: 0,
+      totalTokens: 0,
+      totalCost: 0,
+      modelStats: {}
     }
   })
 
@@ -158,6 +171,14 @@ export const useMonitorStore = defineStore('monitor', () => {
       error.value = null
       const result = await invoke<MonitorStatus>('get_monitor_status')
       status.value = result
+      
+      // 如果 Tauri 认为服务没有运行，但 API 健康检查通过，也认为服务在运行
+      if (!result.is_running) {
+        const isHealthy = await monitorApi.healthCheck()
+        if (isHealthy) {
+          status.value.is_running = true
+        }
+      }
     } catch (e) {
       error.value = String(e)
     }
@@ -233,7 +254,7 @@ export const useMonitorStore = defineStore('monitor', () => {
   /**
    * 加载响应详情
    */
-  async function loadResponseDetail(requestId: string): Promise<LLMResponse> {
+  async function loadResponseDetail(requestId: string): Promise<LLMResponse | null> {
     // 检查缓存
     if (responseDetails.value.has(requestId)) {
       return responseDetails.value.get(requestId)!
@@ -241,7 +262,9 @@ export const useMonitorStore = defineStore('monitor', () => {
 
     try {
       const response = await monitorApi.getResponse(requestId)
-      responseDetails.value.set(requestId, response)
+      if (response) {
+        responseDetails.value.set(requestId, response)
+      }
       return response
     } catch (e) {
       error.value = String(e)
@@ -383,6 +406,7 @@ export const useMonitorStore = defineStore('monitor', () => {
     todayStats,
     weekStats,
     monthStats,
+    allTimeStats,
     selectedRequest,
     selectedResponse,
     selectedMcpCalls,

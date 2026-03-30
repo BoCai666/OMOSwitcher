@@ -1,87 +1,110 @@
-import Database from 'better-sqlite3';
 import fs from 'fs/promises';
 import path from 'path';
+import os from 'os';
 import { createGzip } from 'zlib';
 import { promisify } from 'util';
 import { pipeline } from 'stream';
 import { createReadStream, createWriteStream } from 'fs';
-import { config } from '../config.js';
+import { dbManager } from '../db/index.js';
 
 const pipelineAsync = promisify(pipeline);
 
+// 用户配置目录
+const USER_CONFIG_DIR = path.join(os.homedir(), '.config', 'omoswitcher');
+const ARCHIVE_DIR = path.join(USER_CONFIG_DIR, 'archives');
+
+// 数据保留配置
+const RETENTION_CONFIG = {
+  enabled: true,
+  days: 90,
+  archiveBeforeDelete: true
+};
+
 export class DataCleanupTask {
-  private db: Database.Database;
+  private db: any; // sql.js Database
   private archiveDir: string;
   
-  constructor(db: Database.Database) {
+  constructor(db: any) {
     this.db = db;
-    this.archiveDir = path.join(process.cwd(), 'archives');
+    this.archiveDir = ARCHIVE_DIR;
   }
   
   async initialize(): Promise<void> {
     await fs.mkdir(this.archiveDir, { recursive: true });
+    console.log(`[Cleanup] Archive directory: ${this.archiveDir}`);
   }
   
+  /**
+   * 执行数据清理
+   */
   async cleanup(): Promise<{ archived: number; deleted: number }> {
-    if (!config.retention.enabled) {
+    if (!RETENTION_CONFIG.enabled) {
       return { archived: 0, deleted: 0 };
     }
     
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - config.retention.days);
+    cutoffDate.setDate(cutoffDate.getDate() - RETENTION_CONFIG.days);
     const cutoffTimestamp = cutoffDate.getTime();
     
-    console.log(`[Cleanup] 清理 ${config.retention.days} 天前的数据 (截止: ${cutoffDate.toISOString()})`);
+    console.log(`[Cleanup] Cleaning data older than ${RETENTION_CONFIG.days} days (cutoff: ${cutoffDate.toISOString()})`);
     
     // 查询将要删除的数据
-    const oldRequests = this.db.prepare(
-      'SELECT id FROM requests WHERE timestamp < ?'
-    ).all(cutoffTimestamp) as { id: string }[];
+    const oldRequests = dbManager.query(
+      'SELECT id FROM requests WHERE timestamp < ?',
+      [cutoffTimestamp]
+    );
     
     if (oldRequests.length === 0) {
-      console.log('[Cleanup] 没有需要清理的数据');
+      console.log('[Cleanup] No data to clean');
       return { archived: 0, deleted: 0 };
     }
     
-    console.log(`[Cleanup] 发现 ${oldRequests.length} 条过期记录`);
+    console.log(`[Cleanup] Found ${oldRequests.length} expired records`);
     
     // 归档数据
     let archived = 0;
-    if (config.retention.archiveBeforeDelete) {
+    if (RETENTION_CONFIG.archiveBeforeDelete) {
       archived = await this.archiveData(cutoffTimestamp);
     }
     
     // 删除数据
-    const deleteCount = this.db.transaction(() => {
-      const result = this.db.prepare(
-        'DELETE FROM requests WHERE timestamp < ?'
-      ).run(cutoffTimestamp);
-      return result.changes;
-    })();
+    const deleteStmt = dbManager.prepare('DELETE FROM requests WHERE timestamp < ?');
+    const result = deleteStmt.run(cutoffTimestamp);
+    deleteStmt.free();
     
-    // 压缩数据库
-    this.db.exec('VACUUM');
+    const deleteCount = result.changes;
     
-    console.log(`[Cleanup] 完成: 归档 ${archived} 条, 删除 ${deleteCount} 条`);
+    // 保存数据库
+    await dbManager.saveToFile();
+    
+    console.log(`[Cleanup] Completed: archived ${archived}, deleted ${deleteCount}`);
     
     return { archived, deleted: deleteCount };
   }
   
+  /**
+   * 归档数据到压缩文件
+   */
   private async archiveData(cutoffTimestamp: number): Promise<number> {
     const archiveDate = new Date().toISOString().split('T')[0];
     const archivePath = path.join(this.archiveDir, `archive-${archiveDate}.json.gz`);
     
-    const oldData = this.db.prepare(`
+    // 查询旧数据
+    const oldData = dbManager.query(`
       SELECT 
-        r.*,
-        json_object(
-          'response', (SELECT json_object(*) FROM responses WHERE request_id = r.id),
-          'metrics', (SELECT json_object(*) FROM metrics WHERE request_id = r.id),
-          'mcp_calls', (SELECT json_group_array(json_object(*)) FROM mcp_calls WHERE request_id = r.id)
-        ) as related_data
+        r.id, r.timestamp, r.provider, r.model, r.method, r.url, r.domain,
+        (SELECT json_object(
+          'status_code', status_code,
+          'duration', duration
+        ) FROM responses WHERE request_id = r.id) as response,
+        (SELECT json_object(
+          'total_tokens', total_tokens,
+          'estimated_cost', estimated_cost,
+          'duration', duration
+        ) FROM metrics WHERE request_id = r.id) as metrics
       FROM requests r
       WHERE r.timestamp < ?
-    `).all(cutoffTimestamp);
+    `, [cutoffTimestamp]);
     
     if (oldData.length === 0) return 0;
     
@@ -95,11 +118,14 @@ export class DataCleanupTask {
     );
     
     await fs.unlink(tempPath);
-    console.log(`[Cleanup] 数据已归档到: ${archivePath}`);
+    console.log(`[Cleanup] Data archived to: ${archivePath}`);
     
     return oldData.length;
   }
   
+  /**
+   * 调度每日清理（凌晨3点）
+   */
   scheduleDailyCleanup(): void {
     const scheduleCleanup = () => {
       const now = new Date();
@@ -110,6 +136,8 @@ export class DataCleanupTask {
       }
       
       const delay = next3AM.getTime() - now.getTime();
+      
+      console.log(`[Cleanup] Next cleanup scheduled at: ${next3AM.toISOString()}`);
       
       setTimeout(() => {
         this.cleanup().catch(console.error);

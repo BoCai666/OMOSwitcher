@@ -10,9 +10,10 @@ import { TrendCharts, Document, Coin, Timer } from '@element-plus/icons-vue'
 interface Props {
   title: string // 卡片标题（如：今日、本周、本月）
   stats: {
-    requestCount: number
+    count: number
     totalTokens: number
     totalCost: number
+    modelStats?: Record<string, { count: number; tokens: number; cost: number }>
   }
 }
 
@@ -53,7 +54,7 @@ const formattedTokens = computed(() => {
           <el-icon><Document /></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value neon-text">{{ stats.requestCount }}</div>
+          <div class="stat-value neon-text">{{ stats.count }}</div>
           <div class="stat-label">请求数</div>
         </div>
       </div>

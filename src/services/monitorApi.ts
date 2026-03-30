@@ -76,10 +76,13 @@ export const monitorApi = {
    * 获取响应详情
    * @param requestId 请求 ID
    */
-  async getResponse(requestId: string): Promise<LLMResponse> {
+  async getResponse(requestId: string): Promise<LLMResponse | null> {
     const baseUrl = await getBaseUrl()
     const response = await fetch(`${baseUrl}/requests/${requestId}/response`)
     if (!response.ok) {
+      if (response.status === 404) {
+        return null
+      }
       throw new Error(`获取响应详情失败: ${response.statusText}`)
     }
     return response.json()
@@ -93,9 +96,13 @@ export const monitorApi = {
     const baseUrl = await getBaseUrl()
     const response = await fetch(`${baseUrl}/requests/${requestId}/mcp-calls`)
     if (!response.ok) {
+      if (response.status === 404) {
+        return []
+      }
       throw new Error(`获取 MCP 调用失败: ${response.statusText}`)
     }
-    return response.json()
+    const data = await response.json()
+    return data.calls || []
   },
 
   /**

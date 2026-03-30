@@ -94,9 +94,10 @@ watch(dialogVisible, (val) => {
     v-model="dialogVisible"
     :title="detail?.displayName || name"
     width="800px"
-    top="5vh"
     class="config-detail-dialog"
     destroy-on-close
+    append-to-body
+    align-center
   >
     <div v-if="detail" class="detail-content">
       <!-- 基本信息 -->
@@ -194,13 +195,13 @@ watch(dialogVisible, (val) => {
 </template>
 
 <style scoped>
-/* 对话框玻璃效果 - 深色背景 + 模糊 */
+/* 对话框基础样式 - 背景由各主题样式接管，此处只设置通用属性 */
 /* 注意：config-detail-dialog 是添加到 el-dialog 上的 class，它们是同一个元素 */
 :deep(.el-dialog.config-detail-dialog) {
-  background-color: rgba(18, 18, 26, 0.85);
+  background-color: transparent;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--app-border-default, #2a2a3a);
+  border: 1px solid var(--app-border-default);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
@@ -510,29 +511,31 @@ watch(dialogVisible, (val) => {
 }
 
 /* ==================== 赛博朋克主题 ==================== */
-html.cyberpunk .config-detail-dialog :deep(.el-dialog) {
-  background-color: rgba(26, 26, 46, 0.95);
+html.cyberpunk :deep(.el-dialog.config-detail-dialog) {
+  background-color: var(--app-glass-bg);
+  backdrop-filter: var(--app-glass-blur);
+  -webkit-backdrop-filter: var(--app-glass-blur);
   border: 1px solid rgba(0, 255, 255, 0.3);
   box-shadow:
     0 25px 50px rgba(0, 0, 0, 0.6),
     0 0 40px rgba(0, 255, 255, 0.15);
 }
 
-html.cyberpunk .config-detail-dialog :deep(.el-dialog__header) {
+html.cyberpunk :deep(.el-dialog.config-detail-dialog .el-dialog__header) {
   border-bottom: 2px solid rgba(0, 255, 255, 0.4);
   box-shadow: 0 4px 20px rgba(0, 255, 255, 0.2);
 }
 
-html.cyberpunk .config-detail-dialog :deep(.el-dialog__title) {
+html.cyberpunk :deep(.el-dialog.config-detail-dialog .el-dialog__title) {
   text-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
 }
 
-html.cyberpunk .config-detail-dialog :deep(.el-dialog__headerbtn:hover .el-dialog__close) {
+html.cyberpunk :deep(.el-dialog.config-detail-dialog .el-dialog__headerbtn:hover .el-dialog__close) {
   color: var(--app-color-primary);
   filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.6));
 }
 
-html.cyberpunk .config-detail-dialog :deep(.el-dialog__footer) {
+html.cyberpunk :deep(.el-dialog.config-detail-dialog .el-dialog__footer) {
   border-top: 1px solid rgba(0, 255, 255, 0.2);
 }
 
@@ -668,27 +671,27 @@ html.cyberpunk :deep(.el-button:hover) {
 }
 
 /* ==================== 玻璃拟态主题 ==================== */
-html.glassmorphism .config-detail-dialog :deep(.el-dialog) {
+html.glassmorphism :deep(.el-dialog.config-detail-dialog) {
   background-color: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.95);
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
 }
 
-html.glassmorphism .config-detail-dialog :deep(.el-dialog__header) {
+html.glassmorphism :deep(.el-dialog.config-detail-dialog .el-dialog__header) {
   border-bottom: 2px solid rgba(37, 99, 235, 0.2);
   box-shadow: none;
 }
 
-html.glassmorphism .config-detail-dialog :deep(.el-dialog__title) {
+html.glassmorphism :deep(.el-dialog.config-detail-dialog .el-dialog__title) {
   text-shadow: none;
 }
 
-html.glassmorphism .config-detail-dialog :deep(.el-dialog__headerbtn:hover .el-dialog__close) {
+html.glassmorphism :deep(.el-dialog.config-detail-dialog .el-dialog__headerbtn:hover .el-dialog__close) {
   color: var(--app-color-primary);
   filter: none;
 }
 
-html.glassmorphism .config-detail-dialog :deep(.el-dialog__footer) {
+html.glassmorphism :deep(.el-dialog.config-detail-dialog .el-dialog__footer) {
   border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -783,23 +786,23 @@ html.glassmorphism :deep(.el-button:hover) {
 }
 
 /* ==================== 明色主题 (html.light - 非玻璃拟态) ==================== */
-html.light .config-detail-dialog :deep(.el-dialog) {
+html.light :deep(.el-dialog.config-detail-dialog) {
   background-color: rgba(255, 255, 255, 0.98);
   border: 1px solid var(--app-border-default);
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
 }
 
-html.light .config-detail-dialog :deep(.el-dialog__header) {
+html.light :deep(.el-dialog.config-detail-dialog .el-dialog__header) {
   border-bottom: 2px solid var(--app-color-primary);
   box-shadow: none;
 }
 
-html.light .config-detail-dialog :deep(.el-dialog__title) {
+html.light :deep(.el-dialog.config-detail-dialog .el-dialog__title) {
   color: var(--app-text-primary);
   text-shadow: none;
 }
 
-html.light .config-detail-dialog :deep(.el-dialog__footer) {
+html.light :deep(.el-dialog.config-detail-dialog .el-dialog__footer) {
   border-top: 1px solid var(--app-border-default);
 }
 
@@ -897,29 +900,39 @@ html.light :deep(.el-button:hover) {
 }
 
 /* ==================== 暗色主题 (html.dark) ==================== */
-html.dark .config-detail-dialog :deep(.el-dialog) {
+html.dark :deep(.el-dialog.config-detail-dialog) {
   background-color: rgba(18, 18, 26, 0.95);
   border: 1px solid var(--app-border-default);
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 212, 255, 0.08);
 }
 
-html.dark .config-detail-dialog :deep(.el-dialog__header) {
+html.dark :deep(.el-dialog.config-detail-dialog .el-dialog__header) {
   border-bottom: 2px solid var(--app-color-primary);
   box-shadow: 0 2px 10px rgba(0, 212, 255, 0.2);
 }
 
-html.dark .config-detail-dialog :deep(.el-dialog__title) {
+html.dark :deep(.el-dialog.config-detail-dialog .el-dialog__title) {
   color: var(--app-text-primary);
   text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
 }
 
-html.dark .config-detail-dialog :deep(.el-dialog__headerbtn:hover .el-dialog__close) {
+html.dark :deep(.el-dialog.config-detail-dialog .el-dialog__headerbtn:hover .el-dialog__close) {
   color: var(--app-color-primary);
   filter: drop-shadow(0 0 5px rgba(0, 212, 255, 0.6));
 }
 
-html.dark .config-detail-dialog :deep(.el-dialog__footer) {
+html.dark :deep(.el-dialog.config-detail-dialog .el-dialog__footer) {
   border-top: 1px solid var(--app-border-default);
+}
+
+/* 暗色主题 - 弹窗内容区域背景（参考明色模式逻辑） */
+html.dark :deep(.el-dialog.config-detail-dialog .el-dialog__body) {
+  background-color: transparent;
+}
+
+/* 暗色主题 - 滚动内容容器不设置独立背景，由 el-dialog 统一处理 */
+html.dark .detail-content {
+  background-color: transparent;
 }
 
 /* 暗色主题 - 描述列表样式 */

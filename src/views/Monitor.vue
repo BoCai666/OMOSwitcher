@@ -15,6 +15,19 @@ const store = useMonitorStore()
 // 加载状态
 const loading = ref(false)
 
+// 详情弹窗显示状态
+const detailDialogVisible = ref(false)
+
+// 处理请求选中 - 打开弹窗
+function handleRequestSelected() {
+  detailDialogVisible.value = true
+}
+
+// 关闭详情弹窗
+function closeDetailDialog() {
+  detailDialogVisible.value = false
+}
+
 // 自动刷新开关
 const autoRefresh = ref(false)
 
@@ -211,7 +224,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- 请求列表和详情 - 自适应高度 + 分割线 -->
+      <!-- 请求列表 - 全宽布局 -->
       <div class="content-row">
         <div class="content-col requests-section">
           <div class="section-card">
@@ -226,26 +239,27 @@ onUnmounted(() => {
             </div>
             <div class="section-divider"></div>
             <div class="section-body">
-              <RequestList />
-            </div>
-          </div>
-        </div>
-        <div class="divider-glow"></div>
-        <div class="content-col detail-section">
-          <div class="section-card">
-            <div class="section-header">
-              <div class="header-icon-wrapper detail-icon">
-                <el-icon><Document /></el-icon>
-              </div>
-              <span class="header-title">请求详情</span>
-            </div>
-            <div class="section-divider"></div>
-            <div class="section-body">
-              <RequestDetail />
+              <RequestList @request-selected="handleRequestSelected" />
             </div>
           </div>
         </div>
       </div>
+
+      <!-- 请求详情弹窗 -->
+      <el-dialog
+        v-model="detailDialogVisible"
+        title="请求详情"
+        width="900px"
+        :close-on-click-modal="false"
+        :close-on-press-escape="true"
+        destroy-on-close
+        append-to-body
+        align-center
+        class="detail-dialog"
+        @close="closeDetailDialog"
+      >
+        <RequestDetail />
+      </el-dialog>
     </div>
 </template>
 
@@ -615,44 +629,13 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-/* ==================== 内容区 - 自适应高度 + 分割线 ==================== */
+/* ==================== 内容区 - 请求列表全宽布局 ==================== */
 .content-row {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 20px;
-  min-height: 600px;
+  display: block;
 }
 
 .content-col {
-  min-width: 0;
-}
-
-.divider-glow {
-  width: 2px;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(0, 212, 255, 0.3) 20%,
-    rgba(0, 212, 255, 0.5) 50%,
-    rgba(0, 212, 255, 0.3) 80%,
-    transparent 100%
-  );
-  position: relative;
-}
-
-.divider-glow::before {
-  content: '';
-  position: absolute;
-  inset: -20px -4px;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(0, 212, 255, 0.1) 20%,
-    rgba(0, 212, 255, 0.2) 50%,
-    rgba(0, 212, 255, 0.1) 80%,
-    transparent 100%
-  );
-  filter: blur(8px);
+  width: 100%;
 }
 
 /* 区域卡片 */
@@ -727,15 +710,6 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-/* 移除装饰性彩色边框 */
-.requests-section .section-card {
-  /* 边框已移除 */
-}
-
-.detail-section .section-card {
-  /* 边框已移除 */
-}
-
 /* ==================== 玻璃开关 ==================== */
 :deep(.glass-switch) {
   --el-switch-on-color: var(--app-color-success);
@@ -758,40 +732,54 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
+/* ==================== 详情弹窗样式 ==================== */
+.detail-dialog :deep(.el-dialog) {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-dialog :deep(.el-dialog__header) {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--app-border-default);
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.05) 0%, transparent 50%);
+  margin-right: 0;
+}
+
+.detail-dialog :deep(.el-dialog__title) {
+  color: var(--app-text-primary);
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.detail-dialog :deep(.el-dialog__headerbtn) {
+  top: 16px;
+  right: 20px;
+}
+
+.detail-dialog :deep(.el-dialog__headerbtn .el-dialog__close) {
+  color: var(--app-text-secondary);
+  font-size: 20px;
+}
+
+.detail-dialog :deep(.el-dialog__headerbtn:hover .el-dialog__close) {
+  color: var(--app-color-primary);
+}
+
+.detail-dialog :deep(.el-dialog__body) {
+  padding: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
 /* ==================== 响应式布局 ==================== */
 @media (max-width: 1200px) {
   .status-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .content-row {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
-  }
-  
-  .divider-glow {
-    width: 100%;
-    height: 2px;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(0, 212, 255, 0.3) 20%,
-      rgba(0, 212, 255, 0.5) 50%,
-      rgba(0, 212, 255, 0.3) 80%,
-      transparent 100%
-    );
-  }
-  
-  .divider-glow::before {
-    inset: -4px -20px;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(0, 212, 255, 0.1) 20%,
-      rgba(0, 212, 255, 0.2) 50%,
-      rgba(0, 212, 255, 0.1) 80%,
-      transparent 100%
-    );
   }
   
   .section-card {
@@ -953,28 +941,6 @@ html.cyberpunk .port-value {
   text-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
 }
 
-html.cyberpunk .divider-glow {
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(0, 255, 255, 0.4) 20%,
-    rgba(255, 0, 255, 0.3) 50%,
-    rgba(0, 255, 255, 0.4) 80%,
-    transparent 100%
-  );
-}
-
-html.cyberpunk .divider-glow::before {
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(0, 255, 255, 0.15) 20%,
-    rgba(255, 0, 255, 0.1) 50%,
-    rgba(0, 255, 255, 0.15) 80%,
-    transparent 100%
-  );
-}
-
 html.cyberpunk .section-card {
   background: rgba(26, 26, 46, 0.85);
   border: 1px solid rgba(0, 255, 255, 0.15);
@@ -1001,16 +967,6 @@ html.cyberpunk .header-badge {
   background: rgba(0, 255, 255, 0.15);
   border: 1px solid rgba(0, 255, 255, 0.3);
   box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
-}
-
-html.cyberpunk .requests-section .section-card {
-  border-left: 3px solid rgba(0, 255, 255, 0.5);
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
-}
-
-html.cyberpunk .detail-section .section-card {
-  border-right: 3px solid rgba(255, 0, 255, 0.5);
-  box-shadow: 0 0 20px rgba(255, 0, 255, 0.1);
 }
 
 html.cyberpunk :deep(.glass-switch.is-checked .el-switch__core) {
@@ -1129,14 +1085,6 @@ html.glassmorphism .port-value {
   text-shadow: none;
 }
 
-html.glassmorphism .divider-glow {
-  background: #e5e7eb;
-}
-
-html.glassmorphism .divider-glow::before {
-  display: none;
-}
-
 html.glassmorphism .section-card {
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid #d1d5db;
@@ -1166,12 +1114,6 @@ html.glassmorphism .header-badge {
   background: rgba(37, 99, 235, 0.1);
   border: 1px solid rgba(37, 99, 235, 0.3);
   box-shadow: none;
-}
-
-/* 移除装饰性彩色边框 */
-
-html.glassmorphism .detail-section .section-card {
-  /* 移除装饰性黄色右边框 */
 }
 
 html.glassmorphism :deep(.glass-switch.is-checked .el-switch__core) {
@@ -1298,21 +1240,6 @@ html.light:not(.cyberpunk):not(.dark) .status-value.active {
 
 html.light:not(.cyberpunk):not(.dark) .port-value {
   text-shadow: none;
-}
-
-html.light:not(.cyberpunk):not(.dark) .divider-glow {
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    var(--app-border-default) 20%,
-    var(--app-border-hover) 50%,
-    var(--app-border-default) 80%,
-    transparent 100%
-  );
-}
-
-html.light:not(.cyberpunk):not(.dark) .divider-glow::before {
-  display: none;
 }
 
 html.light:not(.cyberpunk):not(.dark) .section-card {

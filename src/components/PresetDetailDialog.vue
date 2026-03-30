@@ -103,6 +103,7 @@ const toggleJsonPreview = () => {
     width="700px"
     :close-on-click-modal="true"
     class="glass-detail-dialog"
+    append-to-body
     align-center
   >
     <div v-if="preset" class="preset-detail">

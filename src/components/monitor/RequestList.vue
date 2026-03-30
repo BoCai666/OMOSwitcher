@@ -11,6 +11,11 @@ import { Refresh, Search } from '@element-plus/icons-vue'
 // 使用状态管理
 const store = useMonitorStore()
 
+// 定义 emit 事件
+const emit = defineEmits<{
+  (e: 'request-selected'): void
+}>()
+
 // 选中的请求 ID
 const selectedId = ref<string | null>(null)
 
@@ -61,21 +66,25 @@ function getStatusType(statusCode: number | undefined): string {
   return 'warning'
 }
 
-// 过滤后的请求列表
+// 过滤后的请求列表（按时间戳倒序排列，最近的请求在最前面）
 const filteredRequests = computed(() => {
-  if (!searchKeyword.value) return store.requests
-  const keyword = searchKeyword.value.toLowerCase()
-  return store.requests.filter((req: RequestListItem) =>
-    req.provider.toLowerCase().includes(keyword) ||
-    req.model.toLowerCase().includes(keyword) ||
-    req.url.toLowerCase().includes(keyword)
-  )
+  const list = searchKeyword.value
+    ? store.requests.filter((req: RequestListItem) => {
+        const keyword = searchKeyword.value.toLowerCase()
+        return req.provider.toLowerCase().includes(keyword) ||
+          req.model.toLowerCase().includes(keyword) ||
+          req.url.toLowerCase().includes(keyword)
+      })
+    : store.requests
+  // 按 timestamp 倒序排列（最新的在前）
+  return [...list].sort((a, b) => b.timestamp - a.timestamp)
 })
 
 // 处理行点击事件
 function handleRowClick(row: RequestListItem) {
   selectedId.value = row.id
   store.selectRequest(row.id)
+  emit('request-selected')
 }
 
 // 处理刷新
@@ -119,6 +128,7 @@ onMounted(() => {
       v-loading="store.loading"
       class="monitor-table"
       row-class-name="monitor-table-row"
+      max-height="500"
     >
       <!-- 时间列 -->
       <el-table-column label="时间" width="140" fixed="left">

@@ -314,6 +314,8 @@ onMounted(() => {
         :title="isEditing ? '编辑模型' : '添加模型'"
         width="500px"
         :close-on-click-modal="false"
+        append-to-body
+        align-center
         @closed="handleDialogClose"
       >
         <el-form

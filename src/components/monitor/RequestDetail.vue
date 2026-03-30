@@ -298,11 +298,7 @@ watch(() => store.selectedRequestId, () => {
 <style scoped>
 .request-detail {
   height: 100%;
-  padding: 20px;
   overflow-y: auto;
-  background: var(--app-bg-card);
-  border-radius: 16px;
-  border: 1px solid var(--app-border-default);
 }
 
 /* 空状态 */
@@ -738,9 +734,7 @@ watch(() => store.selectedRequestId, () => {
 
 /* ========== Cyberpunk 主题 ========== */
 html.cyberpunk .request-detail {
-  background: linear-gradient(135deg, rgba(10, 15, 30, 0.95), rgba(5, 10, 25, 0.98));
-  border: 1px solid rgba(0, 212, 255, 0.4);
-  box-shadow: 0 0 30px rgba(0, 212, 255, 0.15);
+  /* 弹窗内容样式 */
 }
 
 html.cyberpunk .empty-icon-wrapper {
@@ -858,11 +852,7 @@ html.cyberpunk .code-snippet {
 
 /* ========== Glassmorphism 主题 ========== */
 html.glassmorphism .request-detail {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #d1d5db;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  /* 弹窗内容样式 */
 }
 
 html.glassmorphism .empty-icon-wrapper {
@@ -982,9 +972,7 @@ html.glassmorphism .code-snippet {
 
 /* ========== 明色主题 (html.light - 非玻璃拟态/非暗色) ========== */
 html.light:not(.cyberpunk):not(.dark) .request-detail {
-  background: var(--app-bg-card);
-  border: 1px solid var(--app-border-default);
-  box-shadow: none;
+  /* 弹窗内容样式 */
 }
 
 html.light:not(.cyberpunk):not(.dark) .empty-icon-wrapper {

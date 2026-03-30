@@ -1,35 +1,26 @@
 import { LLMRequest, LLMResponse, LLMMetrics, MCPCall, DailyRecord } from '../types.js';
-import { StorageInterface, MetricsStats, DeltaResult, RequestWithMetrics, RequestListItem, DomainStatsResult, DomainStats } from './interface.js';
+import { StorageInterface, MetricsStats, DeltaResult, RequestListItem, DomainStatsResult, DomainStats } from './interface.js';
 import { dbManager } from '../db/index.js';
-import Database from 'better-sqlite3';
 
 /**
  * SQLite 存储实现类
  * 
- * 实现 StorageInterface 接口，使用 SQLite 数据库存储 LLM 请求、响应、指标和 MCP 调用。
- * 特点：
- * - 使用预编译语句提高性能和安全性
- * - 自动处理 JSON 序列化/反序列化
- * - 支持批量操作的事务处理
+ * 使用 sql.js（纯 WASM SQLite）实现持久化存储
+ * 可以在 pkg 打包环境中正常工作
  */
 export class SQLiteStorage implements StorageInterface {
-  private db: Database.Database | null = null;
-
   /**
    * 初始化数据库连接
    */
   async initialize(): Promise<void> {
-    this.db = await dbManager.initialize();
+    await dbManager.initialize();
   }
 
   /**
    * 获取数据库实例（用于备份等操作）
    */
-  getDatabase(): Database.Database {
-    if (!this.db) {
-      throw new Error('Database not initialized');
-    }
-    return this.db;
+  getDatabase(): any {
+    return dbManager.getDatabase();
   }
 
   /**
@@ -37,12 +28,10 @@ export class SQLiteStorage implements StorageInterface {
    * @param request - LLM 请求对象
    */
   saveRequest(request: LLMRequest): void {
-    if (!this.db) throw new Error('Database not initialized');
-    
     // 提取域名：优先使用 request.domain，否则从 URL 中提取
     const domain = request.domain || this.extractDomain(request.url || '');
     
-    const stmt = this.db.prepare(`
+    const stmt = dbManager.prepare(`
       INSERT OR REPLACE INTO requests 
       (id, timestamp, provider, model, method, url, domain, headers, body, parsed_body) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -60,6 +49,9 @@ export class SQLiteStorage implements StorageInterface {
       JSON.stringify(request.body),
       JSON.stringify(request.parsedBody || null)
     );
+    
+    stmt.free();
+    dbManager.scheduleSave();
   }
 
   /**
@@ -67,9 +59,7 @@ export class SQLiteStorage implements StorageInterface {
    * @param response - LLM 响应对象
    */
   saveResponse(response: LLMResponse): void {
-    if (!this.db) throw new Error('Database not initialized');
-    
-    const stmt = this.db.prepare(`
+    const stmt = dbManager.prepare(`
       INSERT OR REPLACE INTO responses 
       (id, request_id, timestamp, status_code, headers, body, parsed_body, duration) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -85,6 +75,9 @@ export class SQLiteStorage implements StorageInterface {
       JSON.stringify(response.parsedBody || null),
       response.duration || 0
     );
+    
+    stmt.free();
+    dbManager.scheduleSave();
   }
 
   /**
@@ -92,9 +85,7 @@ export class SQLiteStorage implements StorageInterface {
    * @param metrics - LLM 指标对象
    */
   saveMetrics(metrics: LLMMetrics): void {
-    if (!this.db) throw new Error('Database not initialized');
-    
-    const stmt = this.db.prepare(`
+    const stmt = dbManager.prepare(`
       INSERT OR REPLACE INTO metrics 
       (id, request_id, model, provider, prompt_tokens, completion_tokens, total_tokens, estimated_cost, duration, timestamp) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -112,6 +103,9 @@ export class SQLiteStorage implements StorageInterface {
       metrics.duration || 0,
       metrics.timestamp || Date.now()
     );
+    
+    stmt.free();
+    dbManager.scheduleSave();
   }
 
   /**
@@ -119,9 +113,7 @@ export class SQLiteStorage implements StorageInterface {
    * @param mcpCall - MCP 调用对象
    */
   saveMcpCall(mcpCall: MCPCall): void {
-    if (!this.db) throw new Error('Database not initialized');
-    
-    const stmt = this.db.prepare(`
+    const stmt = dbManager.prepare(`
       INSERT OR REPLACE INTO mcp_calls 
       (id, request_id, jsonrpc_version, rpc_id, tool_name, tool_title, tool_description, arguments, result_content, result_is_error, error_message, execution_duration, transport_type, server_name, trace_id, timestamp) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -145,6 +137,9 @@ export class SQLiteStorage implements StorageInterface {
       mcpCall.traceId || null,
       mcpCall.timestamp
     );
+    
+    stmt.free();
+    dbManager.scheduleSave();
   }
 
   /**
@@ -153,15 +148,15 @@ export class SQLiteStorage implements StorageInterface {
    * @returns LLM 请求数组
    */
   getRecentRequests(limit: number): LLMRequest[] {
-    if (!this.db) throw new Error('Database not initialized');
-    
-    const stmt = this.db.prepare(`
+    const stmt = dbManager.prepare(`
       SELECT * FROM requests 
       ORDER BY timestamp DESC 
       LIMIT ?
     `);
     
-    const rows = stmt.all(limit) as any[];
+    const rows = stmt.all(limit);
+    stmt.free();
+    
     return rows.map(row => this.parseRequest(row));
   }
 
@@ -171,10 +166,7 @@ export class SQLiteStorage implements StorageInterface {
    * @returns 带 metrics 的请求数组
    */
   getRecentRequestsWithMetrics(limit: number): RequestListItem[] {
-    if (!this.db) throw new Error('Database not initialized');
-    
-    // 只选择列表显示需要的字段，排除大型字段（body, headers）
-    const stmt = this.db.prepare(`
+    const stmt = dbManager.prepare(`
       SELECT r.id, r.timestamp, r.provider, r.model, r.method, r.url, r.domain,
              res.status_code as status_code,
              m.total_tokens as tokens,
@@ -187,7 +179,9 @@ export class SQLiteStorage implements StorageInterface {
       LIMIT ?
     `);
     
-    const rows = stmt.all(limit) as any[];
+    const rows = stmt.all(limit);
+    stmt.free();
+    
     return rows.map(row => this.parseRequestWithMetrics(row));
   }
 
@@ -197,10 +191,9 @@ export class SQLiteStorage implements StorageInterface {
    * @returns LLM 请求对象或 null
    */
   getRequestById(id: string): LLMRequest | null {
-    if (!this.db) throw new Error('Database not initialized');
-    
-    const stmt = this.db.prepare('SELECT * FROM requests WHERE id = ?');
-    const row = stmt.get(id) as any;
+    const stmt = dbManager.prepare('SELECT * FROM requests WHERE id = ?');
+    const row = stmt.get(id);
+    stmt.free();
     
     return row ? this.parseRequest(row) : null;
   }
@@ -211,10 +204,9 @@ export class SQLiteStorage implements StorageInterface {
    * @returns LLM 响应对象或 null
    */
   getResponseByRequestId(requestId: string): LLMResponse | null {
-    if (!this.db) throw new Error('Database not initialized');
-    
-    const stmt = this.db.prepare('SELECT * FROM responses WHERE request_id = ?');
-    const row = stmt.get(requestId) as any;
+    const stmt = dbManager.prepare('SELECT * FROM responses WHERE request_id = ?');
+    const row = stmt.get(requestId);
+    stmt.free();
     
     return row ? this.parseResponse(row) : null;
   }
@@ -225,10 +217,9 @@ export class SQLiteStorage implements StorageInterface {
    * @returns LLM 指标对象或 null
    */
   getMetricsByRequestId(requestId: string): LLMMetrics | null {
-    if (!this.db) throw new Error('Database not initialized');
-    
-    const stmt = this.db.prepare('SELECT * FROM metrics WHERE request_id = ?');
-    const row = stmt.get(requestId) as any;
+    const stmt = dbManager.prepare('SELECT * FROM metrics WHERE request_id = ?');
+    const row = stmt.get(requestId);
+    stmt.free();
     
     return row ? this.parseMetrics(row) : null;
   }
@@ -239,10 +230,9 @@ export class SQLiteStorage implements StorageInterface {
    * @returns MCP 调用数组
    */
   getMcpCallsByRequestId(requestId: string): MCPCall[] {
-    if (!this.db) throw new Error('Database not initialized');
-    
-    const stmt = this.db.prepare('SELECT * FROM mcp_calls WHERE request_id = ? ORDER BY timestamp ASC');
-    const rows = stmt.all(requestId) as any[];
+    const stmt = dbManager.prepare('SELECT * FROM mcp_calls WHERE request_id = ? ORDER BY timestamp ASC');
+    const rows = stmt.all(requestId);
+    stmt.free();
     
     return rows.map(row => this.parseMcpCall(row));
   }
@@ -254,10 +244,8 @@ export class SQLiteStorage implements StorageInterface {
    * @returns 指标统计对象
    */
   getMetricsStats(startTime: number, endTime: number): MetricsStats {
-    if (!this.db) throw new Error('Database not initialized');
-    
     // 获取基本统计数据
-    const statsStmt = this.db.prepare(`
+    const statsStmt = dbManager.prepare(`
       SELECT 
         COUNT(*) as count,
         COALESCE(SUM(total_tokens), 0) as total_tokens,
@@ -265,10 +253,11 @@ export class SQLiteStorage implements StorageInterface {
       FROM metrics 
       WHERE timestamp >= ? AND timestamp <= ?
     `);
-    const statsRow = statsStmt.get(startTime, endTime) as any;
+    const statsRow = statsStmt.get(startTime, endTime);
+    statsStmt.free();
     
     // 获取按模型分组的统计数据
-    const modelStmt = this.db.prepare(`
+    const modelStmt = dbManager.prepare(`
       SELECT 
         model,
         COUNT(*) as count,
@@ -278,7 +267,8 @@ export class SQLiteStorage implements StorageInterface {
       WHERE timestamp >= ? AND timestamp <= ?
       GROUP BY model
     `);
-    const modelRows = modelStmt.all(startTime, endTime) as any[];
+    const modelRows = modelStmt.all(startTime, endTime);
+    modelStmt.free();
     
     // 构建模型统计对象
     const modelStats: Record<string, { count: number; tokens: number; cost: number }> = {};
@@ -291,9 +281,9 @@ export class SQLiteStorage implements StorageInterface {
     }
     
     return {
-      count: Number(statsRow.count),
-      totalTokens: Number(statsRow.total_tokens),
-      totalCost: Number(statsRow.total_cost),
+      count: Number(statsRow?.count || 0),
+      totalTokens: Number(statsRow?.total_tokens || 0),
+      totalCost: Number(statsRow?.total_cost || 0),
       modelStats
     };
   }
@@ -305,15 +295,15 @@ export class SQLiteStorage implements StorageInterface {
    * @returns 每日记录数组
    */
   getDailyRecords(startDate: string, endDate: string): DailyRecord[] {
-    if (!this.db) throw new Error('Database not initialized');
-    
-    const stmt = this.db.prepare(`
+    const stmt = dbManager.prepare(`
       SELECT * FROM daily_records 
       WHERE date >= ? AND date <= ?
       ORDER BY date ASC
     `);
     
-    const rows = stmt.all(startDate, endDate) as any[];
+    const rows = stmt.all(startDate, endDate);
+    stmt.free();
+    
     return rows.map(row => this.parseDailyRecord(row));
   }
 
@@ -323,10 +313,9 @@ export class SQLiteStorage implements StorageInterface {
    * @returns 每日记录对象或 null
    */
   getDailyRecord(date: string): DailyRecord | null {
-    if (!this.db) throw new Error('Database not initialized');
-    
-    const stmt = this.db.prepare('SELECT * FROM daily_records WHERE date = ?');
-    const row = stmt.get(date) as any;
+    const stmt = dbManager.prepare('SELECT * FROM daily_records WHERE date = ?');
+    const row = stmt.get(date);
+    stmt.free();
     
     return row ? this.parseDailyRecord(row) : null;
   }
@@ -339,10 +328,6 @@ export class SQLiteStorage implements StorageInterface {
    * @returns LLM 请求数组
    */
   getRequestsByDateRange(startDate: string, endDate: string, limit?: number): LLMRequest[] {
-    if (!this.db) throw new Error('Database not initialized');
-    
-    // 将 YYYY-MM-DD 转换为本地时间戳范围（考虑时区）
-    // 使用本地时间 00:00:00 和 23:59:59.999
     const startTimestamp = new Date(startDate + 'T00:00:00').getTime();
     const endTimestamp = new Date(endDate + 'T23:59:59.999').getTime();
     
@@ -351,16 +336,19 @@ export class SQLiteStorage implements StorageInterface {
       WHERE timestamp >= ? AND timestamp <= ?
       ORDER BY timestamp DESC
     `;
-    const params: any[] = [startTimestamp, endTimestamp];
     
     if (limit !== undefined) {
       sql += ' LIMIT ?';
-      params.push(limit);
+      const stmt = dbManager.prepare(sql);
+      const rows = stmt.all(startTimestamp, endTimestamp, limit);
+      stmt.free();
+      return rows.map(row => this.parseRequest(row));
+    } else {
+      const stmt = dbManager.prepare(sql);
+      const rows = stmt.all(startTimestamp, endTimestamp);
+      stmt.free();
+      return rows.map(row => this.parseRequest(row));
     }
-    
-    const stmt = this.db.prepare(sql);
-    const rows = stmt.all(...params) as any[];
-    return rows.map(row => this.parseRequest(row));
   }
 
   /**
@@ -371,14 +359,9 @@ export class SQLiteStorage implements StorageInterface {
    * @returns 带 metrics 的请求数组
    */
   getRequestsByDateRangeWithMetrics(startDate: string, endDate: string, limit?: number): RequestListItem[] {
-    if (!this.db) throw new Error('Database not initialized');
-    
-    // 将 YYYY-MM-DD 转换为本地时间戳范围（考虑时区）
-    // 使用本地时间 00:00:00 和 23:59:59.999
     const startTimestamp = new Date(startDate + 'T00:00:00').getTime();
     const endTimestamp = new Date(endDate + 'T23:59:59.999').getTime();
     
-    // 只选择列表显示需要的字段，排除大型字段（body, headers）
     let sql = `
       SELECT r.id, r.timestamp, r.provider, r.model, r.method, r.url, r.domain,
              res.status_code as status_code,
@@ -391,16 +374,19 @@ export class SQLiteStorage implements StorageInterface {
       WHERE r.timestamp >= ? AND r.timestamp <= ?
       ORDER BY r.timestamp DESC
     `;
-    const params: any[] = [startTimestamp, endTimestamp];
     
     if (limit !== undefined) {
       sql += ' LIMIT ?';
-      params.push(limit);
+      const stmt = dbManager.prepare(sql);
+      const rows = stmt.all(startTimestamp, endTimestamp, limit);
+      stmt.free();
+      return rows.map(row => this.parseRequestWithMetrics(row));
+    } else {
+      const stmt = dbManager.prepare(sql);
+      const rows = stmt.all(startTimestamp, endTimestamp);
+      stmt.free();
+      return rows.map(row => this.parseRequestWithMetrics(row));
     }
-    
-    const stmt = this.db.prepare(sql);
-    const rows = stmt.all(...params) as any[];
-    return rows.map(row => this.parseRequestWithMetrics(row));
   }
 
   /**
@@ -411,9 +397,6 @@ export class SQLiteStorage implements StorageInterface {
    * @returns 带 metrics 的请求数组
    */
   getRequestsByTimestampRangeWithMetrics(startTime: number, endTime: number, limit?: number): RequestListItem[] {
-    if (!this.db) throw new Error('Database not initialized');
-    
-    // 只选择列表显示需要的字段，排除大型字段（body, headers）
     let sql = `
       SELECT r.id, r.timestamp, r.provider, r.model, r.method, r.url, r.domain,
              res.status_code as status_code,
@@ -426,16 +409,19 @@ export class SQLiteStorage implements StorageInterface {
       WHERE r.timestamp >= ? AND r.timestamp <= ?
       ORDER BY r.timestamp DESC
     `;
-    const params: any[] = [startTime, endTime];
     
     if (limit !== undefined) {
       sql += ' LIMIT ?';
-      params.push(limit);
+      const stmt = dbManager.prepare(sql);
+      const rows = stmt.all(startTime, endTime, limit);
+      stmt.free();
+      return rows.map(row => this.parseRequestWithMetrics(row));
+    } else {
+      const stmt = dbManager.prepare(sql);
+      const rows = stmt.all(startTime, endTime);
+      stmt.free();
+      return rows.map(row => this.parseRequestWithMetrics(row));
     }
-    
-    const stmt = this.db.prepare(sql);
-    const rows = stmt.all(...params) as any[];
-    return rows.map(row => this.parseRequestWithMetrics(row));
   }
 
   /**
@@ -443,10 +429,10 @@ export class SQLiteStorage implements StorageInterface {
    * @returns 是否有数据
    */
   hasData(): boolean {
-    if (!this.db) throw new Error('Database not initialized');
+    const stmt = dbManager.prepare('SELECT COUNT(*) as count FROM requests LIMIT 1');
+    const row = stmt.get();
+    stmt.free();
     
-    const stmt = this.db.prepare('SELECT COUNT(*) as count FROM requests LIMIT 1');
-    const row = stmt.get() as any;
     return row && row.count > 0;
   }
 
@@ -455,10 +441,10 @@ export class SQLiteStorage implements StorageInterface {
    * @returns 模型名称数组
    */
   getAllModels(): string[] {
-    if (!this.db) throw new Error('Database not initialized');
+    const stmt = dbManager.prepare('SELECT DISTINCT model FROM metrics WHERE model IS NOT NULL AND model != \'\' ORDER BY model');
+    const rows = stmt.all();
+    stmt.free();
     
-    const stmt = this.db.prepare('SELECT DISTINCT model FROM metrics WHERE model IS NOT NULL AND model != \'\' ORDER BY model');
-    const rows = stmt.all() as any[];
     return rows.map(row => row.model);
   }
 
@@ -469,10 +455,8 @@ export class SQLiteStorage implements StorageInterface {
    * @returns 域名统计结果
    */
   getDomainStats(startTime: number, endTime: number): DomainStatsResult {
-    if (!this.db) throw new Error('Database not initialized');
-    
     // 获取域名基础统计
-    const domainStmt = this.db.prepare(`
+    const domainStmt = dbManager.prepare(`
       SELECT 
         r.domain,
         COUNT(*) as count,
@@ -485,10 +469,11 @@ export class SQLiteStorage implements StorageInterface {
       GROUP BY r.domain
       ORDER BY count DESC
     `);
-    const domainRows = domainStmt.all(startTime, endTime) as any[];
+    const domainRows = domainStmt.all(startTime, endTime);
+    domainStmt.free();
     
-    // 获取域名+模型组合的统计（包括没有 model 的请求，归类为 unknown）
-    const modelStmt = this.db.prepare(`
+    // 获取域名+模型组合的统计
+    const modelStmt = dbManager.prepare(`
       SELECT 
         r.domain,
         COALESCE(NULLIF(m.model, ''), 'unknown') as model_name,
@@ -500,7 +485,8 @@ export class SQLiteStorage implements StorageInterface {
       WHERE r.timestamp >= ? AND r.timestamp <= ?
       GROUP BY r.domain, model_name
     `);
-    const modelRows = modelStmt.all(startTime, endTime) as any[];
+    const modelRows = modelStmt.all(startTime, endTime);
+    modelStmt.free();
     
     // 构建模型统计映射
     const modelStatsByDomain: Record<string, Record<string, { count: number; tokens: number; cost: number }>> = {};
@@ -532,10 +518,8 @@ export class SQLiteStorage implements StorageInterface {
    * 清空所有数据
    */
   clear(): void {
-    if (!this.db) throw new Error('Database not initialized');
-    
-    // 由于外键约束设置了 ON DELETE CASCADE，删除 requests 会自动删除关联数据
-    this.db.exec('DELETE FROM requests');
+    dbManager.exec('DELETE FROM requests');
+    dbManager.saveToFile();
   }
 
   /**
@@ -545,11 +529,8 @@ export class SQLiteStorage implements StorageInterface {
    * @returns 新增和更新的请求
    */
   getDelta(since: number, limit: number): DeltaResult {
-    if (!this.db) throw new Error('Database not initialized');
-    
-    // 查询新增请求（timestamp > since）
-    // 只选择列表显示需要的字段，排除大型字段（body, headers）
-    const newStmt = this.db.prepare(`
+    // 查询新增请求
+    const newStmt = dbManager.prepare(`
       SELECT r.id, r.timestamp, r.provider, r.model, r.method, r.url, r.domain,
              m.total_tokens as tokens, 
              m.estimated_cost as cost, 
@@ -562,10 +543,11 @@ export class SQLiteStorage implements StorageInterface {
       ORDER BY r.timestamp DESC
       LIMIT ?
     `);
-    const newRows = newStmt.all(since, limit) as any[];
+    const newRows = newStmt.all(since, limit);
+    newStmt.free();
     
-    // 查询更新的请求（updated_at > since 但 timestamp <= since）
-    const updatedStmt = this.db.prepare(`
+    // 查询更新的请求
+    const updatedStmt = dbManager.prepare(`
       SELECT r.id, r.timestamp, r.provider, r.model, r.method, r.url, r.domain,
              m.total_tokens as tokens, 
              m.estimated_cost as cost, 
@@ -578,7 +560,8 @@ export class SQLiteStorage implements StorageInterface {
       ORDER BY r.updated_at DESC
       LIMIT ?
     `);
-    const updatedRows = updatedStmt.all(since, since, limit) as any[];
+    const updatedRows = updatedStmt.all(since, since, limit);
+    updatedStmt.free();
     
     return {
       newRequests: newRows.map(row => this.parseRequestWithMetrics(row)),
@@ -586,8 +569,10 @@ export class SQLiteStorage implements StorageInterface {
     };
   }
 
+  // ============ 私有辅助方法 ============
+
   /**
-   * 解析包含 metrics 的请求（列表用，不含大型字段）
+   * 解析包含 metrics 的请求（列表用）
    */
   private parseRequestWithMetrics(row: any): RequestListItem {
     return {
@@ -606,8 +591,6 @@ export class SQLiteStorage implements StorageInterface {
         : undefined
     };
   }
-
-  // ============ 私有辅助方法 ============
 
   /**
    * 解析数据库行到 LLMRequest
@@ -629,8 +612,6 @@ export class SQLiteStorage implements StorageInterface {
 
   /**
    * 从 URL 中提取域名
-   * @param url - 完整的 URL 字符串
-   * @returns 域名或空字符串
    */
   private extractDomain(url: string): string {
     try {
@@ -718,9 +699,6 @@ export class SQLiteStorage implements StorageInterface {
 
   /**
    * 安全解析 JSON 字符串
-   * @param value - 要解析的字符串
-   * @param defaultValue - 解析失败时的默认值
-   * @returns 解析后的值或默认值
    */
   private safeJsonParse<T>(value: string | null | undefined, defaultValue: T): T {
     if (!value || value === 'null' || value === 'undefined') {

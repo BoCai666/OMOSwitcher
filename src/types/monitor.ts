@@ -102,19 +102,28 @@ export interface MonitorStatus {
 // 统计汇总
 export interface StatsSummary {
   today: {
-    requestCount: number
+    count: number
     totalTokens: number
     totalCost: number
+    modelStats: Record<string, { count: number; tokens: number; cost: number }>
   }
-  week: {
-    requestCount: number
+  thisWeek: {
+    count: number
     totalTokens: number
     totalCost: number
+    modelStats: Record<string, { count: number; tokens: number; cost: number }>
   }
-  month: {
-    requestCount: number
+  thisMonth: {
+    count: number
     totalTokens: number
     totalCost: number
+    modelStats: Record<string, { count: number; tokens: number; cost: number }>
+  }
+  allTime: {
+    count: number
+    totalTokens: number
+    totalCost: number
+    modelStats: Record<string, { count: number; tokens: number; cost: number }>
   }
 }
 

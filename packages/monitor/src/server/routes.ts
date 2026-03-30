@@ -3,7 +3,7 @@ import { config } from '../config.js';
 import { LLMRequest } from '../types.js';
 import { ConfigManager } from '../config-manager.js';
 import { RequestListItem } from '../storage/interface.js';
-import { memoryStore } from '../storage/memory-store.js';
+import { getStorage } from '../storage/storage-manager.js';
 
 // 创建 ConfigManager 实例
 const configManager = new ConfigManager();
@@ -68,11 +68,6 @@ export function broadcastMetrics(metrics: any): void {
   clients.forEach((client) => {
     client.write(message);
   });
-}
-
-// 获取存储实例（使用静态导入避免 pkg 动态导入问题）
-function getStorage() {
-  return memoryStore;
 }
 
 const router = Router();
@@ -189,6 +184,21 @@ router.get('/requests/:id/mcp-calls', async (req, res) => {
     requestId: req.params.id,
     calls
   });
+});
+
+// GET /api/requests/:id/metrics - 获取请求的指标
+router.get('/requests/:id/metrics', async (req, res) => {
+  const storage = getStorage();
+  
+  if (!storage.getMetricsByRequestId) {
+    return res.status(404).json({ error: 'Metrics not found' });
+  }
+  
+  const metrics = storage.getMetricsByRequestId(req.params.id);
+  if (!metrics) {
+    return res.status(404).json({ error: 'Metrics not found' });
+  }
+  res.json(metrics);
 });
 
 // GET /api/metrics - 获取统计指标

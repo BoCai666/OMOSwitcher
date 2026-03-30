@@ -68,11 +68,17 @@ function getPrefersReducedMotion(): boolean {
   const accent: ThemeAccent = savedAccent || DEFAULT_THEME_SETTINGS.accent
 
   // 应用 CSS class
-  root.classList.remove('cyberpunk', 'glassmorphism')
+  root.classList.remove('cyberpunk', 'glassmorphism', 'light', 'dark')
   if (mode === 'system') {
-    getPrefersDark() ? root.classList.add('cyberpunk') : root.classList.add('glassmorphism')
+    if (getPrefersDark()) {
+      root.classList.add('cyberpunk', 'dark')
+    } else {
+      root.classList.add('glassmorphism', 'light')
+    }
   } else {
     root.classList.add(mode)
+    // 同时添加 light 或 dark 类，用于滚动条等样式区分
+    root.classList.add(mode === 'cyberpunk' ? 'dark' : 'light')
   }
 
   // 应用强调色
@@ -142,11 +148,17 @@ export function useTheme() {
    * 应用主题模式到 html 元素
    */
   const applyMode = (newMode: ThemeMode) => {
-    root.classList.remove('cyberpunk', 'glassmorphism')
+    root.classList.remove('cyberpunk', 'glassmorphism', 'light', 'dark')
     if (newMode === 'system') {
-      getPrefersDark() ? root.classList.add('cyberpunk') : root.classList.add('glassmorphism')
+      if (getPrefersDark()) {
+        root.classList.add('cyberpunk', 'dark')
+      } else {
+        root.classList.add('glassmorphism', 'light')
+      }
     } else {
       root.classList.add(newMode)
+      // 同时添加 light 或 dark 类，用于滚动条等样式区分
+      root.classList.add(newMode === 'cyberpunk' ? 'dark' : 'light')
     }
     mode.value = newMode
   }
@@ -210,8 +222,12 @@ export function useTheme() {
    */
   const handleSystemThemeChange = () => {
     if (mode.value === 'system') {
-      root.classList.remove('cyberpunk', 'glassmorphism')
-      getPrefersDark() ? root.classList.add('cyberpunk') : root.classList.add('glassmorphism')
+      root.classList.remove('cyberpunk', 'glassmorphism', 'light', 'dark')
+      if (getPrefersDark()) {
+        root.classList.add('cyberpunk', 'dark')
+      } else {
+        root.classList.add('glassmorphism', 'light')
+      }
     }
   }
 

@@ -945,6 +945,10 @@ html.dark {
 html.cyberpunk .el-overlay,
 html.cyberpunk .el-overlay-dialog,
 html.dark .el-overlay,
-html.dark .el-overlay-dialog {
+html.dark .el-overlay-dialog,
+html.glassmorphism .el-overlay,
+html.glassmorphism .el-overlay-dialog,
+html.light .el-overlay,
+html.light .el-overlay-dialog {
   overflow: hidden !important;
 }
