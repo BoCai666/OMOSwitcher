@@ -407,6 +407,52 @@ html.cyberpunk .subtitle {
   color: #a0a0c0;
 }
 
+/* 暗色主题 - 统计信息使用更亮的灰色 */
+html.dark .subtitle {
+  color: #a3a6ad;
+}
+
+/* 暗色主题 - 折叠面板头部样式 */
+html.dark .provider-collapse :deep(.el-collapse-item__header) {
+  background: rgba(18, 18, 26, 0.85);
+  border: 1px solid var(--app-border-default);
+  color: var(--app-text-primary);
+}
+
+html.dark .provider-collapse :deep(.el-collapse-item__header:hover) {
+  background: var(--app-bg-elevated);
+  border-color: var(--app-border-hover);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.08);
+}
+
+html.dark .provider-collapse :deep(.el-collapse-item__arrow) {
+  color: var(--app-color-primary);
+  filter: drop-shadow(0 0 3px rgba(0, 212, 255, 0.5));
+}
+
+html.dark .provider-collapse :deep(.el-collapse-item__arrow.is-active) {
+  color: var(--app-color-secondary);
+  filter: drop-shadow(0 0 6px rgba(0, 255, 213, 0.6));
+}
+
+/* 暗色主题 - 页面头部按钮 */
+html.dark .page-header .el-button--primary {
+  background: linear-gradient(135deg, var(--app-color-primary), var(--app-color-secondary));
+  border: none;
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+html.dark .page-header .el-button--primary:hover {
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
+}
+
+/* 暗色主题 - 空状态 */
+html.dark .provider-groups .el-empty {
+  --el-empty-fill-color-0: var(--app-bg-card);
+  --el-empty-fill-color-1: var(--app-bg-elevated);
+  --el-empty-description-color: var(--app-text-tertiary);
+}
+
 /* 霓虹发光按钮 */
 .page-header .el-button--primary {
   background: linear-gradient(135deg, var(--app-color-primary), var(--app-color-secondary));
@@ -499,6 +545,13 @@ html.cyberpunk .provider-header .el-tag {
   color: #4dd0e1;
   background: rgba(0, 255, 255, 0.15);
   border-color: rgba(0, 255, 255, 0.4);
+}
+
+/* 暗色主题 - 供应商标签使用主题色 */
+html.dark .provider-header .el-tag {
+  color: var(--app-color-primary);
+  background: rgba(0, 212, 255, 0.15);
+  border-color: rgba(0, 212, 255, 0.3);
 }
 
 /* 玻璃拟态主题 - 供应商标签使用深蓝色 */
@@ -597,11 +650,73 @@ html.cyberpunk .model-id {
   text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
 }
 
+/* 暗色主题 - 模型ID使用主题色 */
+html.dark .model-id {
+  color: var(--app-color-primary);
+  background: rgba(0, 212, 255, 0.1);
+  border-color: rgba(0, 212, 255, 0.2);
+}
+
 /* 玻璃拟态主题 - 模型ID使用深蓝色 */
 html.glassmorphism .model-id {
   color: #1d4ed8;
   background: rgba(37, 99, 235, 0.1);
   border-color: rgba(37, 99, 235, 0.3);
+}
+
+/* 暗色主题 - 表格内按钮样式 */
+html.dark .provider-collapse :deep(.el-button--primary.is-link) {
+  color: var(--app-color-primary);
+  transition: all var(--app-transition-fast);
+}
+
+html.dark .provider-collapse :deep(.el-button--primary.is-link:hover) {
+  color: var(--app-color-secondary);
+  text-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
+}
+
+html.dark .provider-collapse :deep(.el-button--danger.is-link) {
+  color: var(--app-color-danger);
+  transition: all var(--app-transition-fast);
+}
+
+html.dark .provider-collapse :deep(.el-button--danger.is-link:hover) {
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+/* ==================== 暗色主题表格样式修复 ==================== */
+html.dark .provider-collapse :deep(.el-table) {
+  --el-table-header-bg-color: var(--app-bg-elevated);
+  --el-table-row-hover-bg-color: rgba(0, 212, 255, 0.08);
+  --el-table-border-color: var(--app-border-default);
+  background: var(--app-bg-card);
+}
+
+html.dark .provider-collapse :deep(.el-table__header th) {
+  background: var(--app-bg-elevated);
+  color: var(--app-text-primary);
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.dark .provider-collapse :deep(.el-table__body tr) {
+  background: var(--app-bg-card);
+}
+
+html.dark .provider-collapse :deep(.el-table__body tr:nth-child(even)) {
+  background: var(--app-bg-base);
+}
+
+html.dark .provider-collapse :deep(.el-table__body tr:nth-child(odd)) {
+  background: var(--app-bg-card);
+}
+
+html.dark .provider-collapse :deep(.el-table__body tr:hover > td) {
+  background: rgba(0, 212, 255, 0.08) !important;
+}
+
+html.dark .provider-collapse :deep(.el-table__body td) {
+  color: var(--app-text-secondary);
+  border-bottom: 1px solid var(--app-border-default);
 }
 
 /* 玻璃拟态主题 - 表格内按钮增强对比度 */
@@ -643,6 +758,80 @@ html.glassmorphism .provider-collapse :deep(.el-button--danger.is-link:hover) {
   box-shadow:
     0 25px 50px rgba(0, 0, 0, 0.5),
     0 0 40px rgba(0, 212, 255, 0.1);
+}
+
+/* ==================== 暗色主题对话框修复 ==================== */
+/* 修复暗色模式下对话框背景铺满问题 */
+html.cyberpunk :deep(.el-dialog),
+html.dark :deep(.el-dialog) {
+  background: rgba(26, 26, 46, 0.95);
+  border: 1px solid var(--app-border-default);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 212, 255, 0.08);
+}
+
+html.cyberpunk :deep(.el-dialog__body),
+html.dark :deep(.el-dialog__body) {
+  background: transparent;
+}
+
+html.dark :deep(.el-dialog__header) {
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.dark :deep(.el-dialog__title) {
+  color: var(--app-text-primary);
+}
+
+html.dark :deep(.el-dialog__headerbtn:hover .el-dialog__close) {
+  color: var(--app-color-primary);
+  filter: drop-shadow(0 0 5px rgba(0, 212, 255, 0.6));
+}
+
+html.dark :deep(.el-dialog__footer) {
+  border-top: 1px solid var(--app-border-default);
+}
+
+html.dark :deep(.el-dialog__footer .el-button:not(.el-button--primary)) {
+  background: transparent;
+  border-color: var(--app-border-default);
+  color: var(--app-text-secondary);
+}
+
+html.dark :deep(.el-dialog__footer .el-button:not(.el-button--primary):hover) {
+  border-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+}
+
+html.dark :deep(.el-dialog__footer .el-button--primary) {
+  background: linear-gradient(135deg, var(--app-color-primary), var(--app-color-secondary));
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+}
+
+/* 对话框内输入框暗色主题适配 */
+html.dark :deep(.el-input__wrapper) {
+  background: var(--app-bg-elevated);
+  box-shadow: 0 0 0 1px var(--app-border-default) inset;
+}
+
+html.dark :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px var(--app-border-hover) inset;
+}
+
+html.dark :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px var(--app-color-primary) inset, 0 0 10px rgba(0, 212, 255, 0.2);
+}
+
+html.dark :deep(.el-input__inner) {
+  color: var(--app-text-primary);
+  background: transparent;
+}
+
+html.dark :deep(.el-input__inner::placeholder) {
+  color: var(--app-text-disabled);
+}
+
+html.dark :deep(.el-form-item__label) {
+  color: var(--app-text-primary);
 }
 
 :deep(.el-dialog__header) {
@@ -740,6 +929,117 @@ html.glassmorphism .provider-collapse :deep(.el-button--danger.is-link:hover) {
 
 :deep(.el-dialog__footer .el-button--primary:hover) {
   box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+}
+
+/* ==================== 明色主题适配 ==================== */
+
+/* 明色主题 - 对话框样式 */
+html.light:not(.cyberpunk):not(.dark) .model-manage :deep(.el-dialog) {
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid var(--app-border-default);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .model-manage :deep(.el-dialog__header) {
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.light:not(.cyberpunk):not(.dark) .model-manage :deep(.el-dialog__title) {
+  color: var(--app-text-primary);
+}
+
+html.light:not(.cyberpunk):not(.dark) .model-manage :deep(.el-dialog__headerbtn:hover .el-dialog__close) {
+  color: var(--app-color-primary);
+  filter: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .model-manage :deep(.el-dialog__body) {
+  background: transparent;
+}
+
+html.light:not(.cyberpunk):not(.dark) .model-manage :deep(.el-dialog__footer) {
+  border-top: 1px solid var(--app-border-default);
+}
+
+html.light:not(.cyberpunk):not(.dark) .model-manage :deep(.el-dialog__footer .el-button--primary) {
+  background: linear-gradient(135deg, var(--app-color-primary), var(--app-color-secondary));
+  box-shadow: 0 4px 15px rgba(0, 168, 232, 0.3);
+}
+
+html.light:not(.cyberpunk):not(.dark) .model-manage :deep(.el-dialog__footer .el-button--primary:hover) {
+  box-shadow: 0 6px 20px rgba(0, 168, 232, 0.4);
+}
+
+/* 明色主题 - 表格内按钮样式优化 */
+html.light:not(.cyberpunk):not(.dark) .provider-collapse :deep(.el-button--primary.is-link) {
+  color: #ffffff;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 4px;
+  background: var(--app-color-primary);
+  border: none;
+  transition: all 0.2s ease;
+}
+
+html.light:not(.cyberpunk):not(.dark) .provider-collapse :deep(.el-button--primary.is-link:hover) {
+  background: var(--app-color-primary-hover);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 168, 232, 0.3);
+}
+
+html.light:not(.cyberpunk):not(.dark) .provider-collapse :deep(.el-button--danger.is-link) {
+  color: #ffffff;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 4px;
+  background: var(--app-color-danger);
+  border: none;
+  transition: all 0.2s ease;
+}
+
+html.light:not(.cyberpunk):not(.dark) .provider-collapse :deep(.el-button--danger.is-link:hover) {
+  background: #dc2626;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+/* 明色主题 - 折叠面板样式 */
+html.light:not(.cyberpunk):not(.dark) .provider-collapse :deep(.el-collapse-item__header) {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  box-shadow: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .provider-collapse :deep(.el-collapse-item__header:hover) {
+  background: var(--app-bg-hover);
+  border-color: var(--app-border-hover);
+}
+
+/* 明色主题 - 供应商标签 */
+html.light:not(.cyberpunk):not(.dark) .provider-header .el-tag {
+  background: rgba(0, 168, 232, 0.1);
+  border: 1px solid rgba(0, 168, 232, 0.3);
+  color: var(--app-color-primary);
+}
+
+/* 明色主题 - 模型ID样式 */
+html.light:not(.cyberpunk):not(.dark) .model-id {
+  background: rgba(0, 168, 232, 0.08);
+  border: 1px solid rgba(0, 168, 232, 0.2);
+  color: var(--app-color-primary);
+}
+
+/* 明色主题 - 表格样式 */
+html.light:not(.cyberpunk):not(.dark) .provider-collapse :deep(.el-table) {
+  --el-table-row-hover-bg-color: rgba(0, 168, 232, 0.05);
+}
+
+html.light:not(.cyberpunk):not(.dark) .provider-collapse :deep(.el-table__body tr:hover > td) {
+  background: rgba(0, 168, 232, 0.05) !important;
 }
 
 /* 响应式优化 */

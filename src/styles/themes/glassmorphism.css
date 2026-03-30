@@ -35,20 +35,20 @@ html.glassmorphism {
   --app-text-inverse: #ffffff;
 
   /* ==================== 边框色 ==================== */
-  /* 默认边框 */
-  --app-border-default: rgba(255, 255, 255, 0.5);
+  /* 默认边框 - 使用带蓝色调的浅灰色，柔和且与主题色呼应 */
+  --app-border-default: #E2E8F0;
   /* 边框基础色（别名） */
-  --app-border-base: rgba(255, 255, 255, 0.5);
+  --app-border-base: #E2E8F0;
   /* 悬浮边框 */
-  --app-border-hover: rgba(255, 255, 255, 0.8);
+  --app-border-hover: #CBD5E1;
   /* 浅色边框 - 分割线 */
-  --app-border-light: rgba(226, 232, 240, 0.6);
+  --app-border-light: #F1F5F9;
   /* 深色边框 */
-  --app-border-dark: rgba(148, 163, 184, 0.4);
+  --app-border-dark: #94A3B8;
   /* 激活边框 */
   --app-border-active: #2563eb;
   /* 禁用边框 */
-  --app-border-disabled: rgba(226, 232, 240, 0.4);
+  --app-border-disabled: #E2E8F0;
   /* 焦点边框 */
   --app-border-focus: #2563eb;
 
@@ -111,8 +111,8 @@ html.glassmorphism {
   /* ==================== 玻璃效果 ==================== */
   /* 玻璃背景 */
   --app-glass-bg: rgba(255, 255, 255, 0.7);
-  /* 玻璃边框 */
-  --app-glass-border: rgba(255, 255, 255, 0.5);
+  /* 玻璃边框 - 使用淡蓝色透明，与主题色呼应 */
+  --app-glass-border: rgba(59, 130, 246, 0.15);
   /* 玻璃模糊 */
   --app-glass-blur: blur(16px);
   /* 玻璃饱和度 */

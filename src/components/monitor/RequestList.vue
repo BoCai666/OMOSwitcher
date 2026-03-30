@@ -481,69 +481,71 @@ html.cyberpunk .status-tag.el-tag--danger {
 
 /* ========== Glassmorphism 主题 ========== */
 html.glassmorphism .request-list {
-  background: var(--app-glass-bg, rgba(255, 255, 255, 0.25));
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #d1d5db;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 html.glassmorphism .toolbar {
-  border-bottom-color: rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid #e5e7eb;
 }
 
 html.glassmorphism .search-input :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+}
+
+html.glassmorphism .search-input :deep(.el-input__wrapper:hover) {
+  border-color: var(--app-color-primary);
 }
 
 html.glassmorphism .search-input :deep(.el-input__wrapper:focus-within) {
-  border-color: rgba(255, 255, 255, 0.5);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border-color: var(--app-color-primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
 html.glassmorphism .refresh-btn {
-  background: rgba(255, 255, 255, 0.25);
-  border-color: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: var(--app-color-primary);
+  border: none;
+  color: #ffffff;
 }
 
 html.glassmorphism .refresh-btn:hover {
-  background: rgba(255, 255, 255, 0.35);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  background: var(--app-color-primary-hover);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 html.glassmorphism .monitor-table {
   background: transparent;
 }
 
+html.glassmorphism .monitor-table :deep(.el-table__header-wrapper) {
+  background: #f9fafb;
+}
+
 html.glassmorphism .monitor-table :deep(.el-table__header th) {
-  background: rgba(255, 255, 255, 0.15);
-  border-bottom-color: rgba(255, 255, 255, 0.2);
-}
-
-html.glassmorphism .monitor-table :deep(.el-table__row) {
-  background: transparent;
-}
-
-html.glassmorphism .monitor-table :deep(.el-table__row.el-table__row--striped) {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-html.glassmorphism .monitor-table :deep(.el-table__row:hover) {
-  background: rgba(255, 255, 255, 0.15) !important;
-}
-
-html.glassmorphism .monitor-table :deep(.el-table__row.current-row) {
-  background: rgba(255, 255, 255, 0.22) !important;
-  box-shadow: inset 3px 0 0 var(--app-color-primary);
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  color: var(--app-text-primary);
 }
 
 html.glassmorphism .monitor-table :deep(.el-table__row td) {
-  border-bottom-color: rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid #e5e7eb;
+}
+
+html.glassmorphism .monitor-table :deep(.el-table__row.el-table__row--striped) {
+  background: #f9fafb;
+}
+
+html.glassmorphism .monitor-table :deep(.el-table__row:hover) {
+  background: rgba(37, 99, 235, 0.05) !important;
+}
+
+html.glassmorphism .monitor-table :deep(.el-table__row.current-row) {
+  background: rgba(37, 99, 235, 0.08) !important;
+  box-shadow: inset 3px 0 0 var(--app-color-primary);
 }
 
 html.glassmorphism .tokens-text,
@@ -552,37 +554,135 @@ html.glassmorphism .cost-text {
 }
 
 html.glassmorphism .provider-tag {
-  background: rgba(255, 255, 255, 0.25) !important;
-  border-color: rgba(255, 255, 255, 0.4) !important;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-html.glassmorphism .status-tag {
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(37, 99, 235, 0.1) !important;
+  border: 1px solid rgba(37, 99, 235, 0.3) !important;
+  color: var(--app-color-primary) !important;
 }
 
 html.glassmorphism .status-tag.el-tag--success {
-  background: rgba(0, 245, 160, 0.2) !important;
-  border-color: rgba(0, 245, 160, 0.4) !important;
+  background: rgba(16, 185, 129, 0.1) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  color: var(--app-color-success) !important;
 }
 
 html.glassmorphism .status-tag.el-tag--danger {
-  background: rgba(255, 77, 77, 0.2) !important;
-  border: 1px solid rgba(255, 77, 77, 0.4) !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  color: var(--app-color-danger) !important;
 }
 
-/* 玻璃拟态主题 - 刷新按钮增强对比度 */
-html.glassmorphism .refresh-btn {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(37, 99, 235, 0.1)) !important;
-  border: 1px solid rgba(37, 99, 235, 0.4) !important;
-  color: #1d4ed8 !important;
-  font-weight: 500;
+html.glassmorphism .status-tag.el-tag--warning {
+  background: rgba(245, 158, 11, 0.1) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  color: var(--app-color-warning) !important;
 }
 
-html.glassmorphism .refresh-btn:hover {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.3), rgba(37, 99, 235, 0.15)) !important;
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2) !important;
+html.glassmorphism .status-tag.el-tag--info {
+  background: #f3f4f6 !important;
+  border: 1px solid #d1d5db !important;
+  color: var(--app-text-secondary) !important;
+}
+
+/* ========== 明色主题 (html.light - 非玻璃拟态/非暗色) ========== */
+html.light:not(.cyberpunk):not(.dark) .request-list {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  box-shadow: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .toolbar {
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.light:not(.cyberpunk):not(.dark) .search-input :deep(.el-input__wrapper) {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  box-shadow: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .search-input :deep(.el-input__wrapper:hover) {
+  border-color: var(--app-color-primary);
+}
+
+html.light:not(.cyberpunk):not(.dark) .search-input :deep(.el-input__wrapper:focus-within) {
+  border-color: var(--app-color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 168, 232, 0.1);
+}
+
+html.light:not(.cyberpunk):not(.dark) .refresh-btn {
+  background: var(--app-color-primary);
+  border: none;
+  color: #ffffff;
+}
+
+html.light:not(.cyberpunk):not(.dark) .refresh-btn:hover {
+  background: var(--app-color-primary-hover);
+  box-shadow: 0 4px 12px rgba(0, 168, 232, 0.3);
+}
+
+html.light:not(.cyberpunk):not(.dark) .monitor-table {
+  background: transparent;
+}
+
+html.light:not(.cyberpunk):not(.dark) .monitor-table :deep(.el-table__header-wrapper) {
+  background: var(--app-bg-elevated);
+}
+
+html.light:not(.cyberpunk):not(.dark) .monitor-table :deep(.el-table__header th) {
+  background: var(--app-bg-elevated);
+  border-bottom: 1px solid var(--app-border-default);
+  color: var(--app-text-primary);
+}
+
+html.light:not(.cyberpunk):not(.dark) .monitor-table :deep(.el-table__row td) {
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.light:not(.cyberpunk):not(.dark) .monitor-table :deep(.el-table__row.el-table__row--striped) {
+  background: var(--app-bg-hover);
+}
+
+html.light:not(.cyberpunk):not(.dark) .monitor-table :deep(.el-table__row:hover) {
+  background: rgba(0, 168, 232, 0.05) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .monitor-table :deep(.el-table__row.current-row) {
+  background: rgba(0, 168, 232, 0.08) !important;
+  box-shadow: inset 3px 0 0 var(--app-color-primary);
+}
+
+html.light:not(.cyberpunk):not(.dark) .tokens-text,
+html.light:not(.cyberpunk):not(.dark) .cost-text {
+  text-shadow: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .provider-tag {
+  background: rgba(0, 168, 232, 0.1) !important;
+  border: 1px solid rgba(0, 168, 232, 0.5) !important;
+  color: var(--app-color-primary) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .status-tag.el-tag--success {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border: 1px solid rgba(16, 185, 129, 0.5) !important;
+  color: var(--app-color-success) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .status-tag.el-tag--danger {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.5) !important;
+  color: var(--app-color-danger) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .status-tag.el-tag--warning {
+  background: rgba(245, 158, 11, 0.1) !important;
+  border: 1px solid rgba(245, 158, 11, 0.5) !important;
+  color: var(--app-color-warning) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .status-tag.el-tag--info {
+  background: var(--app-bg-hover) !important;
+  border: 1px solid var(--app-border-default) !important;
+  color: var(--app-text-secondary) !important;
 }
 </style>

@@ -295,55 +295,122 @@ html.cyberpunk .neon-text {
 
 /* ========== Glassmorphism 主题 ========== */
 html.glassmorphism .stats-card {
-  background: var(--app-glass-bg, rgba(255, 255, 255, 0.25));
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #d1d5db;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 html.glassmorphism .stats-card:hover {
-  background: rgba(255, 255, 255, 0.32);
-  border-color: rgba(255, 255, 255, 0.5);
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  transform: translateY(-6px);
+  background: #ffffff;
+  border-color: #93c5fd;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.1);
+  transform: translateY(-2px);
+}
+
+html.glassmorphism :deep(.el-card__header) {
+  border-bottom: 1px solid #e5e7eb;
 }
 
 html.glassmorphism .header-icon-wrapper {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.2));
-  border-color: rgba(255, 255, 255, 0.5);
-  box-shadow:
-    0 4px 15px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  box-shadow: none;
 }
 
 html.glassmorphism .header-icon {
   filter: none;
+  color: var(--app-color-primary);
 }
 
 html.glassmorphism .stat-item {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e5e7eb;
 }
 
 html.glassmorphism .stat-item:hover {
-  background: rgba(255, 255, 255, 0.25);
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+  border-color: #93c5fd;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
 }
 
 html.glassmorphism .stat-icon-wrapper {
   background: linear-gradient(135deg, var(--app-color-primary), color-mix(in srgb, var(--app-color-primary) 70%, white));
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 168, 232, 0.2);
 }
 
 html.glassmorphism .neon-text {
+  text-shadow: none;
+  color: var(--app-text-primary);
+}
+
+/* ========== 明色主题 (html.light - 非玻璃拟态/非暗色) ========== */
+html.light:not(.cyberpunk):not(.dark) .stats-card {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  box-shadow: var(--app-shadow-sm);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .stats-card:hover {
+  border-color: var(--app-color-primary);
+  box-shadow: var(--app-shadow-md), 0 0 0 1px rgba(0, 168, 232, 0.1);
+}
+
+html.light:not(.cyberpunk):not(.dark) :deep(.el-card__header) {
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.light:not(.cyberpunk):not(.dark) .header-icon-wrapper {
+  background: rgba(0, 168, 232, 0.1);
+  border: 1px solid rgba(0, 168, 232, 0.5);
+  box-shadow: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .header-icon {
+  filter: none;
+  color: var(--app-color-primary);
+}
+
+html.light:not(.cyberpunk):not(.dark) .stat-item {
+  background: var(--app-bg-hover);
+  border: 1px solid var(--app-border-default);
+}
+
+html.light:not(.cyberpunk):not(.dark) .stat-item:hover {
+  background: rgba(0, 168, 232, 0.05);
+  border-color: var(--app-color-primary);
+  box-shadow: 0 4px 12px rgba(0, 168, 232, 0.1);
+}
+
+html.light:not(.cyberpunk):not(.dark) .stat-icon-wrapper {
+  box-shadow: 0 2px 8px rgba(0, 168, 232, 0.2);
+}
+
+html.light:not(.cyberpunk):not(.dark) .stat-icon-wrapper.tokens {
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+html.light:not(.cyberpunk):not(.dark) .stat-icon-wrapper.cost {
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+}
+
+html.light:not(.cyberpunk):not(.dark) .stat-item:hover .stat-icon-wrapper {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 168, 232, 0.25);
+}
+
+html.light:not(.cyberpunk):not(.dark) .stat-item:hover .stat-icon-wrapper.tokens {
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+html.light:not(.cyberpunk):not(.dark) .stat-item:hover .stat-icon-wrapper.cost {
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+}
+
+html.light:not(.cyberpunk):not(.dark) .neon-text {
   text-shadow: none;
   color: var(--app-text-primary);
 }

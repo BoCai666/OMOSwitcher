@@ -292,16 +292,35 @@ html.dark .app-header {
   border-bottom: 1px solid var(--app-border-default);
 }
 
-/* ==================== 明色主题 (html.light - 非玻璃拟态) ==================== */
+/* ==================== 明色主题 (html.light - 非玻璃拟态/非暗色) ==================== */
 
-html.light .app-aside {
-  background: var(--app-bg-card);
-  border-right: 1px solid var(--app-border-default);
+html.light:not(.cyberpunk):not(.dark) .app-layout-wrapper {
+  background-color: var(--app-bg-base);
+  background-image: none;
 }
 
-html.light .app-header {
+html.light:not(.cyberpunk):not(.dark) .app-aside {
+  background: var(--app-bg-card);
+  border-right: 1px solid var(--app-border-default);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .app-header {
   background: var(--app-bg-card);
   border-bottom: 1px solid var(--app-border-default);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .app-main {
+  background-color: var(--app-bg-base);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .app-main-content {
+  background: transparent;
 }
 
 /* ==================== 主题切换动画优化 ==================== */

@@ -275,12 +275,12 @@ html {
 /* 玻璃拟态主题下的玻璃卡片适配 */
 html.glassmorphism .glass-card {
   background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.15);
 }
 
 html.glassmorphism .glass-card-overlay {
   background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.1);
 }
 
 /* 霓虹边框 */
@@ -823,4 +823,128 @@ html.glassmorphism .neon-input :deep(.el-input-group__append) {
   html {
     scroll-behavior: auto;
   }
+}
+
+/* ==================== 滚动条样式 ==================== */
+
+/* 明色模式滚动条 - 玻璃拟态/浅色主题 */
+html.glassmorphism::-webkit-scrollbar,
+html.light::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html.glassmorphism::-webkit-scrollbar-track,
+html.light::-webkit-scrollbar-track {
+  background: var(--app-scrollbar-track, rgba(226, 232, 240, 0.5));
+  border-radius: 4px;
+}
+
+html.glassmorphism::-webkit-scrollbar-thumb,
+html.light::-webkit-scrollbar-thumb {
+  background: var(--app-scrollbar-thumb, rgba(148, 163, 184, 0.6));
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+html.glassmorphism::-webkit-scrollbar-thumb:hover,
+html.light::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover, rgba(100, 116, 139, 0.8));
+}
+
+/* 明色模式 - 元素内部滚动条 */
+html.glassmorphism *::-webkit-scrollbar,
+html.light *::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+html.glassmorphism *::-webkit-scrollbar-track,
+html.light *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html.glassmorphism *::-webkit-scrollbar-thumb,
+html.light *::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 3px;
+}
+
+html.glassmorphism *::-webkit-scrollbar-thumb:hover,
+html.light *::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
+}
+
+/* 暗色模式滚动条 - 赛博朋克主题 */
+html.cyberpunk::-webkit-scrollbar,
+html.dark::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html.cyberpunk::-webkit-scrollbar-track,
+html.dark::-webkit-scrollbar-track {
+  background: var(--app-scrollbar-track, rgba(10, 10, 26, 0.6));
+  border-radius: 4px;
+}
+
+html.cyberpunk::-webkit-scrollbar-thumb,
+html.dark::-webkit-scrollbar-thumb {
+  background: var(--app-scrollbar-thumb, rgba(0, 255, 255, 0.3));
+  border-radius: 4px;
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.3);
+  transition: all 0.2s ease;
+}
+
+html.cyberpunk::-webkit-scrollbar-thumb:hover,
+html.dark::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover, rgba(0, 255, 255, 0.6));
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+/* 暗色模式 - 元素内部滚动条 */
+html.cyberpunk *::-webkit-scrollbar,
+html.dark *::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+html.cyberpunk *::-webkit-scrollbar-track,
+html.dark *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html.cyberpunk *::-webkit-scrollbar-thumb,
+html.dark *::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 255, 0.25);
+  border-radius: 3px;
+  box-shadow: 0 0 4px rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk *::-webkit-scrollbar-thumb:hover,
+html.dark *::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 255, 0.5);
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+/* Firefox 滚动条样式 */
+html.glassmorphism,
+html.light {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.6) rgba(226, 232, 240, 0.5);
+}
+
+html.cyberpunk,
+html.dark {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 255, 255, 0.3) rgba(10, 10, 26, 0.6);
+}
+
+/* ==================== 对话框滚动条修复 ==================== */
+/* 禁用 Element Plus overlay 层的滚动条，避免双滚动条和水平滚动条 */
+html.cyberpunk .el-overlay,
+html.cyberpunk .el-overlay-dialog,
+html.dark .el-overlay,
+html.dark .el-overlay-dialog {
+  overflow: hidden !important;
 }

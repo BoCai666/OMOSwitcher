@@ -130,6 +130,14 @@ html.cyberpunk {
   --app-neon-border-secondary: 1px solid rgba(255, 0, 255, 0.5);
   --app-neon-border-accent: 1px solid rgba(251, 191, 36, 0.5);
 
+  /* ==================== 滚动条 ==================== */
+  /* 滚动条轨道 - 深色半透明 */
+  --app-scrollbar-track: rgba(10, 10, 26, 0.8);
+  /* 滚动条滑块 - 青色半透明 */
+  --app-scrollbar-thumb: rgba(0, 255, 255, 0.3);
+  /* 滚动条滑块悬浮 - 青色高亮 */
+  --app-scrollbar-thumb-hover: rgba(0, 255, 255, 0.6);
+
   /* ==================== Element Plus 变量覆盖 ==================== */
   /* 文字颜色 */
   --el-text-color-primary: #e0e0ff;

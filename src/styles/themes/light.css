@@ -35,20 +35,20 @@ html.light {
   --app-text-inverse: #ffffff;
 
   /* ==================== 边框色 ==================== */
-  /* 默认边框 - 增强对比度 */
-  --app-border-default: #c5c9ce;
+  /* 默认边框 - 使用带蓝色调的浅灰色，柔和且与主题色呼应 */
+  --app-border-default: #E2E8F0;
   /* 边框基础色（别名） */
-  --app-border-base: #c5c9ce;
+  --app-border-base: #E2E8F0;
   /* 悬浮边框 */
-  --app-border-hover: #a1a9b1;
+  --app-border-hover: #CBD5E1;
   /* 浅色边框 - 分割线 */
-  --app-border-light: #e0e3e6;
+  --app-border-light: #e5e7eb;
   /* 深色边框 */
-  --app-border-dark: #9ca3ab;
+  --app-border-dark: #6b7280;
   /* 激活边框 */
   --app-border-active: #00a8e8;
   /* 禁用边框 */
-  --app-border-disabled: #e4e7ed;
+  --app-border-disabled: #e5e7eb;
   /* 焦点边框 */
   --app-border-focus: #00a8e8;
 

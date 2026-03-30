@@ -858,55 +858,50 @@ html.cyberpunk .code-snippet {
 
 /* ========== Glassmorphism 主题 ========== */
 html.glassmorphism .request-detail {
-  background: var(--app-glass-bg, rgba(255, 255, 255, 0.25));
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #d1d5db;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 html.glassmorphism .empty-icon-wrapper {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: #f3f4f6;
+  border: 2px dashed #d1d5db;
 }
 
 html.glassmorphism .empty-icon {
-  filter: none;
-  color: var(--app-text-secondary);
+  color: var(--app-text-tertiary);
 }
 
 html.glassmorphism .basic-info-panel {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
 }
 
 html.glassmorphism .info-header {
-  background: rgba(255, 255, 255, 0.2);
-  border-bottom-color: rgba(255, 255, 255, 0.25);
+  background: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 html.glassmorphism .id-tag {
-  background: rgba(255, 255, 255, 0.25) !important;
-  border-color: rgba(255, 255, 255, 0.4) !important;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(37, 99, 235, 0.1) !important;
+  border: 1px solid rgba(37, 99, 235, 0.3) !important;
+  color: var(--app-color-primary) !important;
 }
 
 html.glassmorphism .info-grid {
-  background: rgba(255, 255, 255, 0.2);
+  background: #e5e7eb;
 }
 
 html.glassmorphism .info-item {
-  background: rgba(255, 255, 255, 0.12);
+  background: #ffffff;
 }
 
 html.glassmorphism .provider-tag {
-  background: rgba(255, 255, 255, 0.25) !important;
-  border-color: rgba(255, 255, 255, 0.4) !important;
+  background: rgba(37, 99, 235, 0.1) !important;
+  border: 1px solid rgba(37, 99, 235, 0.3) !important;
+  color: var(--app-color-primary) !important;
 }
 
 html.glassmorphism .model-value,
@@ -917,8 +912,8 @@ html.glassmorphism .duration-value {
 }
 
 html.glassmorphism .detail-tabs :deep(.el-tabs__header) {
-  background: rgba(255, 255, 255, 0.15);
-  border-bottom-color: rgba(255, 255, 255, 0.25);
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 html.glassmorphism .detail-tabs :deep(.el-tabs__item) {
@@ -926,7 +921,7 @@ html.glassmorphism .detail-tabs :deep(.el-tabs__item) {
 }
 
 html.glassmorphism .detail-tabs :deep(.el-tabs__item.is-active) {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(37, 99, 235, 0.08);
   color: var(--app-color-primary);
 }
 
@@ -935,55 +930,176 @@ html.glassmorphism .detail-tabs :deep(.el-tabs__active-bar) {
 }
 
 html.glassmorphism .detail-tabs :deep(.el-tabs__content) {
-  background: rgba(255, 255, 255, 0.08);
+  background: #fafafa;
 }
 
 html.glassmorphism .tab-badge {
-  background: rgba(255, 255, 255, 0.3) !important;
-  border-color: rgba(255, 255, 255, 0.5) !important;
+  background: rgba(37, 99, 235, 0.1) !important;
+  border: 1px solid rgba(37, 99, 235, 0.3) !important;
+  color: var(--app-color-primary) !important;
 }
 
 html.glassmorphism .code-block {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
 }
 
 html.glassmorphism .code-header {
-  background: rgba(255, 255, 255, 0.2);
-  border-bottom-color: rgba(255, 255, 255, 0.25);
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 html.glassmorphism .mcp-collapse :deep(.el-collapse-item) {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
 }
 
 html.glassmorphism .mcp-collapse :deep(.el-collapse-item:hover) {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: #93c5fd;
 }
 
 html.glassmorphism .mcp-collapse :deep(.el-collapse-item__header) {
-  background: rgba(255, 255, 255, 0.15);
-  border-bottom-color: rgba(255, 255, 255, 0.2);
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 html.glassmorphism .mcp-index {
-  background: rgba(255, 255, 255, 0.25);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  color: var(--app-color-primary);
 }
 
 html.glassmorphism .mcp-server-tag {
-  background: rgba(0, 245, 160, 0.2) !important;
-  border-color: rgba(0, 245, 160, 0.4) !important;
+  background: rgba(16, 185, 129, 0.1) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  color: var(--app-color-success) !important;
 }
 
 html.glassmorphism .code-snippet {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+/* ========== 明色主题 (html.light - 非玻璃拟态/非暗色) ========== */
+html.light:not(.cyberpunk):not(.dark) .request-detail {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  box-shadow: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .empty-icon-wrapper {
+  background: var(--app-bg-hover);
+  border: 2px dashed var(--app-border-default);
+}
+
+html.light:not(.cyberpunk):not(.dark) .empty-icon {
+  color: var(--app-text-tertiary);
+}
+
+html.light:not(.cyberpunk):not(.dark) .basic-info-panel {
+  background: var(--app-bg-hover);
+  border: 1px solid var(--app-border-default);
+}
+
+html.light:not(.cyberpunk):not(.dark) .info-header {
+  background: var(--app-bg-elevated);
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.light:not(.cyberpunk):not(.dark) .id-tag {
+  background: rgba(0, 168, 232, 0.1) !important;
+  border: 1px solid rgba(0, 168, 232, 0.5) !important;
+  color: var(--app-color-primary) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .info-grid {
+  background: var(--app-border-default);
+}
+
+html.light:not(.cyberpunk):not(.dark) .info-item {
+  background: var(--app-bg-card);
+}
+
+html.light:not(.cyberpunk):not(.dark) .provider-tag {
+  background: rgba(0, 168, 232, 0.1) !important;
+  border: 1px solid rgba(0, 168, 232, 0.5) !important;
+  color: var(--app-color-primary) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .model-value,
+html.light:not(.cyberpunk):not(.dark) .tokens-value,
+html.light:not(.cyberpunk):not(.dark) .cost-value,
+html.light:not(.cyberpunk):not(.dark) .duration-value {
+  text-shadow: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .detail-tabs :deep(.el-tabs__header) {
+  background: var(--app-bg-elevated);
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.light:not(.cyberpunk):not(.dark) .detail-tabs :deep(.el-tabs__item) {
+  color: var(--app-text-secondary);
+}
+
+html.light:not(.cyberpunk):not(.dark) .detail-tabs :deep(.el-tabs__item.is-active) {
+  background: rgba(0, 168, 232, 0.08);
+  color: var(--app-color-primary);
+}
+
+html.light:not(.cyberpunk):not(.dark) .detail-tabs :deep(.el-tabs__active-bar) {
+  background: var(--app-color-primary);
+  box-shadow: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .detail-tabs :deep(.el-tabs__content) {
+  background: var(--app-bg-base);
+}
+
+html.light:not(.cyberpunk):not(.dark) .tab-badge {
+  background: rgba(0, 168, 232, 0.1) !important;
+  border: 1px solid rgba(0, 168, 232, 0.5) !important;
+  color: var(--app-color-primary) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .code-block {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+}
+
+html.light:not(.cyberpunk):not(.dark) .code-header {
+  background: var(--app-bg-hover);
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.light:not(.cyberpunk):not(.dark) .mcp-collapse :deep(.el-collapse-item) {
+  background: var(--app-bg-hover);
+  border: 1px solid var(--app-border-default);
+}
+
+html.light:not(.cyberpunk):not(.dark) .mcp-collapse :deep(.el-collapse-item:hover) {
+  border-color: var(--app-color-primary);
+}
+
+html.light:not(.cyberpunk):not(.dark) .mcp-collapse :deep(.el-collapse-item__header) {
+  background: var(--app-bg-elevated);
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.light:not(.cyberpunk):not(.dark) .mcp-index {
+  background: rgba(0, 168, 232, 0.1);
+  border: 1px solid rgba(0, 168, 232, 0.5);
+  color: var(--app-color-primary);
+}
+
+html.light:not(.cyberpunk):not(.dark) .mcp-server-tag {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border: 1px solid rgba(16, 185, 129, 0.5) !important;
+  color: var(--app-color-success) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .code-snippet {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
 }
 </style>

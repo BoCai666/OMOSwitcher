@@ -496,10 +496,22 @@ const handleSaveDescription = async (preset: Preset) => {
   box-shadow: inset 0 0 30px rgba(0, 212, 255, 0.05);
 }
 
-/* 当前预设高亮 */
+/* 当前预设高亮 - 改进版 */
 :deep(.el-table__body tr.is-current-preset td.el-table__cell) {
-  background: rgba(0, 212, 255, 0.08) !important;
-  box-shadow: inset 2px 0 0 var(--app-color-primary);
+  background: linear-gradient(90deg, rgba(0, 212, 255, 0.12), rgba(0, 212, 255, 0.05)) !important;
+  border-left: 3px solid var(--app-color-primary) !important;
+  position: relative;
+}
+
+/* 高亮行的过渡效果 */
+:deep(.el-table__body tr.is-current-preset) {
+  position: relative;
+}
+
+/* 当前预设的预设名称加粗 */
+:deep(.el-table__body tr.is-current-preset .preset-name) {
+  font-weight: 600;
+  color: var(--app-color-primary);
 }
 
 /* 预设名称单元格 */
@@ -763,8 +775,13 @@ html.cyberpunk :deep(.el-table__body tr:hover > td.el-table__cell) {
 }
 
 html.cyberpunk :deep(.el-table__body tr.is-current-preset td.el-table__cell) {
-  background: rgba(0, 255, 136, 0.1) !important;
-  box-shadow: inset 3px 0 0 var(--app-color-success);
+  background: linear-gradient(90deg, rgba(0, 255, 136, 0.15), rgba(0, 255, 136, 0.05)) !important;
+  border-left: 3px solid var(--app-color-success) !important;
+}
+
+html.cyberpunk :deep(.el-table__body tr.is-current-preset .preset-name) {
+  color: var(--app-color-success) !important;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
 }
 
 html.cyberpunk .preset-name {
@@ -848,8 +865,13 @@ html.glassmorphism :deep(.el-table__body tr:hover > td.el-table__cell) {
 }
 
 html.glassmorphism :deep(.el-table__body tr.is-current-preset td.el-table__cell) {
-  background: rgba(16, 185, 129, 0.08) !important;
-  box-shadow: inset 3px 0 0 var(--app-color-success);
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.04)) !important;
+  border-left: 3px solid var(--app-color-success) !important;
+}
+
+html.glassmorphism :deep(.el-table__body tr.is-current-preset .preset-name) {
+  color: var(--app-color-success) !important;
+  font-weight: 600;
 }
 
 html.glassmorphism :deep(.el-input__wrapper) {
@@ -925,5 +947,165 @@ html.glassmorphism .edit-actions :deep(.el-button:not(.el-button--primary):hover
   border-color: var(--app-color-primary) !important;
   color: var(--app-color-primary) !important;
   background: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* ==================== 明色主题 (html.light - 非玻璃拟态/非暗色) ==================== */
+html.light:not(.cyberpunk):not(.dark) .preset-manage {
+  background: transparent;
+}
+
+html.light:not(.cyberpunk):not(.dark) .page-header {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  border-radius: var(--app-radius-md);
+  padding: 16px 20px;
+}
+
+html.light:not(.cyberpunk):not(.dark) .subtitle {
+  color: var(--app-text-secondary);
+}
+
+html.light:not(.cyberpunk):not(.dark) .preset-list-card {
+  background: var(--app-bg-card) !important;
+  border: 1px solid var(--app-border-default) !important;
+  box-shadow: var(--app-shadow-sm) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) :deep(.el-table th.el-table__cell) {
+  background: var(--app-bg-elevated) !important;
+  color: var(--app-text-primary) !important;
+  border-bottom: 1px solid var(--app-border-default) !important;
+  text-shadow: none !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) :deep(.el-table td.el-table__cell) {
+  border-bottom: 1px solid var(--app-border-default) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) :deep(.el-table__body tr:hover > td.el-table__cell) {
+  background: rgba(0, 168, 232, 0.05) !important;
+  box-shadow: none !important;
+}
+
+/* 明色主题 - 当前预设高亮 */
+html.light:not(.cyberpunk):not(.dark) :deep(.el-table__body tr.is-current-preset td.el-table__cell) {
+  background: linear-gradient(90deg, rgba(0, 168, 232, 0.1), rgba(0, 168, 232, 0.03)) !important;
+  border-left: 3px solid var(--app-color-primary) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) :deep(.el-table__body tr.is-current-preset .preset-name) {
+  color: var(--app-color-primary) !important;
+  font-weight: 600;
+}
+
+html.light:not(.cyberpunk):not(.dark) .preset-name {
+  color: var(--app-text-primary);
+  text-shadow: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) :deep(.current-tag.el-tag--success) {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
+  color: var(--app-color-success) !important;
+  box-shadow: none;
+}
+
+/* 明色主题 - 按钮样式 */
+html.light:not(.cyberpunk):not(.dark) :deep(.el-button[type="primary"]) {
+  background: var(--app-color-primary) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 168, 232, 0.25) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) :deep(.el-button[type="primary"]:hover) {
+  background: var(--app-color-primary-hover) !important;
+  box-shadow: 0 4px 12px rgba(0, 168, 232, 0.35) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .neon-button-view {
+  background: var(--app-bg-card) !important;
+  border: 1px solid var(--app-border-default) !important;
+  color: var(--app-text-secondary) !important;
+  box-shadow: none !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .neon-button-view:hover {
+  background: var(--app-bg-hover) !important;
+  border-color: var(--app-color-primary) !important;
+  color: var(--app-color-primary) !important;
+  box-shadow: none !important;
+  transform: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .neon-button-switch {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  color: var(--app-color-success) !important;
+  box-shadow: none !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .neon-button-switch:hover {
+  background: rgba(16, 185, 129, 0.15) !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2) !important;
+  transform: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .neon-button-delete {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  color: var(--app-color-danger) !important;
+  box-shadow: none !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .neon-button-delete:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2) !important;
+  transform: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .neon-button-primary {
+  background: var(--app-color-primary) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(0, 168, 232, 0.25) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .neon-button-primary:hover {
+  box-shadow: 0 6px 16px rgba(0, 168, 232, 0.35) !important;
+  transform: translateY(-1px);
+}
+
+html.light:not(.cyberpunk):not(.dark) :deep(.el-input__wrapper) {
+  background: var(--app-bg-card) !important;
+  border: 1px solid var(--app-border-default) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) :deep(.el-input__wrapper:hover) {
+  border-color: var(--app-color-primary) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) :deep(.el-input__inner) {
+  color: var(--app-text-primary) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .empty-illustration {
+  filter: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .empty-title {
+  text-shadow: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .edit-actions :deep(.el-button:not(.el-button--primary)) {
+  background: var(--app-bg-card) !important;
+  border: 1px solid var(--app-border-default) !important;
+  color: var(--app-text-secondary) !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .edit-actions :deep(.el-button:not(.el-button--primary):hover) {
+  border-color: var(--app-color-primary) !important;
+  color: var(--app-color-primary) !important;
+  background: var(--app-bg-hover) !important;
 }
 </style>

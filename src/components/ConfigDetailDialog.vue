@@ -195,7 +195,8 @@ watch(dialogVisible, (val) => {
 
 <style scoped>
 /* 对话框玻璃效果 - 深色背景 + 模糊 */
-.config-detail-dialog :deep(.el-dialog) {
+/* 注意：config-detail-dialog 是添加到 el-dialog 上的 class，它们是同一个元素 */
+:deep(.el-dialog.config-detail-dialog) {
   background-color: rgba(18, 18, 26, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -204,43 +205,53 @@ watch(dialogVisible, (val) => {
 }
 
 /* 对话框标题霓虹下划线 */
-.config-detail-dialog :deep(.el-dialog__header) {
+:deep(.el-dialog.config-detail-dialog .el-dialog__header) {
   border-bottom: 2px solid var(--app-color-primary, #00d4ff);
   box-shadow: 0 2px 10px rgba(0, 212, 255, 0.3);
   margin-right: 0;
   padding: 20px;
 }
 
-.config-detail-dialog :deep(.el-dialog__title) {
+:deep(.el-dialog.config-detail-dialog .el-dialog__title) {
   color: var(--app-text-primary, #e5eaf3);
   font-weight: 600;
 }
 
 /* 关闭按钮样式 */
-.config-detail-dialog :deep(.el-dialog__headerbtn .el-dialog__close) {
+:deep(.el-dialog.config-detail-dialog .el-dialog__headerbtn .el-dialog__close) {
   color: var(--app-text-tertiary);
   transition: all 0.3s;
 }
 
-.config-detail-dialog :deep(.el-dialog__headerbtn:hover .el-dialog__close) {
+:deep(.el-dialog.config-detail-dialog .el-dialog__headerbtn:hover .el-dialog__close) {
   color: var(--app-color-primary, #00d4ff);
 }
 
-/* 对话框内容区域 */
-.config-detail-dialog :deep(.el-dialog__body) {
-  max-height: 70vh;
-  overflow-y: auto;
+/* 对话框内容区域 - 修复双滚动条问题 */
+:deep(.el-dialog.config-detail-dialog .el-dialog__body) {
   padding: 20px;
   background: transparent;
+  overflow: visible;
+  max-height: none;
 }
 
 /* 底部按钮区域 */
-.config-detail-dialog :deep(.el-dialog__footer) {
+:deep(.el-dialog.config-detail-dialog .el-dialog__footer) {
   border-top: 1px solid var(--app-border-default, #2a2a3a);
   padding: 15px 20px;
 }
 
+/* 禁用 el-overlay 的滚动条，避免双滚动条 */
+:deep(.el-overlay),
+:deep(.el-overlay-dialog) {
+  overflow: hidden !important;
+}
+
+/* 内容容器负责滚动 - 只允许垂直滚动 */
 .detail-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -526,17 +537,30 @@ html.cyberpunk .config-detail-dialog :deep(.el-dialog__footer) {
 }
 
 html.cyberpunk .basic-info :deep(.el-descriptions__body) {
-  background-color: rgba(26, 26, 46, 0.8);
+  background-color: rgba(26, 26, 46, 0.8) !important;
+}
+
+html.cyberpunk .basic-info :deep(.el-descriptions__table) {
+  background-color: rgba(26, 26, 46, 0.8) !important;
 }
 
 html.cyberpunk .basic-info :deep(.el-descriptions__label) {
-  background-color: rgba(0, 255, 255, 0.1);
-  border-bottom: 1px solid rgba(0, 255, 255, 0.15);
+  background-color: rgba(0, 255, 255, 0.1) !important;
+  color: var(--app-text-tertiary) !important;
+  border-bottom: 1px solid rgba(0, 255, 255, 0.15) !important;
+  border-color: rgba(0, 255, 255, 0.15) !important;
 }
 
 html.cyberpunk .basic-info :deep(.el-descriptions__content) {
-  background-color: rgba(26, 26, 46, 0.6);
-  border-bottom: 1px solid rgba(0, 255, 255, 0.1);
+  background-color: rgba(26, 26, 46, 0.6) !important;
+  color: var(--app-text-primary) !important;
+  border-bottom: 1px solid rgba(0, 255, 255, 0.1) !important;
+  border-color: rgba(0, 255, 255, 0.1) !important;
+}
+
+html.cyberpunk .basic-info :deep(.el-descriptions__cell) {
+  border-color: rgba(0, 255, 255, 0.1) !important;
+  background-color: transparent !important;
 }
 
 html.cyberpunk .model-info.clickable {
@@ -559,24 +583,32 @@ html.cyberpunk .section-title {
 }
 
 html.cyberpunk .fallback-item {
-  background-color: rgba(26, 26, 46, 0.7);
-  border: 1px solid rgba(0, 255, 255, 0.15);
+  background-color: rgba(26, 26, 46, 0.7) !important;
+  border: 1px solid rgba(0, 255, 255, 0.15) !important;
 }
 
 html.cyberpunk .fallback-item:hover {
-  border-color: rgba(0, 255, 255, 0.4);
+  border-color: rgba(0, 255, 255, 0.4) !important;
   box-shadow: 0 4px 16px rgba(0, 255, 255, 0.15);
 }
 
 html.cyberpunk .fallback-item.current {
-  background: linear-gradient(135deg, rgba(0, 255, 255, 0.15), rgba(255, 0, 255, 0.08));
-  border-color: var(--app-color-primary);
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.15), rgba(255, 0, 255, 0.08)) !important;
+  border-color: var(--app-color-primary) !important;
   box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
 }
 
 html.cyberpunk .fallback-item.current .fallback-index {
   background: linear-gradient(135deg, var(--app-color-primary, #00ffff), #00ccff);
   box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+}
+
+html.cyberpunk .fallback-model {
+  color: var(--app-text-primary) !important;
+}
+
+html.cyberpunk .providers {
+  color: var(--app-text-tertiary) !important;
 }
 
 html.cyberpunk .trigger-list {
@@ -590,11 +622,32 @@ html.cyberpunk .avoid-list {
 }
 
 html.cyberpunk .prompt-content {
-  background-color: rgba(26, 26, 46, 0.9);
-  border: 1px solid rgba(0, 255, 255, 0.3);
+  background-color: rgba(26, 26, 46, 0.9) !important;
+  border: 1px solid rgba(0, 255, 255, 0.3) !important;
   box-shadow:
     0 0 25px rgba(0, 255, 255, 0.2),
     inset 0 0 40px rgba(0, 255, 255, 0.05);
+}
+
+html.cyberpunk .prompt-content pre {
+  color: var(--app-text-secondary) !important;
+}
+
+/* 赛博朋克 - 当前模型标签样式 */
+html.cyberpunk .model-info.clickable {
+  background: linear-gradient(rgba(26, 26, 46, 0.9), rgba(26, 26, 46, 0.9)) padding-box,
+              linear-gradient(135deg, var(--app-color-primary, #00ffff), #ff00ff) border-box !important;
+}
+
+html.cyberpunk .model-info.clickable .el-tag {
+  background-color: rgba(0, 255, 255, 0.15) !important;
+  border-color: rgba(0, 255, 255, 0.4) !important;
+  color: var(--app-color-primary) !important;
+}
+
+html.cyberpunk .model-name {
+  color: var(--app-color-primary) !important;
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
 }
 
 html.cyberpunk :deep(.el-radio-button__inner) {
@@ -841,5 +894,238 @@ html.light :deep(.el-button:hover) {
   border-color: var(--app-color-primary);
   color: var(--app-color-primary);
   box-shadow: 0 4px 12px rgba(0, 168, 232, 0.15);
+}
+
+/* ==================== 暗色主题 (html.dark) ==================== */
+html.dark .config-detail-dialog :deep(.el-dialog) {
+  background-color: rgba(18, 18, 26, 0.95);
+  border: 1px solid var(--app-border-default);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 212, 255, 0.08);
+}
+
+html.dark .config-detail-dialog :deep(.el-dialog__header) {
+  border-bottom: 2px solid var(--app-color-primary);
+  box-shadow: 0 2px 10px rgba(0, 212, 255, 0.2);
+}
+
+html.dark .config-detail-dialog :deep(.el-dialog__title) {
+  color: var(--app-text-primary);
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+html.dark .config-detail-dialog :deep(.el-dialog__headerbtn:hover .el-dialog__close) {
+  color: var(--app-color-primary);
+  filter: drop-shadow(0 0 5px rgba(0, 212, 255, 0.6));
+}
+
+html.dark .config-detail-dialog :deep(.el-dialog__footer) {
+  border-top: 1px solid var(--app-border-default);
+}
+
+/* 暗色主题 - 描述列表样式 */
+html.dark .basic-info :deep(.el-descriptions__body) {
+  background-color: var(--app-bg-card) !important;
+}
+
+html.dark .basic-info :deep(.el-descriptions__table) {
+  background-color: var(--app-bg-card) !important;
+}
+
+html.dark .basic-info :deep(.el-descriptions__label) {
+  background-color: rgba(0, 212, 255, 0.08) !important;
+  color: var(--app-text-tertiary) !important;
+  border-bottom: 1px solid var(--app-border-default) !important;
+  border-color: var(--app-border-default) !important;
+}
+
+html.dark .basic-info :deep(.el-descriptions__content) {
+  background-color: var(--app-bg-card) !important;
+  color: var(--app-text-primary) !important;
+  border-bottom: 1px solid var(--app-border-default) !important;
+  border-color: var(--app-border-default) !important;
+}
+
+html.dark .basic-info :deep(.el-descriptions__cell) {
+  border-color: var(--app-border-default) !important;
+  background-color: transparent !important;
+}
+
+/* 暗色主题 - 标签样式 */
+html.dark .basic-info :deep(.el-tag) {
+  background-color: rgba(0, 212, 255, 0.15) !important;
+  border-color: rgba(0, 212, 255, 0.3) !important;
+  color: var(--app-color-primary) !important;
+}
+
+html.dark .basic-info :deep(.el-tag--primary) {
+  background-color: rgba(0, 212, 255, 0.15) !important;
+  border-color: rgba(0, 212, 255, 0.3) !important;
+  color: var(--app-color-primary) !important;
+}
+
+html.dark .basic-info :deep(.el-tag--success) {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: var(--app-color-success) !important;
+}
+
+html.dark .basic-info :deep(.el-tag--info) {
+  background-color: rgba(0, 212, 255, 0.1) !important;
+  border-color: rgba(0, 212, 255, 0.25) !important;
+  color: var(--app-color-primary) !important;
+}
+
+/* 暗色主题 - 模型信息样式 */
+html.dark .model-info.clickable {
+  background: linear-gradient(var(--app-bg-card), var(--app-bg-card)) padding-box,
+              linear-gradient(135deg, var(--app-color-primary), var(--app-color-secondary)) border-box;
+}
+
+html.dark .model-info.clickable:hover {
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.4),
+              inset 0 0 12px rgba(0, 212, 255, 0.1);
+}
+
+html.dark .model-name {
+  color: var(--app-color-primary);
+  text-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
+}
+
+/* 暗色主题 - 区块标题 */
+html.dark .section-title {
+  border-left: 3px solid var(--app-color-primary);
+  color: var(--app-text-primary);
+  text-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
+}
+
+/* 暗色主题 - 回退模型链 */
+html.dark .fallback-item {
+  background-color: var(--app-bg-card) !important;
+  border: 1px solid var(--app-border-default) !important;
+}
+
+html.dark .fallback-item:hover {
+  border-color: rgba(0, 212, 255, 0.3) !important;
+  box-shadow: 0 2px 12px rgba(0, 212, 255, 0.1);
+}
+
+html.dark .fallback-item.current {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.12), rgba(0, 168, 255, 0.06)) !important;
+  border-color: var(--app-color-primary) !important;
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+}
+
+html.dark .fallback-item.current .fallback-index {
+  background: linear-gradient(135deg, var(--app-color-primary), var(--app-color-secondary));
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
+}
+
+html.dark .fallback-model {
+  color: var(--app-text-primary) !important;
+}
+
+html.dark .variant-badge {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: var(--app-color-success) !important;
+}
+
+html.dark .providers {
+  color: var(--app-text-tertiary) !important;
+}
+
+/* 暗色主题 - 触发条件列表 */
+html.dark .trigger-list {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.03));
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+html.dark .trigger-list li::marker {
+  color: var(--app-color-success);
+}
+
+/* 暗色主题 - 避免场景列表 */
+html.dark .avoid-list {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.03));
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+html.dark .avoid-list li::marker {
+  color: var(--app-color-danger);
+}
+
+/* 暗色主题 - 系统提示词区域 */
+html.dark .prompt-content {
+  background-color: var(--app-bg-card) !important;
+  border: 1px solid var(--app-color-primary) !important;
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.12),
+              inset 0 0 30px rgba(0, 212, 255, 0.03);
+}
+
+html.dark .prompt-content pre {
+  color: var(--app-text-secondary) !important;
+}
+
+/* 暗色主题 - 当前模型标签样式 */
+html.dark .model-info.clickable {
+  background: linear-gradient(var(--app-bg-card), var(--app-bg-card)) padding-box,
+              linear-gradient(135deg, var(--app-color-primary), var(--app-color-secondary)) border-box !important;
+}
+
+html.dark .model-info.clickable .el-tag {
+  background-color: rgba(0, 212, 255, 0.15) !important;
+  border-color: rgba(0, 212, 255, 0.4) !important;
+  color: var(--app-color-primary) !important;
+}
+
+html.dark .model-name {
+  color: var(--app-color-primary) !important;
+  text-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
+}
+
+/* 暗色主题 - 语言切换按钮 */
+html.dark :deep(.el-radio-button__inner) {
+  background-color: var(--app-bg-card);
+  border-color: var(--app-border-default);
+  color: var(--app-text-tertiary);
+}
+
+html.dark :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 168, 255, 0.12));
+  border-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.25);
+}
+
+/* 暗色主题 - 关闭按钮 */
+html.dark :deep(.el-button) {
+  background-color: transparent;
+  border-color: var(--app-border-default);
+  color: var(--app-text-secondary);
+}
+
+html.dark :deep(.el-button:hover) {
+  border-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.2);
+}
+
+/* 暗色主题 - 滚动条样式 */
+html.dark .detail-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+html.dark .detail-content::-webkit-scrollbar-track {
+  background: var(--app-bg-base);
+  border-radius: 3px;
+}
+
+html.dark .detail-content::-webkit-scrollbar-thumb {
+  background: var(--app-border-default);
+  border-radius: 3px;
+}
+
+html.dark .detail-content::-webkit-scrollbar-thumb:hover {
+  background: var(--app-border-hover);
 }
 </style>
