@@ -51,7 +51,3 @@ AGENTS.md
 playwright-report/
 playwright/.cache/
 test-results/
-
-# 调试截图文件
-*.png
-!src/assets/**/*.png
