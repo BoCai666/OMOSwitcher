@@ -165,14 +165,9 @@ async function applyPreset(name: string) {
   }
 }
 
-// 跳转到 Agent 配置页面
-function goToAgents() {
-  router.push('/agents')
-}
-
-// 跳转到 Category 配置页面
-function goToCategories() {
-  router.push('/categories')
+// 跳转到模型配置页面
+function goToConfig() {
+  router.push('/config')
 }
 
 // 跳转到预设管理页面
@@ -356,14 +351,10 @@ onMounted(() => {
                  <el-icon><VideoPlay /></el-icon>
                  启动 OpenCode
                </el-button>
-               <el-button class="action-btn neon-btn-secondary" size="large" @click="goToAgents">
-                 <el-icon><User /></el-icon>
-                 配置 Agents
-               </el-button>
-               <el-button class="action-btn neon-btn-success" size="large" @click="goToCategories">
-                 <el-icon><Folder /></el-icon>
-                 配置 Categories
-               </el-button>
+                <el-button class="action-btn neon-btn-secondary" size="large" @click="goToConfig">
+                  <el-icon><Setting /></el-icon>
+                  模型配置
+                </el-button>
                <el-button class="action-btn neon-btn-info" size="large" @click="goToPresets">
                  <el-icon><Collection /></el-icon>
                  管理预设
