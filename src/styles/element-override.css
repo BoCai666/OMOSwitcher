@@ -1889,3 +1889,178 @@ html.glassmorphism .el-step__description {
 html.glassmorphism .el-step__line {
   background-color: var(--app-glass-border);
 }
+
+/* =========================================================
+   T13: Alert 组件
+   ========================================================= */
+
+/* ==================== Alert 组件 ==================== */
+
+/* 赛博朋克主题 - Alert 霓虹效果 */
+html.cyberpunk .el-alert {
+  background-color: rgba(26, 26, 46, 0.9);
+  border: 1px solid var(--app-border-default);
+  border-radius: var(--app-radius-md);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+html.cyberpunk .el-alert .el-alert__title {
+  color: var(--app-text-primary);
+  font-weight: 500;
+}
+
+html.cyberpunk .el-alert .el-alert__description {
+  color: var(--app-text-secondary);
+}
+
+html.cyberpunk .el-alert .el-alert__close-btn {
+  color: var(--app-text-tertiary);
+}
+
+html.cyberpunk .el-alert .el-alert__close-btn:hover {
+  color: var(--app-text-primary);
+}
+
+/* 赛博朋克 - Warning Alert */
+html.cyberpunk .el-alert--warning {
+  background-color: rgba(255, 170, 0, 0.08);
+  border-color: rgba(255, 170, 0, 0.3);
+  box-shadow: 0 0 15px rgba(255, 170, 0, 0.1);
+}
+
+html.cyberpunk .el-alert--warning .el-alert__icon {
+  color: var(--app-color-warning);
+}
+
+html.cyberpunk .el-alert--warning .el-alert__title {
+  color: var(--app-color-warning);
+}
+
+/* 赛博朋克 - Success Alert */
+html.cyberpunk .el-alert--success {
+  background-color: rgba(0, 255, 136, 0.08);
+  border-color: rgba(0, 255, 136, 0.3);
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.1);
+}
+
+html.cyberpunk .el-alert--success .el-alert__icon {
+  color: var(--app-color-success);
+}
+
+html.cyberpunk .el-alert--success .el-alert__title {
+  color: var(--app-color-success);
+}
+
+/* 赛博朋克 - Error Alert */
+html.cyberpunk .el-alert--error {
+  background-color: rgba(255, 51, 102, 0.08);
+  border-color: rgba(255, 51, 102, 0.3);
+  box-shadow: 0 0 15px rgba(255, 51, 102, 0.1);
+}
+
+html.cyberpunk .el-alert--error .el-alert__icon {
+  color: var(--app-color-danger);
+}
+
+html.cyberpunk .el-alert--error .el-alert__title {
+  color: var(--app-color-danger);
+}
+
+/* 赛博朋克 - Info Alert */
+html.cyberpunk .el-alert--info {
+  background-color: rgba(0, 255, 255, 0.08);
+  border-color: rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .el-alert--info .el-alert__icon {
+  color: var(--app-color-primary);
+}
+
+html.cyberpunk .el-alert--info .el-alert__title {
+  color: var(--app-color-primary);
+}
+
+/* 玻璃拟态主题 - Alert 玻璃效果 */
+html.glassmorphism .el-alert {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--app-glass-border);
+  border-radius: var(--app-radius-md);
+  backdrop-filter: var(--app-glass-blur);
+  -webkit-backdrop-filter: var(--app-glass-blur);
+  box-shadow: var(--app-shadow-sm);
+}
+
+html.glassmorphism .el-alert .el-alert__title {
+  color: var(--app-text-primary);
+  font-weight: 500;
+}
+
+html.glassmorphism .el-alert .el-alert__description {
+  color: var(--app-text-secondary);
+}
+
+html.glassmorphism .el-alert .el-alert__close-btn {
+  color: var(--app-text-tertiary);
+}
+
+html.glassmorphism .el-alert .el-alert__close-btn:hover {
+  color: var(--app-text-primary);
+}
+
+/* 玻璃拟态 - Warning Alert */
+html.glassmorphism .el-alert--warning {
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+html.glassmorphism .el-alert--warning .el-alert__icon {
+  color: #f59e0b;
+}
+
+html.glassmorphism .el-alert--warning .el-alert__title {
+  color: #b45309;
+}
+
+/* 玻璃拟态 - Success Alert */
+html.glassmorphism .el-alert--success {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+html.glassmorphism .el-alert--success .el-alert__icon {
+  color: #10b981;
+}
+
+html.glassmorphism .el-alert--success .el-alert__title {
+  color: #047857;
+}
+
+/* 玻璃拟态 - Error Alert */
+html.glassmorphism .el-alert--error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+html.glassmorphism .el-alert--error .el-alert__icon {
+  color: #ef4444;
+}
+
+html.glassmorphism .el-alert--error .el-alert__title {
+  color: #b91c1c;
+}
+
+/* 玻璃拟态 - Info Alert */
+html.glassmorphism .el-alert--info {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+html.glassmorphism .el-alert--info .el-alert__icon {
+  color: var(--app-color-primary);
+}
+
+html.glassmorphism .el-alert--info .el-alert__title {
+  color: #1d4ed8;
+}

@@ -96,7 +96,7 @@ watch(dialogVisible, (val) => {
     width="800px"
     class="config-detail-dialog"
     destroy-on-close
-    append-to-body
+    append-to=".app-main"
     align-center
   >
     <div v-if="detail" class="detail-content">

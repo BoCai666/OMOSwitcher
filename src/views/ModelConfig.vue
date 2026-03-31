@@ -64,6 +64,14 @@ function handleViewAgentDetail(agentName: AgentName) {
   detailDialogVisible.value = true
 }
 
+// 直接打开 Agent 的模型选择抽屉
+function handleChangeAgentModel(agentName: AgentName) {
+  modelDrawerType.value = 'agent'
+  modelDrawerAgentName.value = agentName
+  modelDrawerCategoryName.value = null
+  modelDrawerVisible.value = true
+}
+
 // ========== Category 相关方法 ==========
 
 function updateCategoryModel(categoryName: CategoryName, modelId: string) {
@@ -74,6 +82,14 @@ function handleViewCategoryDetail(categoryName: CategoryName) {
   selectedCategoryName.value = categoryName
   selectedAgentName.value = null
   detailDialogVisible.value = true
+}
+
+// 直接打开 Category 的模型选择抽屉
+function handleChangeCategoryModel(categoryName: CategoryName) {
+  modelDrawerType.value = 'category'
+  modelDrawerCategoryName.value = categoryName
+  modelDrawerAgentName.value = null
+  modelDrawerVisible.value = true
 }
 
 // ========== 模型选择相关 ==========
@@ -192,6 +208,7 @@ watch(() => configStore.error, (newError) => {
               :models="models"
               :clickable="true"
               @click="handleViewAgentDetail(agentName as AgentName)"
+              @click-model="handleChangeAgentModel(agentName as AgentName)"
             />
           </div>
         </el-tab-pane>
@@ -211,6 +228,7 @@ watch(() => configStore.error, (newError) => {
               :models="models"
               :clickable="true"
               @click="handleViewCategoryDetail(name)"
+              @click-model="handleChangeCategoryModel(name)"
             />
           </div>
         </el-tab-pane>

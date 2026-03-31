@@ -4,7 +4,7 @@
  * 从右侧滑出，支持搜索和按供应商分组选择模型
  */
 import { ref, computed, watch } from 'vue'
-import { Search } from '@element-plus/icons-vue'
+import { Search, ArrowRight } from '@element-plus/icons-vue'
 import type { Model } from '@/types'
 
 const props = defineProps<{
@@ -22,10 +22,14 @@ const emit = defineEmits<{
 // 搜索关键词
 const searchKeyword = ref('')
 
-// 抽屉关闭时清空搜索
+// 折叠状态：记录每个 provider 是否展开，默认全部折叠
+const expandedProviders = ref<Set<string>>(new Set())
+
+// 抽屉关闭时清空搜索和折叠状态
 watch(() => props.visible, (newVal) => {
   if (!newVal) {
     searchKeyword.value = ''
+    expandedProviders.value = new Set()
   }
 })
 
@@ -73,6 +77,37 @@ function handleSelectModel(modelId: string) {
 function isCurrentModel(modelId: string) {
   return modelId === props.currentModel
 }
+
+// 判断 provider 是否展开
+function isProviderExpanded(provider: string) {
+  return expandedProviders.value.has(provider)
+}
+
+// 切换 provider 的展开/折叠状态
+function toggleProvider(provider: string) {
+  if (expandedProviders.value.has(provider)) {
+    expandedProviders.value.delete(provider)
+  } else {
+    expandedProviders.value.add(provider)
+  }
+  // 触发响应式更新
+  expandedProviders.value = new Set(expandedProviders.value)
+}
+
+// 展开/折叠全部
+function toggleAll() {
+  // 如果全部展开则折叠全部，否则展开全部
+  if (expandedProviders.value.size === groupedModels.value.size) {
+    expandedProviders.value = new Set()
+  } else {
+    expandedProviders.value = new Set(groupedModels.value.keys())
+  }
+}
+
+// 是否全部展开
+const isAllExpanded = computed(() => {
+  return groupedModels.value.size > 0 && expandedProviders.value.size === groupedModels.value.size
+})
 </script>
 
 <template>
@@ -104,35 +139,51 @@ function isCurrentModel(modelId: string) {
       <!-- 模型列表 -->
       <div class="model-list">
         <template v-if="groupedModels.size > 0">
+          <!-- 全部展开/折叠按钮 -->
+          <div class="list-actions">
+            <el-button link size="small" @click="toggleAll">
+              {{ isAllExpanded ? '全部折叠' : '全部展开' }}
+            </el-button>
+          </div>
+          
           <div
             v-for="[provider, providerModels] in groupedModels"
             :key="provider"
             class="provider-group"
           >
-            <div class="provider-header">
-              <span class="provider-name">{{ provider }}</span>
-              <span class="provider-count">{{ providerModels.length }}</span>
-            </div>
-            
-            <div class="model-items">
-              <div
-                v-for="model in providerModels"
-                :key="model.id"
-                class="model-item"
-                :class="{ 'is-current': isCurrentModel(model.id) }"
-                @click="handleSelectModel(model.id)"
-              >
-                <div class="model-info">
-                  <span class="model-name">{{ model.name }}</span>
-                  <span class="model-id">{{ model.id }}</span>
-                </div>
-                <el-icon v-if="isCurrentModel(model.id)" class="check-icon">
-                  <svg viewBox="0 0 1024 1024">
-                    <path fill="currentColor" d="M406.656 706.944L195.84 496.256a32 32 0 10-45.248 45.248l256 256 512-512a32 32 0 00-45.248-45.248L406.592 706.944z"/>
-                  </svg>
-                </el-icon>
+            <div 
+              class="provider-header" 
+              :class="{ expanded: isProviderExpanded(provider) }"
+              @click="toggleProvider(provider)"
+            >
+              <div class="provider-info">
+                <el-icon class="expand-icon"><ArrowRight /></el-icon>
+                <span class="provider-name">{{ provider }}</span>
+                <span class="provider-count">{{ providerModels.length }}</span>
               </div>
             </div>
+            
+            <el-collapse-transition>
+              <div v-show="isProviderExpanded(provider)" class="model-items">
+                <div
+                  v-for="model in providerModels"
+                  :key="model.id"
+                  class="model-item"
+                  :class="{ 'is-current': isCurrentModel(model.id) }"
+                  @click="handleSelectModel(model.id)"
+                >
+                  <div class="model-info">
+                    <span class="model-name">{{ model.name }}</span>
+                    <span class="model-id">{{ model.id }}</span>
+                  </div>
+                  <el-icon v-if="isCurrentModel(model.id)" class="check-icon">
+                    <svg viewBox="0 0 1024 1024">
+                      <path fill="currentColor" d="M406.656 706.944L195.84 496.256a32 32 0 10-45.248 45.248l256 256 512-512a32 32 0 00-45.248-45.248L406.592 706.944z"/>
+                    </svg>
+                  </el-icon>
+                </div>
+              </div>
+            </el-collapse-transition>
           </div>
         </template>
         
@@ -240,13 +291,32 @@ function isCurrentModel(modelId: string) {
 .model-list {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 全部展开/折叠按钮 */
+.list-actions {
+  display: flex;
+  gap: var(--app-spacing-3);
+  margin-bottom: var(--app-spacing-4);
+  padding: 0 var(--app-spacing-2);
+}
+
+.list-actions :deep(.el-button) {
+  font-size: 12px;
+  color: var(--app-text-tertiary);
+  padding: 4px 8px;
+}
+
+.list-actions :deep(.el-button:hover) {
+  color: var(--app-color-primary);
 }
 
 .provider-group {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
-/* 供应商分组标题 - 渐变背景 */
+/* 供应商分组标题 - 可点击折叠 */
 .provider-header {
   display: flex;
   align-items: center;
@@ -254,8 +324,33 @@ function isCurrentModel(modelId: string) {
   padding: 10px 14px;
   background: linear-gradient(135deg, rgba(0, 212, 255, 0.15) 0%, rgba(0, 212, 255, 0.05) 100%);
   border-radius: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 0;
   border: 1px solid rgba(0, 212, 255, 0.2);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  user-select: none;
+}
+
+.provider-header:hover {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2) 0%, rgba(0, 212, 255, 0.08) 100%);
+  border-color: rgba(0, 212, 255, 0.4);
+}
+
+.provider-info {
+  display: flex;
+  align-items: center;
+  gap: var(--app-spacing-2);
+}
+
+.expand-icon {
+  color: var(--app-color-primary);
+  font-size: 14px;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.provider-header.expanded .expand-icon {
+  transform: rotate(90deg);
 }
 
 .provider-name {
@@ -272,12 +367,15 @@ function isCurrentModel(modelId: string) {
   padding: 3px 10px;
   border-radius: 12px;
   border: 1px solid var(--app-border-default);
+  margin-left: auto;
 }
 
 .model-items {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding: 10px 0 0 0;
+  overflow-x: hidden;
 }
 
 /* 模型列表项 - 悬停高亮 + 霓虹边框 */
@@ -289,7 +387,7 @@ function isCurrentModel(modelId: string) {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  border: 1px solid transparent;
+  border: 1px solid var(--app-border-default);
   background: rgba(42, 42, 58, 0.3);
 }
 
@@ -297,7 +395,6 @@ function isCurrentModel(modelId: string) {
   background: rgba(0, 212, 255, 0.08);
   border-color: rgba(0, 212, 255, 0.5);
   box-shadow: 0 0 15px rgba(0, 212, 255, 0.2), inset 0 0 10px rgba(0, 212, 255, 0.05);
-  transform: translateX(4px);
 }
 
 /* 选中状态 - 霓虹边框 + 发光 */
@@ -405,6 +502,17 @@ html.cyberpunk .provider-header {
   box-shadow: 0 0 15px rgba(0, 255, 255, 0.15);
 }
 
+html.cyberpunk .provider-header:hover {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.25) 0%, rgba(0, 255, 255, 0.1) 100%);
+  border-color: rgba(0, 255, 255, 0.5);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.25);
+}
+
+html.cyberpunk .expand-icon {
+  color: var(--app-color-primary);
+  filter: drop-shadow(0 0 6px rgba(0, 255, 255, 0.5));
+}
+
 html.cyberpunk .provider-name {
   text-shadow: 0 0 12px rgba(0, 255, 255, 0.5);
 }
@@ -416,7 +524,7 @@ html.cyberpunk .provider-count {
 
 html.cyberpunk .model-item {
   background: rgba(26, 26, 46, 0.5);
-  border: 1px solid transparent;
+  border: 1px solid rgba(0, 255, 255, 0.15);
 }
 
 html.cyberpunk .model-item:hover {
@@ -496,6 +604,15 @@ html.glassmorphism .provider-header {
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0.03) 100%);
   border: 1px solid rgba(37, 99, 235, 0.15);
   box-shadow: none;
+}
+
+html.glassmorphism .provider-header:hover {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(37, 99, 235, 0.05) 100%);
+  border-color: rgba(37, 99, 235, 0.25);
+}
+
+html.glassmorphism .expand-icon {
+  color: var(--app-color-primary);
 }
 
 html.glassmorphism .provider-name {

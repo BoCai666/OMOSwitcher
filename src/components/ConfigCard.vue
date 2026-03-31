@@ -5,7 +5,7 @@
  * 点击卡片可查看详情
  */
 import { computed } from 'vue'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ArrowRight, Edit } from '@element-plus/icons-vue'
 import type { Model } from '@/types'
 
 const props = defineProps<{
@@ -19,6 +19,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: string]
   'click': []
+  'click-model': []
 }>()
 
 // 当前模型信息
@@ -58,7 +59,11 @@ const displayModel = computed(() => {
       </div>
       
       <!-- 当前模型显示 -->
-      <div class="model-display">
+      <div 
+        class="model-display" 
+        :class="{ 'model-clickable': clickable }"
+        @click.stop="clickable && emit('click-model')"
+      >
         <div class="model-info">
           <span class="label">当前模型</span>
           <div class="model-details">
@@ -66,6 +71,7 @@ const displayModel = computed(() => {
             <span class="model-name">{{ displayModel }}</span>
           </div>
         </div>
+        <el-icon v-if="clickable" class="model-click-hint"><Edit /></el-icon>
       </div>
     </div>
   </el-card>
@@ -283,6 +289,62 @@ html.glassmorphism .provider-tag {
     rgba(139, 92, 246, 0.04) 100%
   );
   border: 1px solid rgba(0, 168, 232, 0.15);
+}
+
+/* 模型区域可点击样式 */
+.model-display.model-clickable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.model-display.model-clickable:hover {
+  border-color: var(--app-color-primary);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.model-click-hint {
+  color: var(--app-text-tertiary);
+  font-size: 16px;
+  opacity: 0;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  margin-left: var(--app-spacing-3);
+}
+
+.model-display.model-clickable:hover .model-click-hint {
+  opacity: 1;
+  color: var(--app-color-primary);
+}
+
+/* 赛博朋克主题 - 模型区域可点击 */
+html.cyberpunk .model-display.model-clickable:hover {
+  border-color: rgba(0, 255, 255, 0.5);
+  box-shadow: 
+    0 0 20px rgba(0, 255, 255, 0.3),
+    inset 0 0 15px rgba(0, 255, 255, 0.05);
+}
+
+html.cyberpunk .model-click-hint {
+  color: var(--app-text-tertiary);
+}
+
+html.cyberpunk .model-display.model-clickable:hover .model-click-hint {
+  color: var(--app-color-primary);
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
+/* 玻璃拟态主题 - 模型区域可点击 */
+html.glassmorphism .model-display.model-clickable:hover {
+  border-color: rgba(37, 99, 235, 0.4);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15);
+}
+
+html.glassmorphism .model-display.model-clickable:hover .model-click-hint {
+  color: var(--app-color-primary);
 }
 
 /* 模型显示区域微光装饰 */
