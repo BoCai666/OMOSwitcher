@@ -5,7 +5,8 @@
  */
 import { ref, watch } from 'vue'
 import { useMonitorStore } from '@/stores/monitor'
-import { Document, ChatDotRound, Tools } from '@element-plus/icons-vue'
+import { Document, ChatDotRound, Tools, View } from '@element-plus/icons-vue'
+import RequestBodyDetailDialog from './RequestBodyDetailDialog.vue'
 
 // 使用状态管理
 const store = useMonitorStore()
@@ -15,6 +16,9 @@ const activeTab = ref('request')
 
 // MCP 折叠面板激活项
 const activeMcpNames = ref<string[]>([])
+
+// 请求体详情弹窗
+const bodyDetailVisible = ref(false)
 
 // 格式化 JSON
 function formatJSON(data: unknown): string {
@@ -186,10 +190,21 @@ watch(() => store.selectedRequestId, () => {
           <div class="code-block">
             <div class="code-header">
               <span class="code-title">Request Body</span>
-              <div class="code-dots">
-                <span></span>
-                <span></span>
-                <span></span>
+              <div class="code-actions">
+                <el-button
+                  type="primary"
+                  size="small"
+                  :icon="View"
+                  @click="bodyDetailVisible = true"
+                  class="detail-btn"
+                >
+                  详情
+                </el-button>
+                <div class="code-dots">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
               </div>
             </div>
             <div class="code-content">
@@ -292,6 +307,13 @@ watch(() => store.selectedRequestId, () => {
         </el-tab-pane>
       </el-tabs>
     </div>
+
+    <!-- 请求体详情弹窗 -->
+    <RequestBodyDetailDialog
+      v-model:visible="bodyDetailVisible"
+      :request-body="store.selectedRequest?.parsedBody || store.selectedRequest?.body"
+      :actual-tokens="store.selectedMetrics?.totalTokens"
+    />
   </div>
 </template>
 
@@ -357,7 +379,9 @@ watch(() => store.selectedRequestId, () => {
   background: rgba(0, 212, 255, 0.15) !important;
   border: 1px solid rgba(0, 212, 255, 0.3) !important;
   color: var(--app-color-primary) !important;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
+  font-weight: 600;
+  font-size: 12px;
 }
 
 .info-grid {
@@ -387,35 +411,39 @@ watch(() => store.selectedRequestId, () => {
 }
 
 .info-value {
-  font-size: 13px;
-  color: var(--app-text-secondary);
+  font-size: 14px;
+  color: var(--app-text-primary);
+  font-weight: 500;
 }
 
 .time-value {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
   color: var(--app-text-secondary);
+  font-weight: 500;
 }
 
 .model-value {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
   color: var(--app-color-primary);
+  font-weight: 600;
 }
 
 .duration-value {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
   color: var(--app-color-warning);
+  font-weight: 600;
 }
 
 .tokens-value {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
   color: var(--app-color-success);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .cost-value {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
   color: var(--app-color-warning);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .provider-tag {
@@ -503,6 +531,25 @@ watch(() => store.selectedRequestId, () => {
   border-bottom: 1px solid var(--app-border-default);
 }
 
+.code-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.detail-btn {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(0, 212, 255, 0.05));
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  color: var(--app-color-primary);
+  font-weight: 500;
+}
+
+.detail-btn:hover {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.25), rgba(0, 212, 255, 0.1));
+  border-color: rgba(0, 212, 255, 0.5);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+}
+
 .code-title {
   font-size: 11px;
   color: var(--app-text-tertiary);
@@ -559,12 +606,13 @@ watch(() => store.selectedRequestId, () => {
 
 .json-code {
   margin: 0;
-  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
-  font-size: 12px;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
   line-height: 1.6;
-  color: var(--app-text-tertiary);
+  color: var(--app-text-secondary);
   white-space: pre-wrap;
   word-break: break-all;
+  font-weight: 450;
 }
 
 /* JSON 语法高亮模拟 */
@@ -674,7 +722,7 @@ watch(() => store.selectedRequestId, () => {
   font-size: 13px;
   font-weight: 600;
   color: var(--app-text-primary);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
 }
 
 .mcp-server-tag {
@@ -705,13 +753,15 @@ watch(() => store.selectedRequestId, () => {
 }
 
 .detail-value {
-  font-size: 13px;
-  color: var(--app-text-secondary);
+  font-size: 14px;
+  color: var(--app-text-primary);
+  font-weight: 500;
 }
 
 .detail-value.duration {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
   color: var(--app-color-warning);
+  font-weight: 600;
 }
 
 .code-snippet {
@@ -724,12 +774,13 @@ watch(() => store.selectedRequestId, () => {
 
 .code-snippet pre {
   margin: 0;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 11px;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
   line-height: 1.5;
   color: var(--app-text-secondary);
   white-space: pre-wrap;
   word-break: break-all;
+  font-weight: 450;
 }
 
 /* ========== Cyberpunk 主题 ========== */
@@ -816,6 +867,17 @@ html.cyberpunk .code-block {
 html.cyberpunk .code-header {
   background: rgba(0, 212, 255, 0.1);
   border-bottom-color: rgba(0, 212, 255, 0.25);
+}
+
+html.cyberpunk .detail-btn {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(0, 255, 255, 0.08));
+  border-color: rgba(0, 255, 255, 0.4);
+}
+
+html.cyberpunk .detail-btn:hover {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.3), rgba(0, 255, 255, 0.12));
+  border-color: rgba(0, 255, 255, 0.6);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
 }
 
 html.cyberpunk .mcp-collapse :deep(.el-collapse-item) {
@@ -939,6 +1001,17 @@ html.glassmorphism .code-header {
   border-bottom: 1px solid #e5e7eb;
 }
 
+html.glassmorphism .detail-btn {
+  background: var(--app-color-primary);
+  border: none;
+  color: #ffffff;
+}
+
+html.glassmorphism .detail-btn:hover {
+  background: #1d4ed8;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
 html.glassmorphism .mcp-collapse :deep(.el-collapse-item) {
   background: #ffffff;
   border: 1px solid #e5e7eb;
@@ -1060,6 +1133,17 @@ html.light:not(.cyberpunk):not(.dark) .code-header {
   border-bottom: 1px solid var(--app-border-default);
 }
 
+html.light:not(.cyberpunk):not(.dark) .detail-btn {
+  background: var(--app-color-primary);
+  border: none;
+  color: #ffffff;
+}
+
+html.light:not(.cyberpunk):not(.dark) .detail-btn:hover {
+  background: var(--app-color-primary-hover);
+  box-shadow: 0 4px 12px rgba(0, 168, 232, 0.3);
+}
+
 html.light:not(.cyberpunk):not(.dark) .mcp-collapse :deep(.el-collapse-item) {
   background: var(--app-bg-hover);
   border: 1px solid var(--app-border-default);
@@ -1088,6 +1172,132 @@ html.light:not(.cyberpunk):not(.dark) .mcp-server-tag {
 
 html.light:not(.cyberpunk):not(.dark) .code-snippet {
   background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+}
+
+/* ========== 暗色主题 ========== */
+html.dark .request-detail {
+  /* 弹窗内容样式 */
+}
+
+html.dark .empty-icon-wrapper {
+  background: rgba(0, 212, 255, 0.1);
+  border: 2px dashed rgba(0, 212, 255, 0.3);
+}
+
+html.dark .empty-icon {
+  color: var(--app-color-primary);
+}
+
+html.dark .basic-info-panel {
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid var(--app-border-default);
+}
+
+html.dark .info-header {
+  background: rgba(0, 212, 255, 0.05);
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.dark .id-tag {
+  background: rgba(0, 212, 255, 0.15) !important;
+  border: 1px solid rgba(0, 212, 255, 0.4) !important;
+  color: var(--app-color-primary) !important;
+}
+
+html.dark .info-grid {
+  background: var(--app-border-default);
+}
+
+html.dark .info-item {
+  background: var(--app-bg-card);
+}
+
+html.dark .provider-tag {
+  background: rgba(0, 212, 255, 0.15) !important;
+  border: 1px solid rgba(0, 212, 255, 0.4) !important;
+  color: var(--app-color-primary) !important;
+}
+
+html.dark .detail-tabs :deep(.el-tabs__header) {
+  background: rgba(0, 212, 255, 0.05);
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.dark .detail-tabs :deep(.el-tabs__item) {
+  color: var(--app-text-secondary);
+}
+
+html.dark .detail-tabs :deep(.el-tabs__item.is-active) {
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--app-color-primary);
+}
+
+html.dark .detail-tabs :deep(.el-tabs__active-bar) {
+  background: var(--app-color-primary);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+}
+
+html.dark .detail-tabs :deep(.el-tabs__content) {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+html.dark .tab-badge {
+  background: rgba(0, 212, 255, 0.15) !important;
+  border: 1px solid rgba(0, 212, 255, 0.4) !important;
+  color: var(--app-color-primary) !important;
+}
+
+html.dark .code-block {
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid var(--app-border-default);
+}
+
+html.dark .code-header {
+  background: rgba(0, 212, 255, 0.05);
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.dark .detail-btn {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 212, 255, 0.1));
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  color: var(--app-color-primary);
+}
+
+html.dark .detail-btn:hover {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(0, 212, 255, 0.15));
+  border-color: rgba(0, 212, 255, 0.6);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+}
+
+html.dark .mcp-collapse :deep(.el-collapse-item) {
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid var(--app-border-default);
+}
+
+html.dark .mcp-collapse :deep(.el-collapse-item:hover) {
+  border-color: rgba(0, 212, 255, 0.4);
+}
+
+html.dark .mcp-collapse :deep(.el-collapse-item__header) {
+  background: rgba(0, 212, 255, 0.05);
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.dark .mcp-index {
+  background: rgba(0, 212, 255, 0.15);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  color: var(--app-color-primary);
+}
+
+html.dark .mcp-server-tag {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
+  color: var(--app-color-success) !important;
+}
+
+html.dark .code-snippet {
+  background: rgba(26, 26, 46, 0.6);
   border: 1px solid var(--app-border-default);
 }
 </style>

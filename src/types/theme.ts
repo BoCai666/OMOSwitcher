@@ -16,7 +16,7 @@ export interface ThemeSettings {
 
 /** 默认主题设置 */
 export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
-  mode: 'system',
+  mode: 'cyberpunk',
   accent: 'cyan',
   effectsEnabled: true
 }

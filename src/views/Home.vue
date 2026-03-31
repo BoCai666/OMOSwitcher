@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 主页仪表盘组件 - 显示配置概览、快速操作和最近预设
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useConfigStore } from '@/stores/config'
 import { listPresets, loadPreset } from '@/services/presetStore'
@@ -31,6 +31,9 @@ const defaultCertPath = ref('')
 // 代理端口
 const proxyPort = ref(7101) // 默认端口
 
+// 证书检查定时器
+let certCheckTimer: ReturnType<typeof setInterval> | null = null
+
 // 加载保存的路径
 async function loadSavedPath() {
   const saved = await getWorkingPath()
@@ -48,6 +51,37 @@ async function savePath() {
   }
 }
 
+// 检查证书状态
+async function checkCertStatus() {
+  const exists = await checkCaCertExists()
+  certExists.value = exists
+  
+  // 如果证书已存在，停止轮询
+  if (exists && certCheckTimer) {
+    clearInterval(certCheckTimer)
+    certCheckTimer = null
+  }
+}
+
+// 启动证书状态轮询
+function startCertPolling() {
+  // 如果已经在轮询，不重复启动
+  if (certCheckTimer) return
+  
+  // 每 2 秒检查一次证书状态
+  certCheckTimer = setInterval(async () => {
+    await checkCertStatus()
+  }, 2000)
+}
+
+// 停止证书状态轮询
+function stopCertPolling() {
+  if (certCheckTimer) {
+    clearInterval(certCheckTimer)
+    certCheckTimer = null
+  }
+}
+
 // 加载代理配置
 async function loadProxyConfig() {
   const config = await getProxyConfig()
@@ -55,10 +89,15 @@ async function loadProxyConfig() {
   // 获取默认证书路径
   defaultCertPath.value = await getDefaultCaCertPath()
   // 检查证书是否存在
-  certExists.value = await checkCaCertExists()
+  await checkCertStatus()
   // 获取代理端口配置
   const ports = await getMonitorPorts()
   proxyPort.value = ports.proxy
+  
+  // 如果启用了代理但证书不存在，启动轮询等待证书生成
+  if (proxyEnabled.value && certExists.value === false) {
+    startCertPolling()
+  }
 }
 
 // 保存代理配置
@@ -91,6 +130,17 @@ async function handleLaunchOpenCode() {
   await savePath()
   await saveProxyConfig()
   launchOpenCode(workingPath.value, proxyEnabled.value, defaultCertPath.value)
+  
+  // 如果启用了代理，启动证书状态轮询
+  if (proxyEnabled.value) {
+    // 延迟 1 秒后开始检查，给证书生成留出时间
+    setTimeout(() => {
+      checkCertStatus()
+      if (certExists.value === false) {
+        startCertPolling()
+      }
+    }, 1000)
+  }
 }
 
 // 监听错误并显示提示
@@ -186,6 +236,17 @@ function createPreset() {
   router.push('/presets')
 }
 
+// 监听代理开关变化
+watch(proxyEnabled, (enabled) => {
+  // 启用代理时，检查证书状态
+  if (enabled && certExists.value === false) {
+    startCertPolling()
+  } else if (!enabled) {
+    // 关闭代理时，停止轮询
+    stopCertPolling()
+  }
+})
+
 onMounted(() => {
   loadRecentPresets()
   // 尝试加载配置
@@ -194,6 +255,11 @@ onMounted(() => {
   loadSavedPath()
   // 加载代理配置
   loadProxyConfig()
+})
+
+onUnmounted(() => {
+  // 清理证书检查定时器
+  stopCertPolling()
 })
 </script>
 
@@ -296,9 +362,9 @@ onMounted(() => {
                        浏览
                      </el-button>
                    </template>
-                 </el-input>
-               </div>
-               
+                  </el-input>
+                </div>
+                
                 <!-- 代理配置区域 -->
                 <div class="proxy-config-wrapper glass-card-overlay">
                   <div class="proxy-switch-row">
@@ -306,9 +372,10 @@ onMounted(() => {
                       v-model="proxyEnabled"
                       active-text="启用监控代理"
                       inactive-text="直连模式"
+                      class="glass-switch"
                     />
-                    <el-tag v-if="proxyEnabled" :type="certExists === true ? 'success' : 'warning'" size="small" effect="dark">
-                      {{ certExists === true ? '证书已就绪' : (certExists === false ? '证书未生成' : '检查中...') }}
+                    <el-tag v-if="proxyEnabled" :type="certExists === true ? 'success' : 'info'" size="small" effect="dark">
+                      {{ certExists === true ? '证书已就绪' : (certExists === false ? '证书生成中...' : '检查中...') }}
                     </el-tag>
                   </div>
                   
@@ -324,13 +391,13 @@ onMounted(() => {
                       <!-- 证书不存在提示 -->
                       <el-alert
                         v-if="certExists === false"
-                        title="证书尚未生成"
-                        type="warning"
+                        title="正在生成证书"
+                        type="info"
                         :closable="false"
                         show-icon
                       >
                         <template #default>
-                          首次启用监控代理时会自动生成 CA 证书。若证书生成失败，请检查目录权限或手动启动监控服务。
+                          首次启用监控代理时会自动生成 CA 证书，请稍候片刻。证书生成完成后即可正常使用监控功能。
                         </template>
                       </el-alert>
                       

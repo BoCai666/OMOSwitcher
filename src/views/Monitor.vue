@@ -250,7 +250,7 @@ onUnmounted(() => {
         v-model="detailDialogVisible"
         title="请求详情"
         width="900px"
-        :close-on-click-modal="false"
+        :close-on-click-modal="true"
         :close-on-press-escape="true"
         destroy-on-close
         append-to=".app-main"
@@ -711,22 +711,6 @@ onUnmounted(() => {
 }
 
 /* ==================== 玻璃开关 ==================== */
-:deep(.glass-switch) {
-  --el-switch-on-color: var(--app-color-success);
-  --el-switch-off-color: var(--app-bg-hover);
-}
-
-:deep(.glass-switch .el-switch__core) {
-  border-color: var(--app-border-default);
-  background: var(--app-bg-hover);
-}
-
-:deep(.glass-switch.is-checked .el-switch__core) {
-  background: rgba(0, 245, 160, 0.2);
-  border-color: rgba(0, 245, 160, 0.4);
-  box-shadow: 0 0 15px rgba(0, 245, 160, 0.3);
-}
-
 :deep(.glass-switch .el-switch__action) {
   background: linear-gradient(135deg, var(--app-text-inverse), var(--app-text-tertiary));
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -969,12 +953,6 @@ html.cyberpunk .header-badge {
   box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
 }
 
-html.cyberpunk :deep(.glass-switch.is-checked .el-switch__core) {
-  background: rgba(0, 255, 136, 0.25);
-  border-color: rgba(0, 255, 136, 0.5);
-  box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
-}
-
 /* ==================== 玻璃拟态主题 ==================== */
 html.glassmorphism .monitor-page {
   background: linear-gradient(180deg, rgba(241, 245, 249, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%);
@@ -1113,12 +1091,6 @@ html.glassmorphism .header-icon-wrapper.detail-icon {
 html.glassmorphism .header-badge {
   background: rgba(37, 99, 235, 0.1);
   border: 1px solid rgba(37, 99, 235, 0.3);
-  box-shadow: none;
-}
-
-html.glassmorphism :deep(.glass-switch.is-checked .el-switch__core) {
-  background: rgba(16, 185, 129, 0.2);
-  border-color: var(--app-color-success);
   box-shadow: none;
 }
 
@@ -1273,12 +1245,6 @@ html.light:not(.cyberpunk):not(.dark) .header-icon-wrapper.detail-icon {
 html.light:not(.cyberpunk):not(.dark) .header-badge {
   background: rgba(0, 168, 232, 0.1);
   border: 1px solid rgba(0, 168, 232, 0.5);
-  box-shadow: none;
-}
-
-html.light:not(.cyberpunk):not(.dark) :deep(.glass-switch.is-checked .el-switch__core) {
-  background: rgba(16, 185, 129, 0.2);
-  border-color: var(--app-color-success);
   box-shadow: none;
 }
 

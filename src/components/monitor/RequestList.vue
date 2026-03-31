@@ -25,13 +25,13 @@ const searchKeyword = ref('')
 // 格式化时间戳
 function formatTime(timestamp: number): string {
   const date = new Date(timestamp)
-  return date.toLocaleString('zh-CN', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hour = String(date.getHours()).padStart(2, '0')
+  const minute = String(date.getMinutes()).padStart(2, '0')
+  const second = String(date.getSeconds()).padStart(2, '0')
+  return `${year}/${month}/${day} ${hour}:${minute}:${second}`
 }
 
 // 格式化持续时间
@@ -130,7 +130,7 @@ onMounted(() => {
       max-height="500"
     >
       <!-- 时间列 -->
-      <el-table-column label="时间" width="140" fixed="left">
+      <el-table-column label="时间" width="170" fixed="left">
         <template #default="{ row }">
           <span class="time-text">{{ formatTime(row.timestamp) }}</span>
         </template>
@@ -260,6 +260,19 @@ onMounted(() => {
   overflow: hidden;
 }
 
+/* loading 遮罩层样式 */
+.monitor-table :deep(.el-loading-mask) {
+  background-color: rgba(18, 18, 26, 0.8);
+}
+
+.monitor-table :deep(.el-loading-spinner .circular) {
+  stroke: var(--app-color-primary);
+}
+
+.monitor-table :deep(.el-loading-spinner .el-loading-text) {
+  color: var(--app-color-primary);
+}
+
 .monitor-table :deep(.el-table__header-wrapper) {
   background: rgba(0, 0, 0, 0.2);
 }
@@ -312,44 +325,48 @@ onMounted(() => {
 
 /* 文本样式 */
 .time-text {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-  font-size: 11px;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
   color: var(--app-text-secondary);
   letter-spacing: 0.3px;
+  font-weight: 500;
 }
 
 .model-text {
   font-size: 13px;
-  color: var(--app-text-secondary);
-  font-weight: 500;
+  color: var(--app-text-primary);
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
 
 .url-text {
-  font-size: 11px;
-  color: var(--app-text-tertiary);
-  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--app-text-secondary);
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
+  font-weight: 450;
 }
 
 .tokens-text {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-  font-size: 12px;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
   color: var(--app-color-success);
-  font-weight: 600;
+  font-weight: 700;
   text-shadow: 0 0 10px rgba(0, 245, 160, 0.4);
 }
 
 .cost-text {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-  font-size: 12px;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
   color: var(--app-color-warning);
-  font-weight: 600;
+  font-weight: 700;
   text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
 }
 
 .duration-text {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-  font-size: 11px;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
   color: var(--app-text-secondary);
+  font-weight: 500;
 }
 
 /* 标签样式 */
@@ -357,13 +374,15 @@ onMounted(() => {
   background: rgba(0, 212, 255, 0.15) !important;
   border: 1px solid rgba(0, 212, 255, 0.3) !important;
   color: var(--app-color-primary) !important;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .status-tag {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 600;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-weight: 700;
+  font-size: 12px;
 }
 
 .status-tag.el-tag--success {
@@ -406,6 +425,15 @@ html.cyberpunk .request-list {
   box-shadow: 0 0 30px rgba(0, 212, 255, 0.15);
 }
 
+html.cyberpunk .monitor-table :deep(.el-loading-mask) {
+  background-color: rgba(10, 15, 30, 0.9);
+}
+
+html.cyberpunk .monitor-table :deep(.el-loading-spinner .circular) {
+  stroke: var(--app-color-primary);
+  filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.6));
+}
+
 html.cyberpunk .search-input :deep(.el-input__wrapper) {
   background: rgba(0, 212, 255, 0.08);
   border-color: rgba(0, 212, 255, 0.3);
@@ -420,6 +448,7 @@ html.cyberpunk .refresh-btn {
   background: linear-gradient(135deg, rgba(0, 212, 255, 0.25), rgba(255, 0, 128, 0.15));
   border-color: rgba(0, 212, 255, 0.5);
   box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+  color: var(--app-color-primary) !important;
 }
 
 html.cyberpunk .refresh-btn:hover {
@@ -427,6 +456,11 @@ html.cyberpunk .refresh-btn:hover {
   box-shadow:
     0 0 30px rgba(0, 212, 255, 0.4),
     0 0 60px rgba(255, 0, 128, 0.2);
+  color: var(--app-color-primary) !important;
+}
+
+html.cyberpunk .refresh-btn .el-icon {
+  color: var(--app-color-primary) !important;
 }
 
 html.cyberpunk .monitor-table :deep(.el-table__header th) {
@@ -475,6 +509,14 @@ html.glassmorphism .request-list {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+html.glassmorphism .monitor-table :deep(.el-loading-mask) {
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+html.glassmorphism .monitor-table :deep(.el-loading-spinner .circular) {
+  stroke: var(--app-color-primary);
 }
 
 html.glassmorphism .toolbar {
@@ -574,6 +616,14 @@ html.light:not(.cyberpunk):not(.dark) .request-list {
   box-shadow: none;
 }
 
+html.light:not(.cyberpunk):not(.dark) .monitor-table :deep(.el-loading-mask) {
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+html.light:not(.cyberpunk):not(.dark) .monitor-table :deep(.el-loading-spinner .circular) {
+  stroke: var(--app-color-primary);
+}
+
 html.light:not(.cyberpunk):not(.dark) .toolbar {
   border-bottom: 1px solid var(--app-border-default);
 }
@@ -662,6 +712,109 @@ html.light:not(.cyberpunk):not(.dark) .status-tag.el-tag--warning {
 html.light:not(.cyberpunk):not(.dark) .status-tag.el-tag--info {
   background: var(--app-bg-hover) !important;
   border: 1px solid var(--app-border-default) !important;
+  color: var(--app-text-secondary) !important;
+}
+
+/* ========== 暗色主题 (html.dark) ========== */
+html.dark .refresh-btn {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 212, 255, 0.1));
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  color: var(--app-color-primary) !important;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+html.dark .refresh-btn:hover {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(0, 212, 255, 0.15));
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+  color: var(--app-color-primary) !important;
+}
+
+html.dark .refresh-btn .el-icon {
+  color: var(--app-color-primary) !important;
+}
+
+html.dark .request-list {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+}
+
+html.dark .monitor-table :deep(.el-loading-mask) {
+  background-color: rgba(18, 18, 26, 0.85);
+}
+
+html.dark .monitor-table :deep(.el-loading-spinner .circular) {
+  stroke: var(--app-color-primary);
+}
+
+html.dark .monitor-table :deep(.el-loading-spinner .el-loading-text) {
+  color: var(--app-color-primary);
+}
+
+html.dark .toolbar {
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.dark .search-input :deep(.el-input__wrapper) {
+  background: var(--app-bg-hover);
+  border: 1px solid var(--app-border-default);
+}
+
+html.dark .search-input :deep(.el-input__wrapper:focus-within) {
+  border-color: var(--app-color-primary);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+}
+
+html.dark .monitor-table :deep(.el-table__header th) {
+  background: var(--app-bg-elevated);
+  border-bottom: 1px solid var(--app-border-default);
+  color: var(--app-text-secondary);
+}
+
+html.dark .monitor-table :deep(.el-table__row td) {
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+html.dark .monitor-table :deep(.el-table__row.el-table__row--striped) {
+  background: var(--app-bg-hover);
+}
+
+html.dark .monitor-table :deep(.el-table__row:hover) {
+  background: rgba(0, 212, 255, 0.08) !important;
+}
+
+html.dark .tokens-text,
+html.dark .cost-text {
+  text-shadow: none;
+}
+
+html.dark .provider-tag {
+  background: rgba(0, 212, 255, 0.15) !important;
+  border: 1px solid rgba(0, 212, 255, 0.4) !important;
+  color: var(--app-color-primary) !important;
+}
+
+html.dark .status-tag.el-tag--success {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
+  color: var(--app-color-success) !important;
+}
+
+html.dark .status-tag.el-tag--danger {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  color: var(--app-color-danger) !important;
+}
+
+html.dark .status-tag.el-tag--warning {
+  background: rgba(245, 158, 11, 0.15) !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+  color: var(--app-color-warning) !important;
+}
+
+html.dark .status-tag.el-tag--info {
+  background: rgba(136, 136, 136, 0.15) !important;
+  border: 1px solid rgba(136, 136, 136, 0.4) !important;
   color: var(--app-text-secondary) !important;
 }
 </style>

@@ -313,7 +313,7 @@ onMounted(() => {
         v-model="dialogVisible"
         :title="isEditing ? '编辑模型' : '添加模型'"
         width="500px"
-        :close-on-click-modal="false"
+        :close-on-click-modal="true"
         append-to=".app-main"
         align-center
         @closed="handleDialogClose"

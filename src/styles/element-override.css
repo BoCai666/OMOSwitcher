@@ -948,6 +948,41 @@ html.glassmorphism .el-overlay {
   backdrop-filter: blur(4px);
 }
 
+/* 明色主题 - Dialog 弹窗样式 */
+html.light:not(.cyberpunk):not(.dark) .el-dialog {
+  background-color: #ffffff;
+  border: 1px solid var(--app-color-primary);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
+              0 0 0 1px rgba(0, 168, 232, 0.1);
+  border-radius: var(--app-radius-lg);
+}
+
+html.light:not(.cyberpunk):not(.dark) .el-dialog__header {
+  border-bottom: 1px solid rgba(0, 168, 232, 0.15);
+}
+
+html.light:not(.cyberpunk):not(.dark) .el-dialog__title {
+  color: var(--app-color-primary);
+  font-weight: 600;
+}
+
+html.light:not(.cyberpunk):not(.dark) .el-dialog__headerbtn .el-dialog__close {
+  color: var(--app-text-secondary);
+  transition: all 0.2s ease;
+}
+
+html.light:not(.cyberpunk):not(.dark) .el-dialog__headerbtn:hover .el-dialog__close {
+  color: var(--app-color-primary);
+}
+
+html.light:not(.cyberpunk):not(.dark) .el-dialog__body {
+  color: var(--app-text-primary);
+}
+
+html.light:not(.cyberpunk):not(.dark) .el-dialog__footer {
+  border-top: 1px solid rgba(0, 168, 232, 0.15);
+}
+
 /* 明色主题 - 遮罩层 */
 html.light:not(.cyberpunk):not(.dark) .el-overlay {
   position: absolute;
@@ -958,6 +993,124 @@ html.light:not(.cyberpunk):not(.dark) .el-overlay {
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* ==================== Switch 组件主题适配 ==================== */
+
+/* 默认开关关闭状态 */
+.glass-switch .el-switch__core {
+  border: 2px solid #6b7280 !important;
+  background: #ffffff !important;
+}
+
+.glass-switch .el-switch__action {
+  background: #00a8e8 !important;
+}
+
+.glass-switch.is-checked .el-switch__core {
+  background: #00a8e8 !important;
+  border-color: #00a8e8 !important;
+}
+
+.glass-switch.is-checked .el-switch__action {
+  background: #ffffff !important;
+}
+
+/* Switch 文字颜色 */
+.glass-switch .el-switch__label {
+  color: var(--app-text-secondary);
+}
+
+.glass-switch .el-switch__label.is-active {
+  color: var(--app-color-primary);
+}
+
+/* 明色主题 - Switch */
+html.light:not(.cyberpunk):not(.dark) .glass-switch .el-switch__core {
+  border: 2px solid rgba(0, 168, 232, 0.4) !important;
+  background: #ffffff !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .glass-switch .el-switch__action {
+  background: #00a8e8 !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .glass-switch.is-checked .el-switch__core {
+  background: #00a8e8 !important;
+  border-color: #00a8e8 !important;
+}
+
+html.light:not(.cyberpunk):not(.dark) .glass-switch.is-checked .el-switch__action {
+  background: #ffffff !important;
+}
+
+/* 明色主题 - Switch 文字颜色 */
+html.light:not(.cyberpunk):not(.dark) .glass-switch .el-switch__label {
+  color: #606266;
+}
+
+html.light:not(.cyberpunk):not(.dark) .glass-switch .el-switch__label.is-active {
+  color: #00a8e8;
+}
+
+/* 暗色主题 - Switch */
+html.dark:not(.cyberpunk) .glass-switch .el-switch__core {
+  border: 2px solid rgba(0, 212, 255, 0.5) !important;
+  background: rgba(26, 26, 46, 0.9) !important;
+}
+
+html.dark:not(.cyberpunk) .glass-switch .el-switch__action {
+  background: rgba(0, 212, 255, 0.8) !important;
+}
+
+html.dark:not(.cyberpunk) .glass-switch.is-checked .el-switch__core {
+  background: rgba(0, 245, 160, 0.2) !important;
+  border-color: rgba(0, 245, 160, 0.5) !important;
+}
+
+html.dark:not(.cyberpunk) .glass-switch.is-checked .el-switch__action {
+  background: rgba(0, 245, 160, 0.9) !important;
+}
+
+/* 赛博朋克主题 - Switch */
+html.cyberpunk .glass-switch .el-switch__core {
+  border: 2px solid rgba(0, 255, 255, 0.5) !important;
+  background: rgba(26, 26, 46, 0.9) !important;
+}
+
+html.cyberpunk .glass-switch .el-switch__action {
+  background: rgba(0, 255, 255, 0.8) !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
+html.cyberpunk .glass-switch.is-checked .el-switch__core {
+  background: rgba(0, 255, 136, 0.25) !important;
+  border-color: rgba(0, 255, 136, 0.5) !important;
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+}
+
+html.cyberpunk .glass-switch.is-checked .el-switch__action {
+  background: rgba(0, 255, 136, 0.9) !important;
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.6);
+}
+
+/* 玻璃拟态主题 - Switch */
+html.glassmorphism .glass-switch .el-switch__core {
+  border: 2px solid rgba(0, 168, 232, 0.4) !important;
+  background: #ffffff !important;
+}
+
+html.glassmorphism .glass-switch .el-switch__action {
+  background: #00a8e8 !important;
+}
+
+html.glassmorphism .glass-switch.is-checked .el-switch__core {
+  background: #00a8e8 !important;
+  border-color: #00a8e8 !important;
+}
+
+html.glassmorphism .glass-switch.is-checked .el-switch__action {
+  background: #ffffff !important;
 }
 
 /* ==================== Drawer 组件 ==================== */
