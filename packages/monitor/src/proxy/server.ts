@@ -375,22 +375,10 @@ export class ProxyServer extends EventEmitter {
 
   /**
    * 标准化提供商名称
+   * 直接返回配置文件中的 provider 值（小写）
    */
   private normalizeProvider(provider: string): string {
-    const providerLower = provider.toLowerCase();
-    
-    // 已知的提供商直接映射
-    const providerMap: Record<string, string> = {
-      'openai': 'openai',
-      'anthropic': 'anthropic',
-      'groq': 'openai',
-      'openrouter': 'openai',
-      'kimi': 'openai',
-      'deepseek': 'openai',
-      'volces': 'openai',
-    };
-    
-    return providerMap[providerLower] || 'openai';
+    return provider.toLowerCase();
   }
 
   private isLLMRequest(host: string): boolean {

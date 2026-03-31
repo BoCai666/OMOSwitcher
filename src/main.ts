@@ -3,7 +3,12 @@ import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
+// Element Plus 样式异步加载，不阻塞渲染
 import 'element-plus/dist/index.css'
+
+import App from './App.vue'
+import router from './router'
+import { globalErrorHandler, setupGlobalErrorHandling } from './utils/errorHandler'
 
 // 设计系统样式引入（顺序重要）
 import '@/styles/variables.css'
@@ -27,10 +32,6 @@ import '@/styles/global.css'
 // 主题初始化 - 必须在 CSS 加载后、应用挂载前导入
 // 这会触发 useTheme.ts 中的 IIFE，立即设置 html 元素的 light/dark class
 import '@/composables/useTheme'
-
-import App from './App.vue'
-import router from './router'
-import { globalErrorHandler, setupGlobalErrorHandling } from './utils/errorHandler'
 
 // 设置全局错误处理（捕获未处理的 Promise 拒绝和全局错误）
 setupGlobalErrorHandling()
@@ -66,3 +67,13 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 
 // 挂载应用
 app.mount('#app')
+
+// 立即移除预加载动画
+const preloadEl = document.getElementById('preload-loading')
+if (preloadEl) {
+  preloadEl.style.opacity = '0'
+  preloadEl.style.transition = 'opacity 0.3s ease'
+  setTimeout(() => {
+    preloadEl.remove()
+  }, 300)
+}

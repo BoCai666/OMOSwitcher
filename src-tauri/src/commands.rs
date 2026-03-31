@@ -66,6 +66,18 @@ fn get_settings_path() -> Result<PathBuf, String> {
     Ok(get_omoswitcher_dir()?.join("settings.json"))
 }
 
+/// 获取 Monitor CA 证书文件路径
+/// ~/.config/omoswitcher/monitor/certs/ca.crt
+fn get_ca_cert_path() -> Result<PathBuf, String> {
+    Ok(get_omoswitcher_dir()?.join("monitor").join("certs").join("ca.crt"))
+}
+
+/// 获取 Monitor 配置文件路径
+/// ~/.config/omoswitcher/monitor/config.jsonc
+fn get_monitor_config_path() -> Result<PathBuf, String> {
+    Ok(get_omoswitcher_dir()?.join("monitor").join("config.jsonc"))
+}
+
 // Monitor 端口配置结构
 #[derive(Debug, Deserialize, Default)]
 struct MonitorPorts {
@@ -74,8 +86,8 @@ struct MonitorPorts {
 }
 
 #[derive(Debug, Deserialize, Default)]
-struct AppSettings {
-    monitor_ports: Option<MonitorPorts>,
+struct MonitorConfig {
+    ports: Option<MonitorPorts>,
 }
 
 /// 读取 Monitor 端口配置
@@ -84,12 +96,14 @@ pub fn get_monitor_ports() -> (u16, u16) {
     // 默认端口
     let default_ports = (7100, 7101);
     
-    // 尝试读取 settings.json
-    if let Ok(path) = get_settings_path() {
+    // 尝试读取 monitor/config.jsonc
+    if let Ok(path) = get_monitor_config_path() {
         if path.exists() {
             if let Ok(content) = fs::read_to_string(&path) {
-                if let Ok(settings) = serde_json::from_str::<AppSettings>(&content) {
-                    if let Some(ports) = settings.monitor_ports {
+                // 移除 JSONC 注释（简单实现：移除 // 和 /* */ 注释）
+                let json_content = remove_jsonc_comments(&content);
+                if let Ok(config) = serde_json::from_str::<MonitorConfig>(&json_content) {
+                    if let Some(ports) = config.ports {
                         return (ports.web, ports.proxy);
                     }
                 }
@@ -98,6 +112,64 @@ pub fn get_monitor_ports() -> (u16, u16) {
     }
     
     default_ports
+}
+
+/// 移除 JSONC 注释（简单实现）
+fn remove_jsonc_comments(input: &str) -> String {
+    let mut result = String::new();
+    let chars: Vec<char> = input.chars().collect();
+    let mut i = 0;
+    let mut in_string = false;
+    
+    while i < chars.len() {
+        let c = chars[i];
+        
+        // 处理字符串内的内容
+        if in_string {
+            result.push(c);
+            if c == '\\' && i + 1 < chars.len() {
+                i += 1;
+                result.push(chars[i]);
+            } else if c == '"' {
+                in_string = false;
+            }
+            i += 1;
+            continue;
+        }
+        
+        // 检查是否进入字符串
+        if c == '"' {
+            in_string = true;
+            result.push(c);
+            i += 1;
+            continue;
+        }
+        
+        // 检查行注释 //
+        if c == '/' && i + 1 < chars.len() && chars[i + 1] == '/' {
+            // 跳过直到行尾
+            while i < chars.len() && chars[i] != '\n' {
+                i += 1;
+            }
+            continue;
+        }
+        
+        // 检查块注释 /* */
+        if c == '/' && i + 1 < chars.len() && chars[i + 1] == '*' {
+            i += 2;
+            // 跳过直到 */
+            while i + 1 < chars.len() && !(chars[i] == '*' && chars[i + 1] == '/') {
+                i += 1;
+            }
+            i += 2; // 跳过 */
+            continue;
+        }
+        
+        result.push(c);
+        i += 1;
+    }
+    
+    result
 }
 
 /// 读取应用设置（异步）
@@ -487,10 +559,14 @@ pub fn kill_port_process(port: u16) -> Result<bool, String> {
 
     #[cfg(target_os = "windows")]
     {
+        // CREATE_NO_WINDOW: 不创建控制台窗口
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        
         // Windows: 使用 netstat + taskkill
         // 1. 查找占用端口的 PID
         let output = Command::new("cmd")
             .args(["/C", &format!("netstat -ano | findstr :{}", port)])
+            .creation_flags(CREATE_NO_WINDOW)
             .output()
             .map_err(|e| format!("执行 netstat 失败: {}", e))?;
 
@@ -512,6 +588,7 @@ pub fn kill_port_process(port: u16) -> Result<bool, String> {
                         // 2. 终止进程
                         let kill_result = Command::new("taskkill")
                             .args(["/F", "/PID", &pid.to_string()])
+                            .creation_flags(CREATE_NO_WINDOW)
                             .output();
 
                         if let Ok(result) = kill_result {
@@ -708,4 +785,25 @@ pub fn get_monitor_status() -> Result<MonitorStatus, String> {
         is_running: process.is_some(),
         port: web_port,
     })
+}
+
+/// 获取默认 CA 证书路径
+#[tauri::command]
+pub fn get_default_ca_cert_path() -> Result<String, String> {
+    let path = get_ca_cert_path()?;
+    Ok(path.to_string_lossy().to_string())
+}
+
+/// 检查 CA 证书文件是否存在
+#[tauri::command]
+pub fn check_ca_cert_exists() -> Result<bool, String> {
+    let path = get_ca_cert_path()?;
+    Ok(path.exists())
+}
+
+/// 获取 Monitor 端口配置
+#[tauri::command]
+pub fn get_monitor_ports_config() -> Result<(u16, u16), String> {
+    let (web, proxy) = get_monitor_ports();
+    Ok((web, proxy))
 }

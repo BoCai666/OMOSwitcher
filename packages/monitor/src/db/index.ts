@@ -1,9 +1,9 @@
 import initSqlJs, { Database as SqlJsDatabase, SqlJsStatic } from 'sql.js';
 import fs from 'fs/promises';
 import path from 'path';
-import os from 'os';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import { MONITOR_ROOT, DATABASE_FILE } from '../paths.js';
 
 // 使用 createRequire 来加载 WASM 文件（pkg 兼容）
 const require = createRequire(import.meta.url);
@@ -12,12 +12,6 @@ const require = createRequire(import.meta.url);
 const pkgDirname = typeof __dirname !== 'undefined' 
   ? __dirname 
   : path.dirname(fileURLToPath(import.meta.url));
-
-// 用户配置目录
-const USER_CONFIG_DIR = path.join(os.homedir(), '.config', 'omoswitcher');
-
-// 默认数据库路径（用户配置目录下）
-const DEFAULT_DB_PATH = path.join(USER_CONFIG_DIR, 'monitor.db');
 
 /**
  * 获取 WASM 文件路径
@@ -52,7 +46,7 @@ function getDatabasePath(): string {
   if (process.env.SQLITE_PATH) {
     return process.env.SQLITE_PATH;
   }
-  return DEFAULT_DB_PATH;
+  return DATABASE_FILE;
 }
 
 /**

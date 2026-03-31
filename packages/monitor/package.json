@@ -12,7 +12,7 @@
     "start": "node dist/index.js",
     "dev": "node --watch dist/index.js",
     "clean": "node -e \"fs.rmSync('dist',{recursive:true,force:true})\"",
-    "pkg": "pkg . --targets node18-win-x64 --output dist/monitor.exe --compress GZip"
+    "pkg": "pkg . --targets node18-win-x64 --output dist/monitor.exe --compress GZip --config package.json"
   },
   "keywords": [
     "llm",
@@ -49,6 +49,8 @@
       "dist/db/migrations/**/*",
       "dist/wasm/**/*"
     ],
-    "outputPath": "dist"
+    "outputPath": "dist",
+    "targets": ["node18-win-x64"],
+    "options": ["no_bytecode", "public_packages"]
   }
 }

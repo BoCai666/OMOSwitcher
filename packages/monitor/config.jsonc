@@ -1,5 +1,6 @@
 // OpenCode Monitor 配置文件
 // 支持 JSONC 格式（带注释的 JSON）
+
 {
   // 域名配置：需要监控的 API 域名列表
   "domains": [
@@ -47,6 +48,7 @@
       "enabled": true
     }
   ],
+
   // 定价配置：各模型的输入输出定价（美元 per 1M tokens）
   "pricing": {
     // 匹配策略：'prefix'（前缀匹配）或 'exact'（精确匹配）
@@ -128,27 +130,12 @@
       }
     ]
   },
+
   // 端口配置：各服务监听的端口
   "ports": {
     // Web API 端口（Tauri 前端调用）
     "web": 7100,
     // 代理服务端口（拦截 LLM API）
     "proxy": 7101
-  },
-  // 监控配置
-  "monitor": {
-    // 数据刷新间隔（毫秒）
-    "refreshInterval": 3000,
-    // 请求列表中保留的最大请求数
-    "maxRequestsInList": 100
-  },
-  // 星空特效配置
-  "nebula": {
-    // 主题颜色：'blue' (深蓝), 'purple' (紫黑), 'green' (绿黑), 'gold' (金橙)
-    // 支持通过页面右下角主题切换按钮动态切换
-    // 用户选择会保存到 localStorage，优先级高于此配置
-    "theme": "blue",
-    // 星星数量
-    "starCount": 150
   }
 }

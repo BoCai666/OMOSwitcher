@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 import { fileURLToPath } from 'url';
 import logger from './logger.js';
+import { MONITOR_ROOT, CONFIG_FILE } from './paths.js';
 
 // pkg 环境中 __dirname 和 __filename 已被注入，使用不同的变量名
 const pkgFilename = typeof __filename !== 'undefined' 
@@ -18,10 +18,6 @@ const isPkgEnvironment = typeof (process as any).pkg !== 'undefined' ||
                          pkgFilename.includes('snapshot') ||
                          pkgDirname.includes('snapshot');
 
-// 用户配置目录
-const USER_CONFIG_DIR = path.join(os.homedir(), '.config', 'omoswitcher');
-const USER_CONFIG_FILE = path.join(USER_CONFIG_DIR, 'monitor-config.jsonc');
-
 // 配置变更回调类型
 export type ConfigChangeCallback = (key: string, value: any, oldValue: any) => void;
 
@@ -29,10 +25,13 @@ export type ConfigChangeCallback = (key: string, value: any, oldValue: any) => v
 const DEFAULT_CONFIG = {
   domains: [
     { domain: "api.openai.com", provider: "OpenAI", enabled: true },
+    { domain: "qianfan.baidubce.com", provider: "qianfan", enabled: true },
     { domain: "api.anthropic.com", provider: "Anthropic", enabled: true },
-    { domain: "api.groq.com", provider: "Groq", enabled: true },
-    { domain: "openrouter.ai", provider: "OpenRouter", enabled: true },
-    { domain: "api.kimi.com", provider: "Kimi", enabled: true }
+    { domain: "api.kimi.com", provider: "kimi", enabled: true },
+    { domain: "ark.cn-beijing.volces.com", provider: "volces", enabled: true },
+    { domain: "cloud.infini-ai.com", provider: "infini", enabled: true },
+    { domain: "api.minimaxi.com", provider: "minimax", enabled: true },
+    { domain: "modelservice.jdcloud.com", provider: "jdcloud", enabled: true }
   ],
   pricing: {
     matchStrategy: "prefix",
@@ -44,12 +43,16 @@ const DEFAULT_CONFIG = {
       { model: "gpt-4o-mini", input: 0.15, output: 0.6 },
       { model: "claude-3-opus", input: 15, output: 75 },
       { model: "claude-3-sonnet", input: 3, output: 15 },
-      { model: "kimi", input: 1, output: 3 }
+      { model: "doubao", input: 0.1, output: 0.2 },
+      { model: "kimi", input: 1, output: 3 },
+      { model: "kimi-k2.5", input: 0.6, output: 3 },
+      { model: "minimax-m2.5", input: 0.3, output: 1.2 },
+      { model: "glm-4.7", input: 0.6, output: 2.2 },
+      { model: "glm-5", input: 0.5, output: 2.25 },
+      { model: "doubao-seed-2.0-code", input: 0.2, output: 1 }
     ]
   },
-  ports: { web: 3000, proxy: 8080 },
-  monitor: { refreshInterval: 3000, maxRequestsInList: 100 },
-  nebula: { theme: "blue", starCount: 150 }
+  ports: { web: 7100, proxy: 7101 }
 };
 
 /**
@@ -74,12 +77,12 @@ export class ConfigManager {
     } else {
       // pkg 打包环境：只使用用户配置目录
       if (isPkgEnvironment) {
-        this.configPath = USER_CONFIG_FILE;
+        this.configPath = CONFIG_FILE;
         logger.debug(`[ConfigManager] pkg 环境，使用用户配置目录: ${this.configPath}`);
       } else {
         // 开发环境：按优先级查找
         const possiblePaths = [
-          USER_CONFIG_FILE,                                    // 用户配置目录
+          CONFIG_FILE,                                           // 用户配置目录
           path.resolve(pkgDirname, '..', 'config.jsonc'),      // 项目根目录
           path.resolve(process.cwd(), 'config.jsonc'),         // 当前工作目录
         ];
@@ -91,7 +94,7 @@ export class ConfigManager {
           this.configPath = existingPath;
         } else {
           // 没有找到配置文件，使用用户配置目录（会自动创建）
-          this.configPath = USER_CONFIG_FILE;
+          this.configPath = CONFIG_FILE;
         }
         
         logger.debug(`[ConfigManager] 开发环境，配置文件路径: ${this.configPath}`);
@@ -193,8 +196,16 @@ export class ConfigManager {
   // 域名配置：需要监控的 API 域名列表
   "domains": [
     {
+      // 域名（主机名）
       "domain": "api.openai.com",
+      // 服务商名称
       "provider": "OpenAI",
+      // 是否启用监控
+      "enabled": true
+    },
+    {
+      "domain": "qianfan.baidubce.com",
+      "provider": "qianfan",
       "enabled": true
     },
     {
@@ -203,29 +214,44 @@ export class ConfigManager {
       "enabled": true
     },
     {
-      "domain": "api.groq.com",
-      "provider": "Groq",
-      "enabled": true
-    },
-    {
-      "domain": "openrouter.ai",
-      "provider": "OpenRouter",
-      "enabled": true
-    },
-    {
       "domain": "api.kimi.com",
-      "provider": "Kimi",
+      "provider": "kimi",
+      "enabled": true
+    },
+    {
+      "domain": "ark.cn-beijing.volces.com",
+      "provider": "volces",
+      "enabled": true
+    },
+    {
+      "domain": "cloud.infini-ai.com",
+      "provider": "infini",
+      "enabled": true
+    },
+    {
+      "domain": "api.minimaxi.com",
+      "provider": "minimax",
+      "enabled": true
+    },
+    {
+      "domain": "modelservice.jdcloud.com",
+      "provider": "jdcloud",
       "enabled": true
     }
   ],
 
   // 定价配置：各模型的输入输出定价（美元 per 1M tokens）
   "pricing": {
+    // 匹配策略：'prefix'（前缀匹配）或 'exact'（精确匹配）
     "matchStrategy": "prefix",
+    // 模型定价列表
     "models": [
       {
+        // 模型名称（前缀匹配）
         "model": "gpt-4",
+        // 输入定价（美元/1M tokens）
         "input": 30,
+        // 输出定价（美元/1M tokens）
         "output": 60
       },
       {
@@ -259,29 +285,49 @@ export class ConfigManager {
         "output": 15
       },
       {
+        "model": "doubao",
+        "input": 0.1,
+        "output": 0.2
+      },
+      {
         "model": "kimi",
         "input": 1,
         "output": 3
+      },
+      {
+        "model": "kimi-k2.5",
+        "input": 0.6,
+        "output": 3
+      },
+      {
+        "model": "minimax-m2.5",
+        "input": 0.3,
+        "output": 1.2
+      },
+      {
+        "model": "glm-4.7",
+        "input": 0.6,
+        "output": 2.2
+      },
+      {
+        "model": "glm-5",
+        "input": 0.5,
+        "output": 2.25
+      },
+      {
+        "model": "doubao-seed-2.0-code",
+        "input": 0.2,
+        "output": 1
       }
     ]
   },
 
   // 端口配置：各服务监听的端口
   "ports": {
-    "web": 3000,
-    "proxy": 8080
-  },
-
-  // 监控配置
-  "monitor": {
-    "refreshInterval": 3000,
-    "maxRequestsInList": 100
-  },
-
-  // 星空特效配置
-  "nebula": {
-    "theme": "blue",
-    "starCount": 150
+    // Web API 端口（Tauri 前端调用）
+    "web": 7100,
+    // 代理服务端口（拦截 LLM API）
+    "proxy": 7101
   }
 }
 `;

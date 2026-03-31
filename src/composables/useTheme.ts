@@ -1,7 +1,7 @@
 // 主题切换 composable
 // 支持 cyberpunk/glassmorphism/system 三种主题模式、主题色切换和特效开关
 
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { ThemeMode, ThemeAccent, ThemeSettings } from '@/types/theme'
 import { DEFAULT_THEME_SETTINGS } from '@/types/theme'
 
@@ -252,13 +252,6 @@ export function useTheme() {
   onUnmounted(() => {
     mediaQueryDark.removeEventListener('change', handleSystemThemeChange)
     mediaQueryMotion.removeEventListener('change', handleReducedMotionChange)
-  })
-
-  // 监听 prefers-reduced-motion 变化，如果当前是禁用状态则保持
-  watch(mediaQueryMotion, (query) => {
-    if (!query.matches && !effectsEnabled.value) {
-      // 系统动画偏好改变且用户之前禁用了特效，保持禁用状态
-    }
   })
 
   return {

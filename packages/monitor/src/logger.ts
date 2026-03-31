@@ -5,11 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
-
-// 日志文件路径：~/.config/omoswitcher/monitor.log
-const LOG_DIR = path.join(os.homedir(), '.config', 'omoswitcher');
-const LOG_FILE = path.join(LOG_DIR, 'monitor.log');
+import { LOGS_DIR, LOG_FILE } from './paths.js';
 
 // 最大日志文件大小（5MB）
 const MAX_LOG_SIZE = 5 * 1024 * 1024;
@@ -21,8 +17,8 @@ const MAX_BACKUP_COUNT = 3;
  */
 function ensureLogDir(): void {
   try {
-    if (!fs.existsSync(LOG_DIR)) {
-      fs.mkdirSync(LOG_DIR, { recursive: true });
+    if (!fs.existsSync(LOGS_DIR)) {
+      fs.mkdirSync(LOGS_DIR, { recursive: true });
     }
   } catch (err) {
     // 如果创建目录失败，仅输出到控制台
@@ -43,22 +39,22 @@ function rotateLogIfNeeded(): void {
     const stats = fs.statSync(LOG_FILE);
     if (stats.size >= MAX_LOG_SIZE) {
       // 删除最旧的备份
-      const oldestBackup = path.join(LOG_DIR, `monitor.log.${MAX_BACKUP_COUNT}`);
+      const oldestBackup = path.join(LOGS_DIR, `monitor.log.${MAX_BACKUP_COUNT}`);
       if (fs.existsSync(oldestBackup)) {
         fs.unlinkSync(oldestBackup);
       }
 
       // 轮转备份文件
       for (let i = MAX_BACKUP_COUNT - 1; i >= 1; i--) {
-        const currentBackup = path.join(LOG_DIR, `monitor.log.${i}`);
-        const nextBackup = path.join(LOG_DIR, `monitor.log.${i + 1}`);
+        const currentBackup = path.join(LOGS_DIR, `monitor.log.${i}`);
+        const nextBackup = path.join(LOGS_DIR, `monitor.log.${i + 1}`);
         if (fs.existsSync(currentBackup)) {
           fs.renameSync(currentBackup, nextBackup);
         }
       }
 
       // 将当前日志文件重命名为 .1
-      fs.renameSync(LOG_FILE, path.join(LOG_DIR, 'monitor.log.1'));
+      fs.renameSync(LOG_FILE, path.join(LOGS_DIR, 'monitor.log.1'));
     }
   } catch (err) {
     console.error('[Logger] 日志轮转失败:', err);

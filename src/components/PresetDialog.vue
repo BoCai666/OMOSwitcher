@@ -51,7 +51,7 @@ const isCurrentPreset = (name: string): boolean => {
     title="预设管理"
     width="500px"
     class="glass-dialog"
-    append-to-body
+    append-to=".app-main"
     align-center
   >
     <!-- 保存新预设 -->

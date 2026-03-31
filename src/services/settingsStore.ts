@@ -286,10 +286,20 @@ export async function setProxyEnabled(enabled: boolean): Promise<void> {
 
 /**
  * 获取 Monitor 端口配置
+ * 从 ~/.config/omoswitcher/monitor/config.jsonc 读取
  */
 export async function getMonitorPorts(): Promise<{ web: number; proxy: number }> {
-  const settings = await readSettings()
-  return settings.monitorPorts
+  try {
+    const invoke = await getTauriInvoke()
+    if (!invoke) {
+      return { web: 7100, proxy: 7101 }
+    }
+    const [web, proxy] = await invoke<[number, number]>('get_monitor_ports_config')
+    return { web, proxy }
+  } catch (error) {
+    console.error('获取 Monitor 端口配置失败:', error)
+    return { web: 7100, proxy: 7101 }
+  }
 }
 
 /**
@@ -315,4 +325,60 @@ export async function getMonitorWebPort(): Promise<number> {
 export async function getMonitorProxyPort(): Promise<number> {
   const ports = await getMonitorPorts()
   return ports.proxy
+}
+
+// ==================== 证书相关函数 ====================
+
+/**
+ * 获取默认 CA 证书路径
+ * ~/.config/omoswitcher/monitor/certs/ca.crt
+ */
+export async function getDefaultCaCertPath(): Promise<string> {
+  try {
+    const invoke = await getTauriInvoke()
+    if (!invoke) {
+      // 返回默认路径
+      const homeDir = await getHomeDir()
+      return `${homeDir}/.config/omoswitcher/monitor/certs/ca.crt`
+    }
+    return await invoke<string>('get_default_ca_cert_path')
+  } catch (error) {
+    console.error('获取默认证书路径失败:', error)
+    // 返回默认路径
+    const homeDir = await getHomeDir()
+    return `${homeDir}/.config/omoswitcher/monitor/certs/ca.crt`
+  }
+}
+
+/**
+ * 检查 CA 证书文件是否存在
+ */
+export async function checkCaCertExists(): Promise<boolean> {
+  try {
+    const invoke = await getTauriInvoke()
+    if (!invoke) {
+      return false
+    }
+    return await invoke<boolean>('check_ca_cert_exists')
+  } catch (error) {
+    console.error('检查证书存在失败:', error)
+    return false
+  }
+}
+
+/**
+ * 获取用户主目录
+ */
+async function getHomeDir(): Promise<string> {
+  try {
+    const invoke = await getTauriInvoke()
+    if (!invoke) {
+      return ''
+    }
+    // 使用 Tauri 的 home_dir API（如果可用）
+    // 否则返回空字符串，让调用方处理
+    return ''
+  } catch {
+    return ''
+  }
 }

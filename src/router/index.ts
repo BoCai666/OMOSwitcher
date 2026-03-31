@@ -11,11 +11,19 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/config',
-    name: 'ModelConfig',
-    component: () => import('@/views/ModelConfig.vue'),
+    path: '/agents',
+    name: 'Agents',
+    component: () => import('@/views/AgentConfig.vue'),
     meta: {
-      title: '模型配置'
+      title: 'Agent 配置'
+    }
+  },
+  {
+    path: '/categories',
+    name: 'Categories',
+    component: () => import('@/views/CategoryConfig.vue'),
+    meta: {
+      title: 'Category 配置'
     }
   },
   {

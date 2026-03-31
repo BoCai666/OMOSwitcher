@@ -11,7 +11,7 @@ import { useTheme } from '@/composables/useTheme'
 const isMaximized = ref(false)
 
 // 主题
-const { isCyberpunk, isGlassmorphism } = useTheme()
+const { isCyberpunk, isGlassmorphism, toggleTheme } = useTheme()
 
 // 动态导入 Tauri API（避免 SSR 问题）
 let appWindow: Awaited<ReturnType<typeof import('@tauri-apps/api/window').getCurrentWindow>> | null = null
@@ -99,7 +99,7 @@ onUnmounted(() => {
         class="theme-btn"
         type="button"
         :title="isCyberpunk ? '切换到玻璃主题' : '切换到赛博朋克主题'"
-        @click.stop
+        @click.stop="toggleTheme"
       >
         <span class="theme-icon-wrapper">
           <!-- 赛博朋克图标 -->

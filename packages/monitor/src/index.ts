@@ -35,13 +35,55 @@ let storage: StorageInterface = memoryStore;
 let dbBackup: DatabaseBackup | null = null;
 let dataCleanup: DataCleanupTask | null = null;
 
+// 全局配置管理器（在 main() 中初始化）
+let configManager: ConfigManager;
+
+// 定价配置接口
+interface PricingModel {
+  model: string;
+  input: number;
+  output: number;
+}
+
+interface PricingConfig {
+  matchStrategy: 'prefix' | 'exact';
+  models: PricingModel[];
+}
+
+/**
+ * 根据模型名称获取定价配置
+ * @param model 模型名称
+ * @returns 定价配置 { input, output } 或 null
+ */
+function getModelPricing(model: string): { input: number; output: number } | null {
+  if (!configManager) return null;
+  
+  const pricing = configManager.get<PricingConfig>('pricing');
+  if (!pricing || !pricing.models) return null;
+  
+  const strategy = pricing.matchStrategy || 'prefix';
+  
+  for (const pricingModel of pricing.models) {
+    if (strategy === 'exact') {
+      if (model === pricingModel.model) {
+        return { input: pricingModel.input, output: pricingModel.output };
+      }
+    } else {
+      // prefix 匹配
+      if (model.startsWith(pricingModel.model) || pricingModel.model.startsWith(model)) {
+        return { input: pricingModel.input, output: pricingModel.output };
+      }
+    }
+  }
+  
+  return null;
+}
+
 // 计算指标
 function calculateMetrics(response: LLMResponse, modelFromRequest?: string, requestBody?: any): LLMMetrics {
   const parsedBody = response.parsedBody;
   const usage = parsedBody?.usage;
   const content = parsedBody?.content || '';
-  
-
   
   // 优先使用 API 返回的 usage 数据
   let promptTokens = usage?.prompt_tokens || 0;
@@ -70,20 +112,25 @@ function calculateMetrics(response: LLMResponse, modelFromRequest?: string, requ
   // 优先使用请求中的 model，其次使用响应中的 model
   const model = modelFromRequest || response.parsedBody?.model || 'unknown';
   
-  // 计算成本 - 支持多种模型（单位：美元/1M tokens）
-  let costPer1M = 1; // 默认成本
-  if (model.includes('gpt-4')) {
-    costPer1M = 30;
-  } else if (model.includes('gpt-3.5')) {
-    costPer1M = 1.5;
-  } else if (model.includes('kimi')) {
-    costPer1M = 1; // Kimi 模型成本
-  } else if (model.includes('doubao') || model.startsWith('ep-')) {
-    costPer1M = 0.1; // 火山引擎豆包模型默认成本
-  }
-  const estimatedCost = totalTokens > 0 ? (totalTokens / 1000000) * costPer1M : 0;
+  // 计算成本 - 从配置文件读取定价
+  let inputCost = 0;
+  let outputCost = 0;
   
-  logger.debug(`[Metrics] Model: ${model}, Tokens: ${totalTokens}, Cost: $${estimatedCost.toFixed(6)}, Usage:`, usage || 'N/A (estimated)');
+  const pricing = getModelPricing(model);
+  if (pricing) {
+    inputCost = (promptTokens / 1000000) * pricing.input;
+    outputCost = (completionTokens / 1000000) * pricing.output;
+  } else {
+    // 未找到定价配置，使用默认成本估算
+    const defaultCostPer1M = 1;
+    inputCost = (promptTokens / 1000000) * defaultCostPer1M;
+    outputCost = (completionTokens / 1000000) * defaultCostPer1M;
+    logger.debug(`[Metrics] No pricing found for model: ${model}, using default $${defaultCostPer1M}/1M tokens`);
+  }
+  
+  const estimatedCost = inputCost + outputCost;
+  
+  logger.debug(`[Metrics] Model: ${model}, Tokens: ${totalTokens} (prompt=${promptTokens}, completion=${completionTokens}), Cost: $${estimatedCost.toFixed(6)}, Usage:`, usage || 'N/A (estimated)');
   
   return {
     id: `metrics-${response.requestId}`,
@@ -133,40 +180,6 @@ function createMcpCall(request: LLMRequest, response?: LLMResponse): MCPCall | n
     traceId: undefined,
     timestamp: Date.now(),
   };
-}
-
-// 显示使用说明
-function showUsageInstructions(caCertPath: string, proxyPort: number, webPort: number): void {
-  logger.info('\n==============================================');
-  logger.info('  OpenCode LLM Monitor - 代理服务器已启动');
-  logger.info('==============================================\n');
-  
-  logger.info('📋 使用说明:\n');
-  
-  logger.info('1. 安装 CA 证书 (仅首次需要):');
-  logger.info(`   证书路径: ${caCertPath}`);
-  logger.info('   - macOS: 双击证书 -> 添加到系统钥匙串 -> 始终信任');
-  logger.info('   - Windows: 双击证书 -> 安装到受信任的根证书颁发机构');
-  logger.info('   - Linux: 复制到 /usr/local/share/ca-certificates/ 并运行 update-ca-certificates\n');
-  
-  logger.info('2. 配置代理环境变量:');
-  logger.info(`   export HTTP_PROXY=http://localhost:${proxyPort}`);
-  logger.info(`   export HTTPS_PROXY=http://localhost:${proxyPort}`);
-  logger.info(`   export http_proxy=http://localhost:${proxyPort}`);
-  logger.info(`   export https_proxy=http://localhost:${proxyPort}\n`);
-  
-  logger.info('   或在命令前临时设置:');
-  logger.info(`   HTTP_PROXY=http://localhost:${proxyPort} opencode --enable-interceptor\n`);
-  
-  logger.info('3. 访问 Web 界面查看监控数据:');
-  logger.info(`   http://localhost:${webPort}\n`);
-  
-  logger.info('4. 启动 OpenCode (在另一个终端):');
-  logger.info('   opencode --enable-interceptor\n');
-  
-  logger.info('==============================================');
-  logger.info('  按 Ctrl+C 停止代理服务器');
-  logger.info('==============================================\n');
 }
 
 // 初始化存储
@@ -239,9 +252,6 @@ async function migrateFromMemory(): Promise<void> {
   
   logger.info(`[Migration] 完成！共迁移 ${migrated} 条记录`);
 }
-
-// 全局配置管理器
-let configManager: ConfigManager;
 
 // 主函数
 async function main() {
@@ -319,10 +329,7 @@ async function main() {
     // 8. 启动 Web 服务器
     startServer();
     
-    // 9. 显示使用说明
-    showUsageInstructions(caCertPath, proxyPort, config.port);
-    
-    // 10. 处理关闭信号
+    // 9. 处理关闭信号
     process.on('SIGINT', async () => {
       logger.info('[Monitor] Shutting down...');
       

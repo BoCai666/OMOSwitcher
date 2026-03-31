@@ -56,8 +56,11 @@ const isDark = computed(() => {
         
         <!-- 内容区域 -->
         <el-main class="app-main">
-          <div class="app-main-content">
-            <slot />
+          <!-- 滚动容器分离出来，遮罩层能覆盖整个 app-main -->
+          <div class="app-main-scroll">
+            <div class="app-main-content">
+              <slot />
+            </div>
           </div>
         </el-main>
       </el-container>
@@ -170,13 +173,25 @@ const isDark = computed(() => {
   right: 20px;
 }
 
-/* 内容区域样式 */
+/* 内容区域样式 - 不滚动，作为遮罩层的定位基准 */
 .app-main {
+  position: relative;
   background-color: var(--app-bg-base);
-  padding: 20px;
-  overflow-y: auto;
+  overflow: visible;
   flex: 1;
+  height: 0; /* flexbox 中让 flex: 1 生效 */
   transition: background-color 0.5s var(--app-easing-smooth);
+}
+
+/* 滚动容器 - 绝对定位铺满 app-main */
+.app-main-scroll {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow-y: auto;
+  padding: 20px;
 }
 
 .app-main-content {
@@ -315,12 +330,25 @@ html.light:not(.cyberpunk):not(.dark) .app-header {
 
 html.light:not(.cyberpunk):not(.dark) .app-main {
   background-color: var(--app-bg-base);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  /* 使用 backdrop-filter 创建 containing block，限制 Drawer 遮罩层范围 */
+  /* blur(0px) 没有实际模糊效果，但能创建与暗色模式相同的 containing block 行为 */
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
 }
 
 html.light:not(.cyberpunk):not(.dark) .app-main-content {
   background: transparent;
+}
+
+/* 明色模式 - 创建独立的层叠上下文，使侧边栏不受遮罩层影响 */
+html.light:not(.cyberpunk):not(.dark) .app-layout-wrapper {
+  isolation: isolate;
+  position: relative;
+}
+
+html.light:not(.cyberpunk):not(.dark) .app-aside {
+  position: relative;
+  z-index: 2100;
 }
 
 /* ==================== 主题切换动画优化 ==================== */

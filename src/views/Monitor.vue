@@ -253,7 +253,7 @@ onUnmounted(() => {
         :close-on-click-modal="false"
         :close-on-press-escape="true"
         destroy-on-close
-        append-to-body
+        append-to=".app-main"
         align-center
         class="detail-dialog"
         @close="closeDetailDialog"

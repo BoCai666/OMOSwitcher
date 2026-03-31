@@ -17,8 +17,8 @@ const pageTitle = computed(() => (route.meta.title as string) || 'OMOSwitcher')
 
 // 应用启动时自动启动监控服务和预加载数据
 onMounted(async () => {
-  // 并行执行所有初始化操作
-  const initPromises = [
+  // 并行执行所有初始化操作（后台执行，不阻塞 UI 显示）
+  Promise.allSettled([
     // 启动监控服务
     (async () => {
       try {
@@ -34,22 +34,19 @@ onMounted(async () => {
         })
       }
     })(),
-    // 预加载模型列表（后台执行，不阻塞）
+    // 预加载模型列表
     listModels().then(() => {
       console.log('[App] Models preloaded')
     }).catch((e) => {
       console.warn('[App] Failed to preload models:', e)
     }),
-    // 预加载预设列表（后台执行，不阻塞）
+    // 预加载预设列表
     listPresets().then(() => {
       console.log('[App] Presets preloaded')
     }).catch((e) => {
       console.warn('[App] Failed to preload presets:', e)
     }),
-  ]
-
-  // 等待所有初始化完成（不阻塞 UI）
-  await Promise.allSettled(initPromises)
+  ])
 })
 
 // 应用关闭时停止监控服务

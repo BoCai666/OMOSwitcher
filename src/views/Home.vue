@@ -4,7 +4,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useConfigStore } from '@/stores/config'
 import { listPresets, loadPreset } from '@/services/presetStore'
-import { getWorkingPath, setWorkingPath, getProxyConfig, setProxyConfig } from '@/services/settingsStore'
+import { getWorkingPath, setWorkingPath, getProxyConfig, setProxyConfig, getDefaultCaCertPath, checkCaCertExists, getMonitorPorts } from '@/services/settingsStore'
 import { AGENT_NAMES, CATEGORY_NAMES, type OhMyOpenCodeConfig } from '@/types'
 import { showSuccess, showError } from '@/utils/errorHandler'
 import { useOpenCode } from '@/composables/useOpenCode'
@@ -21,7 +21,15 @@ const workingPath = ref('')
 
 // 代理配置
 const proxyEnabled = ref(false)
-const proxyCaCertPath = ref('')
+
+// 证书是否存在
+const certExists = ref<boolean | null>(null) // null 表示未检查
+
+// 默认证书路径
+const defaultCertPath = ref('')
+
+// 代理端口
+const proxyPort = ref(7101) // 默认端口
 
 // 加载保存的路径
 async function loadSavedPath() {
@@ -44,14 +52,21 @@ async function savePath() {
 async function loadProxyConfig() {
   const config = await getProxyConfig()
   proxyEnabled.value = config.enabled
-  proxyCaCertPath.value = config.caCertPath || ''
+  // 获取默认证书路径
+  defaultCertPath.value = await getDefaultCaCertPath()
+  // 检查证书是否存在
+  certExists.value = await checkCaCertExists()
+  // 获取代理端口配置
+  const ports = await getMonitorPorts()
+  proxyPort.value = ports.proxy
 }
 
 // 保存代理配置
 async function saveProxyConfig() {
   await setProxyConfig({
     enabled: proxyEnabled.value,
-    caCertPath: proxyCaCertPath.value || undefined
+    // 使用默认证书路径
+    caCertPath: defaultCertPath.value || undefined
   })
 }
 
@@ -71,28 +86,11 @@ async function browseFolder() {
   }
 }
 
-// 打开证书文件选择对话框
-async function browseCertFile() {
-  try {
-    const selected = await open({
-      directory: false,
-      multiple: false,
-      filters: [{ name: '证书文件', extensions: ['crt', 'pem', 'cer'] }],
-      title: '选择 CA 证书文件'
-    })
-    if (selected) {
-      proxyCaCertPath.value = selected as string
-    }
-  } catch (e) {
-    // 用户取消选择，不做处理
-  }
-}
-
 // 启动 OpenCode（带路径和代理配置）
 async function handleLaunchOpenCode() {
   await savePath()
   await saveProxyConfig()
-  launchOpenCode(workingPath.value, proxyEnabled.value, proxyCaCertPath.value)
+  launchOpenCode(workingPath.value, proxyEnabled.value, defaultCertPath.value)
 }
 
 // 监听错误并显示提示
@@ -306,45 +304,48 @@ onMounted(() => {
                  </el-input>
                </div>
                
-               <!-- 代理配置区域 -->
-               <div class="proxy-config-wrapper glass-card-overlay">
-                 <div class="proxy-switch-row">
-                   <el-switch
-                     v-model="proxyEnabled"
-                     active-text="启用监控代理"
-                     inactive-text="直连模式"
-                   />
-                   <el-tag v-if="proxyEnabled" :type="proxyCaCertPath ? 'success' : 'warning'" size="small" effect="dark">
-                     {{ proxyCaCertPath ? '已配置证书' : '未配置证书' }}
-                   </el-tag>
-                 </div>
-                 
-                 <el-collapse-transition>
-                   <div v-if="proxyEnabled" class="proxy-cert-config">
-                     <el-input
-                       v-model="proxyCaCertPath"
-                       placeholder="企业代理 CA 证书路径（可选，用于信任自签名证书）"
-                       clearable
-                       class="cert-input neon-input"
-                     >
-                       <template #prepend>
-                         <el-icon><Key /></el-icon>
-                         <span>CA 证书</span>
-                       </template>
-                       <template #append>
-                         <el-button class="neon-btn-secondary" @click="browseCertFile">
-                           <el-icon><FolderOpened /></el-icon>
-                           浏览
-                         </el-button>
-                       </template>
-                     </el-input>
-                     <div class="proxy-info">
-                       <el-icon><InfoFilled /></el-icon>
-                       <span>启用后，流量将通过监控代理 (localhost:8080)，可监控 LLM API 调用。如遇到企业代理 SSL 错误，请配置 CA 证书。</span>
-                     </div>
-                   </div>
-                 </el-collapse-transition>
-               </div>
+                <!-- 代理配置区域 -->
+                <div class="proxy-config-wrapper glass-card-overlay">
+                  <div class="proxy-switch-row">
+                    <el-switch
+                      v-model="proxyEnabled"
+                      active-text="启用监控代理"
+                      inactive-text="直连模式"
+                    />
+                    <el-tag v-if="proxyEnabled" :type="certExists === true ? 'success' : 'warning'" size="small" effect="dark">
+                      {{ certExists === true ? '证书已就绪' : (certExists === false ? '证书未生成' : '检查中...') }}
+                    </el-tag>
+                  </div>
+                  
+                  <el-collapse-transition>
+                    <div v-if="proxyEnabled" class="proxy-cert-info">
+                      <!-- 证书路径显示 -->
+                      <div class="cert-path-display">
+                        <el-icon><Key /></el-icon>
+                        <span class="cert-label">CA 证书路径：</span>
+                        <code class="cert-path">{{ defaultCertPath }}</code>
+                      </div>
+                      
+                      <!-- 证书不存在提示 -->
+                      <el-alert
+                        v-if="certExists === false"
+                        title="证书尚未生成"
+                        type="warning"
+                        :closable="false"
+                        show-icon
+                      >
+                        <template #default>
+                          首次启用监控代理时会自动生成 CA 证书。若证书生成失败，请检查目录权限或手动启动监控服务。
+                        </template>
+                      </el-alert>
+                      
+                      <div class="proxy-info">
+                        <el-icon><InfoFilled /></el-icon>
+                        <span>启用后，流量将通过监控代理 (localhost:{{ proxyPort }})，可监控 LLM API 调用。</span>
+                      </div>
+                    </div>
+                  </el-collapse-transition>
+                </div>
                
                <el-button 
                  class="action-btn neon-btn-primary" 
@@ -718,14 +719,33 @@ html.glassmorphism .proxy-config-wrapper {
   margin-top: var(--app-spacing-3);
 }
 
-.cert-input {
-  width: 100%;
+.proxy-cert-info {
+  margin-top: var(--app-spacing-3);
 }
 
-.cert-input :deep(.el-input-group__prepend) {
+.cert-path-display {
   display: flex;
   align-items: center;
   gap: var(--app-spacing-2);
+  padding: var(--app-spacing-2) var(--app-spacing-3);
+  background-color: var(--app-bg-hover);
+  border-radius: var(--app-radius-sm);
+  margin-bottom: var(--app-spacing-2);
+}
+
+.cert-label {
+  color: var(--app-text-tertiary);
+  font-size: 13px;
+}
+
+.cert-path {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  color: var(--app-color-primary);
+  background-color: color-mix(in srgb, var(--app-color-primary) 10%, transparent);
+  padding: 2px 6px;
+  border-radius: var(--app-radius-sm);
+  word-break: break-all;
 }
 
 .proxy-info {

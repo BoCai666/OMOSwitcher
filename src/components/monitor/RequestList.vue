@@ -123,7 +123,6 @@ onMounted(() => {
       :data="filteredRequests"
       stripe
       size="small"
-      highlight-current-row
       @row-click="handleRowClick"
       v-loading="store.loading"
       class="monitor-table"
@@ -306,18 +305,6 @@ onMounted(() => {
   background: transparent !important;
 }
 
-/* 选中状态霓虹边框 */
-.monitor-table :deep(.el-table__row.current-row) {
-  background: rgba(0, 212, 255, 0.1) !important;
-  box-shadow:
-    inset 3px 0 0 var(--app-color-primary),
-    0 0 20px rgba(0, 212, 255, 0.2);
-}
-
-.monitor-table :deep(.el-table__row.current-row td) {
-  background: transparent !important;
-}
-
 /* 条纹效果 */
 .monitor-table :deep(.el-table__row.el-table__row--striped) {
   background: var(--app-bg-hover);
@@ -451,14 +438,6 @@ html.cyberpunk .monitor-table :deep(.el-table__row:hover) {
   background: rgba(0, 212, 255, 0.12) !important;
 }
 
-html.cyberpunk .monitor-table :deep(.el-table__row.current-row) {
-  background: rgba(0, 212, 255, 0.18) !important;
-  box-shadow:
-    inset 4px 0 0 var(--app-color-primary),
-    inset -4px 0 0 rgba(255, 0, 128, 0.5),
-    0 0 30px rgba(0, 212, 255, 0.25);
-}
-
 html.cyberpunk .provider-tag {
   background: rgba(0, 212, 255, 0.2) !important;
   border-color: rgba(0, 212, 255, 0.5) !important;
@@ -550,12 +529,7 @@ html.glassmorphism .monitor-table :deep(.el-table__row.el-table__row--striped) {
 }
 
 html.glassmorphism .monitor-table :deep(.el-table__row:hover) {
-  background: rgba(37, 99, 235, 0.05) !important;
-}
-
-html.glassmorphism .monitor-table :deep(.el-table__row.current-row) {
-  background: rgba(37, 99, 235, 0.08) !important;
-  box-shadow: inset 3px 0 0 var(--app-color-primary);
+  background: rgba(37, 99, 235, 0.1) !important;
 }
 
 html.glassmorphism .tokens-text,
@@ -653,12 +627,7 @@ html.light:not(.cyberpunk):not(.dark) .monitor-table :deep(.el-table__row.el-tab
 }
 
 html.light:not(.cyberpunk):not(.dark) .monitor-table :deep(.el-table__row:hover) {
-  background: rgba(0, 168, 232, 0.05) !important;
-}
-
-html.light:not(.cyberpunk):not(.dark) .monitor-table :deep(.el-table__row.current-row) {
-  background: rgba(0, 168, 232, 0.08) !important;
-  box-shadow: inset 3px 0 0 var(--app-color-primary);
+  background: #93c5fd !important;
 }
 
 html.light:not(.cyberpunk):not(.dark) .tokens-text,

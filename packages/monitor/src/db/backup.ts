@@ -1,10 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import os from 'os';
-
-// 用户配置目录
-const USER_CONFIG_DIR = path.join(os.homedir(), '.config', 'omoswitcher');
-const BACKUP_DIR = path.join(USER_CONFIG_DIR, 'backups');
+import { MONITOR_ROOT, BACKUPS_DIR, DATABASE_FILE } from '../paths.js';
 
 /**
  * 数据库备份管理器
@@ -19,9 +15,9 @@ export class DatabaseBackup {
   
   constructor(db: any, dbPath?: string) {
     this.db = db;
-    this.backupDir = BACKUP_DIR;
+    this.backupDir = BACKUPS_DIR;
     this.maxBackups = 7;
-    this.dbPath = dbPath || path.join(USER_CONFIG_DIR, 'monitor.db');
+    this.dbPath = dbPath || DATABASE_FILE;
   }
   
   async initialize(): Promise<void> {
