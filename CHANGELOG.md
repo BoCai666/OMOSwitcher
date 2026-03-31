@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.1] - 2026-04-01
+
+### 新增功能
+
+- **Agent/Category 配置页面** - 独立的配置管理界面
+  - Agent 模型配置
+  - Category 模型配置
+  - 更直观的配置管理体验
+
+### 优化改进
+
+- **UI/UX 优化**
+  - 整体 UI 样式优化
+  - 模型配置交互体验优化
+  - 启动体验优化
+
+### Bug 修复
+
+- 修复 ModelConfig 页面导航空白问题
+- 恢复 ModelConfig 页面功能
+
+---
+
 ## [2.0.0] - 2026-03-30
 
 ### 新增功能
