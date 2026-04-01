@@ -18,8 +18,7 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "build:monitor": "npm run build -w @omoswitcher/monitor",
-    "pkg:monitor": "npm run pkg -w @omoswitcher/monitor",
-    "test:e2e": "playwright test"
+    "pkg:monitor": "npm run pkg -w @omoswitcher/monitor"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",
@@ -30,7 +29,6 @@
     "vue-router": "^4.2.5"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2",
     "@tauri-apps/cli": "^2.0.0",
     "@types/node": "^25.5.0",
     "@vitejs/plugin-vue": "^5.0.0",
