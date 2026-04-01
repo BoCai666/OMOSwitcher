@@ -2,13 +2,24 @@
 // 侧边栏导航组件 - 霓虹科技风格
 // 使用完全自定义样式，不使用 Element Plus 默认样式
 import { useRoute, useRouter } from 'vue-router'
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { Sunny, Moon } from '@element-plus/icons-vue'
 import { useTheme } from '@/composables/useTheme'
 
 const route = useRoute()
 const router = useRouter()
 const { isDark, toggleTheme } = useTheme()
+
+// 控制入场动画是否已播放完成
+const animationReady = ref(false)
+
+// 组件挂载后标记动画已准备好，禁用后续的入场动画
+onMounted(() => {
+  // 等待入场动画完成后禁用动画
+  setTimeout(() => {
+    animationReady.value = true
+  }, 300) // 最长动画延迟是 0.25s，加一点缓冲
+})
 
 // 导航菜单项配置
 const menuItems = [
@@ -40,7 +51,7 @@ const handleSelect = (index: string) => {
 
     <!-- 菜单区域 -->
     <nav class="sidebar-nav">
-      <ul class="menu-list">
+      <ul class="menu-list" :class="{ 'animation-done': animationReady }">
         <li
           v-for="item in menuItems"
           :key="item.index"
@@ -214,7 +225,7 @@ const handleSelect = (index: string) => {
   transition: var(--sidebar-transition);
 }
 
-/* 菜单项进入动画 */
+/* 菜单项进入动画 - 只在首次加载时播放 */
 @keyframes slideIn {
   from {
     opacity: 0;
@@ -226,15 +237,16 @@ const handleSelect = (index: string) => {
   }
 }
 
-.menu-item {
+/* 仅在动画未完成时应用入场动画 */
+.menu-list:not(.animation-done) .menu-item {
   animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) backwards;
 }
 
-.menu-item:nth-child(1) { animation-delay: 0.05s; }
-.menu-item:nth-child(2) { animation-delay: 0.1s; }
-.menu-item:nth-child(3) { animation-delay: 0.15s; }
-.menu-item:nth-child(4) { animation-delay: 0.2s; }
-.menu-item:nth-child(5) { animation-delay: 0.25s; }
+.menu-list:not(.animation-done) .menu-item:nth-child(1) { animation-delay: 0.05s; }
+.menu-list:not(.animation-done) .menu-item:nth-child(2) { animation-delay: 0.1s; }
+.menu-list:not(.animation-done) .menu-item:nth-child(3) { animation-delay: 0.15s; }
+.menu-list:not(.animation-done) .menu-item:nth-child(4) { animation-delay: 0.2s; }
+.menu-list:not(.animation-done) .menu-item:nth-child(5) { animation-delay: 0.25s; }
 </style>
 
 <style>
