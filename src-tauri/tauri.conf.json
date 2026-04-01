@@ -33,10 +33,12 @@
         "decorations": false,
         "resizable": true,
         "shadow": true,
-        "width": 800,
+        "width": 1280,
         "transparent": false,
         "devtools": true,
-        "height": 600,
+        "height": 800,
+        "minWidth": 1200,
+        "minHeight": 700,
         "backgroundColor": "#1a1a2e"
       }
     ]

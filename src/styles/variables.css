@@ -72,6 +72,11 @@
   --app-spacing-12: 48px;
   --app-spacing-16: 64px;
 
+  /* ==================== 布局系统 ==================== */
+
+  --app-sidebar-width: 220px;
+  --app-titlebar-height: 36px;
+
   /* ==================== 过渡时间（兼容旧命名）==================== */
 
   --app-transition-fast: 150ms ease;
