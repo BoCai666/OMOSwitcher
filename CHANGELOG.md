@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.2] - 2026-04-01
+
+### 构建优化
+
+- **CI/CD 改进**
+  - 添加 monitor sidecar 自动构建步骤
+  - 完善构建流程，确保发布包包含最新 monitor
+
+- **构建脚本**
+  - 新增 `build:all` 一键打包命令
+  - 新增 `build:monitor:prod` 生产环境构建命令
+  - 区分 monitor 开发版和生产版构建配置
+
+### 资源优化
+
+- **图标文件清理**
+  - 删除不需要的 Windows Store 图标（Square*Logo.png、StoreLogo.png）
+  - 移除不存在的 icon.icns 引用
+  - 精简图标资源约 290KB
+
+### 文档更新
+
+- README 补充 LLM API 监控功能说明
+
+---
+
 ## [2.0.1] - 2026-04-01
 
 ### 新增功能
