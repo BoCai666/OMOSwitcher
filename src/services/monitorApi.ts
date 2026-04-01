@@ -3,6 +3,7 @@
  * 与 Sidecar 监控服务通信
  */
 
+import { getMonitorWebPort } from './settingsStore'
 import type {
   RequestListItem,
   StatsSummary,
@@ -15,6 +16,8 @@ import type {
 
 // 端口缓存
 let cachedPort: number | null = null
+// baseUrl 缓存（避免每次都异步获取）
+let cachedBaseUrl: string | null = null
 
 /**
  * 获取 Monitor Web API 端口
@@ -25,8 +28,6 @@ async function getMonitorPort(): Promise<number> {
   }
   
   try {
-    // 动态导入避免循环依赖
-    const { getMonitorWebPort } = await import('./settingsStore')
     cachedPort = await getMonitorWebPort()
     return cachedPort
   } catch {
@@ -36,11 +37,16 @@ async function getMonitorPort(): Promise<number> {
 }
 
 /**
- * 获取 API 基础 URL
+ * 获取 API 基础 URL（带缓存）
  */
 async function getBaseUrl(): Promise<string> {
+  if (cachedBaseUrl !== null) {
+    return cachedBaseUrl
+  }
+  
   const port = await getMonitorPort()
-  return `http://localhost:${port}/api`
+  cachedBaseUrl = `http://localhost:${port}/api`
+  return cachedBaseUrl
 }
 
 /**
@@ -143,7 +149,7 @@ export const monitorApi = {
       const baseUrl = await getBaseUrl()
       const response = await fetch(`${baseUrl}/health`, {
         method: 'GET',
-        signal: AbortSignal.timeout(3000) // 3秒超时
+        signal: AbortSignal.timeout(1000) // 1秒超时（优化延迟）
       })
       return response.ok
     } catch {
@@ -169,6 +175,7 @@ export const monitorApi = {
    */
   clearPortCache(): void {
     cachedPort = null
+    cachedBaseUrl = null
   },
 
   // ========== SSE 实时推送 ==========

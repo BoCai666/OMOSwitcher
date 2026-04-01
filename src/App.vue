@@ -5,6 +5,7 @@ import { useMonitorStore } from '@/stores/monitor'
 import { listModels } from '@/services/modelStore'
 import { listPresets } from '@/services/presetStore'
 import { ElMessage } from 'element-plus'
+import { invoke } from '@tauri-apps/api/core'
 import AppLayout from '@/components/layout/AppLayout.vue'
 
 const route = useRoute()
@@ -16,6 +17,9 @@ const pageTitle = computed(() => (route.meta.title as string) || 'OMOSwitcher')
 
 // 应用启动时自动启动监控服务和预加载数据
 onMounted(async () => {
+  // 预热 Tauri IPC 调用（减少首次调用延迟）
+  invoke('get_monitor_ports_config').catch(() => {})
+
   // 并行执行所有初始化操作（后台执行，不阻塞 UI 显示）
   Promise.allSettled([
     // 启动监控服务
@@ -61,7 +65,7 @@ onUnmounted(async () => {
 <template>
   <AppLayout :title="pageTitle">
     <router-view v-slot="{ Component }">
-      <transition name="page-fade" mode="out-in">
+      <transition name="page-fade" mode="out-in" :duration="100">
         <component :is="Component" />
       </transition>
     </router-view>
@@ -87,10 +91,10 @@ html, body {
   height: 100%;
 }
 
-/* 页面切换过渡动画 */
+/* 页面切换过渡动画（快速版本） */
 .page-fade-enter-active,
 .page-fade-leave-active {
-  transition: opacity 0.15s ease;
+  transition: opacity 0.08s ease;
 }
 
 .page-fade-enter-from,

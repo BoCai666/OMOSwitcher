@@ -4,7 +4,7 @@
  * 以可视化友好的方式展示大模型请求内容
  */
 import { computed, ref } from 'vue'
-import { User, ChatDotRound, Setting, Document, Tools, VideoPlay, ArrowRight } from '@element-plus/icons-vue'
+import { User, ChatDotRound, Setting, Document, Tools, VideoPlay, ArrowRight, Cpu } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   visible: boolean
@@ -79,16 +79,52 @@ function formatTokens(tokens: number): string {
 const messages = computed(() => {
   const msgs = parsedBody.value?.messages || []
   return msgs.map((msg: any, index: number) => {
-    const content = typeof msg.content === 'string' 
-      ? msg.content 
-      : JSON.stringify(msg.content, null, 2)
+    // 解析 content，支持字符串和数组格式
+    let contentStr = ''
+    let thinkingBlocks: Array<{ type: string; text: string }> = []
+    
+    // 处理 null/undefined
+    if (msg.content === null || msg.content === undefined) {
+      contentStr = ''
+    } else if (typeof msg.content === 'string') {
+      contentStr = msg.content
+    } else if (Array.isArray(msg.content)) {
+      // Anthropic 格式：content 数组可能包含 thinking 和 text 块
+      const textParts: string[] = []
+      for (const block of msg.content) {
+        if (block.type === 'thinking' && block.thinking) {
+          thinkingBlocks.push({ type: 'thinking', text: block.thinking })
+        } else if (block.type === 'text' && block.text) {
+          textParts.push(block.text)
+        } else if (block.type === 'redacted_thinking') {
+          thinkingBlocks.push({ type: 'redacted_thinking', text: '[思考内容已隐藏]' })
+        } else if (block.type && block.content !== undefined) {
+          // 其他类型的块（如 image）
+          textParts.push(`[${block.type}]`)
+        }
+      }
+      contentStr = textParts.join('\n')
+    } else if (typeof msg.content === 'object') {
+      // 单个 content 对象（可能是一个 block）
+      if (msg.content.type === 'thinking' && msg.content.thinking) {
+        thinkingBlocks.push({ type: 'thinking', text: msg.content.thinking })
+      } else if (msg.content.type === 'text' && msg.content.text) {
+        contentStr = msg.content.text
+      } else {
+        contentStr = JSON.stringify(msg.content, null, 2)
+      }
+    } else {
+      contentStr = String(msg.content)
+    }
+    
     return {
       index: index + 1,
       role: msg.role || 'unknown',
-      content,
+      content: contentStr,
+      thinkingBlocks, // 思考块
       name: msg.name,
       toolCallId: msg.tool_call_id,
-      tokens: estimateTokens(content)
+      tokens: estimateTokens(contentStr + thinkingBlocks.map(b => b.text).join(''))
     }
   })
 })
@@ -130,6 +166,68 @@ const parameters = computed(() => {
         type
       })
     }
+  }
+  
+  return params
+})
+
+// 思考参数
+const thinkingParams = computed(() => {
+  const body = parsedBody.value || {}
+  const params: { key: string; value: any; type: string; label: string }[] = []
+  
+  // reasoning_effort (OpenAI o1/o3)
+  if (body.reasoning_effort !== undefined) {
+    const labels: Record<string, string> = { low: '低', medium: '中', high: '高' }
+    params.push({
+      key: 'reasoning_effort',
+      value: body.reasoning_effort,
+      type: 'select',
+      label: labels[body.reasoning_effort] || body.reasoning_effort
+    })
+  }
+  
+  // thinking (Anthropic)
+  if (body.thinking !== undefined) {
+    if (typeof body.thinking === 'object' && body.thinking.type) {
+      params.push({
+        key: 'thinking',
+        value: body.thinking.type,
+        type: 'select',
+        label: body.thinking.type === 'enabled' ? '已启用' : body.thinking.type
+      })
+      if (body.thinking.budget_tokens !== undefined) {
+        params.push({
+          key: 'thinking.budget_tokens',
+          value: body.thinking.budget_tokens,
+          type: 'tokens',
+          label: `${body.thinking.budget_tokens} tokens`
+        })
+      }
+    }
+  }
+  
+  // thinking_budget
+  if (body.thinking_budget !== undefined) {
+    params.push({
+      key: 'thinking_budget',
+      value: body.thinking_budget,
+      type: 'tokens',
+      label: `${body.thinking_budget} tokens`
+    })
+  }
+  
+  // extended_thinking
+  if (body.extended_thinking !== undefined) {
+    const val = typeof body.extended_thinking === 'boolean'
+      ? (body.extended_thinking ? '已启用' : '已禁用')
+      : String(body.extended_thinking)
+    params.push({
+      key: 'extended_thinking',
+      value: body.extended_thinking,
+      type: 'boolean',
+      label: val
+    })
   }
   
   return params
@@ -180,6 +278,11 @@ function formatParamValue(value: any, type: string): string {
 const expandedMessages = ref<number[]>([])
 const expandedToolIndexes = ref<number[]>([])
 const expandedToolCallIndexes = ref<number[]>([])
+
+// 区块折叠状态（默认折叠）
+const messagesCollapsed = ref(true)
+const toolsCollapsed = ref(true)
+const toolCallsCollapsed = ref(true)
 
 // 切换消息展开状态
 function toggleMessage(index: number) {
@@ -239,127 +342,171 @@ function isMessageExpanded(index: number): boolean {
         </div>
       </div>
 
-      <!-- 消息列表 -->
-      <div v-if="messages.length > 0" class="section messages-section">
+      <!-- 思考参数 -->
+      <div v-if="thinkingParams.length > 0" class="section thinking-params-section">
         <div class="section-header">
-          <el-icon class="section-icon"><ChatDotRound /></el-icon>
-          <span class="section-title">消息列表</span>
-          <span class="section-badge">{{ messages.length }}</span>
+          <el-icon class="section-icon thinking-icon"><Cpu /></el-icon>
+          <span class="section-title">思考参数</span>
         </div>
         <div class="section-body">
-          <div class="messages-list">
-            <div
-              v-for="msg in messages"
-              :key="msg.index"
-              class="message-item"
-              :class="[`role-${msg.role}`]"
-            >
-              <div class="message-header" @click="toggleMessage(msg.index)">
-                <div class="message-role">
-                  <el-icon class="role-icon"><component :is="getRoleIcon(msg.role)" /></el-icon>
-                  <el-tag :type="getRoleTagType(msg.role)" size="small" effect="dark">
-                    {{ getRoleDisplayName(msg.role) }}
-                  </el-tag>
-                  <span v-if="msg.name" class="message-name">{{ msg.name }}</span>
-                </div>
-                <div class="message-meta">
-                  <span class="message-tokens">~{{ formatTokens(msg.tokens) }} token</span>
-                  <span class="message-index">#{{ msg.index }}</span>
-                  <el-icon class="expand-icon" :class="{ expanded: isMessageExpanded(msg.index) }">
-                    <ArrowRight />
-                  </el-icon>
-                </div>
-              </div>
-              <Transition name="collapse">
-                <div v-if="isMessageExpanded(msg.index)" class="message-content">
-                  <pre>{{ msg.content }}</pre>
-                </div>
-              </Transition>
+          <div class="params-grid">
+            <div v-for="param in thinkingParams" :key="param.key" class="param-item thinking-param">
+              <span class="param-key">{{ param.key }}</span>
+              <span class="param-value thinking-value">{{ param.label }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 工具定义 -->
-      <div v-if="tools.length > 0" class="section tools-section">
-        <div class="section-header">
-          <el-icon class="section-icon"><Tools /></el-icon>
-          <span class="section-title">工具定义</span>
-          <span class="section-badge">{{ tools.length }}</span>
+      <!-- 消息列表（可折叠） -->
+      <div v-if="messages.length > 0" class="section messages-section collapsible-section">
+        <div class="section-header clickable" @click="messagesCollapsed = !messagesCollapsed">
+          <el-icon class="section-icon"><ChatDotRound /></el-icon>
+          <span class="section-title">消息列表</span>
+          <span class="section-badge">{{ messages.length }}</span>
+          <el-icon class="collapse-arrow" :class="{ expanded: !messagesCollapsed }">
+            <ArrowRight />
+          </el-icon>
         </div>
-        <div class="section-body">
-          <el-collapse v-model="expandedToolIndexes" class="tools-collapse">
-            <el-collapse-item
-              v-for="(tool, index) in tools"
-              :key="index"
-              :name="index"
-              class="tool-item"
-            >
-              <template #title>
-                <div class="tool-title">
-                  <span class="tool-name">{{ tool.function?.name || tool.name || '未命名工具' }}</span>
-                  <el-tag v-if="tool.type" size="small" type="info">{{ tool.type }}</el-tag>
-                </div>
-              </template>
-              <div class="tool-details">
-                <div v-if="tool.function?.description" class="tool-detail-item">
-                  <span class="detail-label">描述</span>
-                  <span class="detail-value">{{ tool.function.description }}</span>
-                </div>
-                <div v-if="tool.function?.parameters" class="tool-detail-item">
-                  <span class="detail-label">参数定义</span>
-                  <div class="code-block">
-                    <pre>{{ JSON.stringify(tool.function.parameters, null, 2) }}</pre>
+        <Transition name="collapse-section">
+          <div v-show="!messagesCollapsed" class="section-body">
+            <div class="messages-list">
+              <div
+                v-for="msg in messages"
+                :key="msg.index"
+                class="message-item"
+                :class="[`role-${msg.role}`]"
+              >
+                <div class="message-header" @click="toggleMessage(msg.index)">
+                  <div class="message-role">
+                    <el-icon class="role-icon"><component :is="getRoleIcon(msg.role)" /></el-icon>
+                    <el-tag :type="getRoleTagType(msg.role)" size="small" effect="dark">
+                      {{ getRoleDisplayName(msg.role) }}
+                    </el-tag>
+                    <span v-if="msg.name" class="message-name">{{ msg.name }}</span>
+                  </div>
+                  <div class="message-meta">
+                    <span class="message-tokens">~{{ formatTokens(msg.tokens) }} token</span>
+                    <span class="message-index">#{{ msg.index }}</span>
+                    <el-icon class="expand-icon" :class="{ expanded: isMessageExpanded(msg.index) }">
+                      <ArrowRight />
+                    </el-icon>
                   </div>
                 </div>
+                <Transition name="collapse">
+                  <div v-if="isMessageExpanded(msg.index)" class="message-content-wrapper">
+                    <!-- 思考块 -->
+                    <div v-if="msg.thinkingBlocks && msg.thinkingBlocks.length > 0" class="thinking-blocks">
+                      <div v-for="(block, blockIndex) in msg.thinkingBlocks" :key="blockIndex" class="thinking-block">
+                        <div class="thinking-header">
+                          <el-icon class="thinking-icon"><Cpu /></el-icon>
+                          <span class="thinking-label">{{ block.type === 'thinking' ? '思考过程' : '隐藏思考' }}</span>
+                        </div>
+                        <pre class="thinking-content">{{ block.text }}</pre>
+                      </div>
+                    </div>
+                    <!-- 消息内容 -->
+                    <div v-if="msg.content" class="message-content">
+                      <pre>{{ msg.content }}</pre>
+                    </div>
+                  </div>
+                </Transition>
               </div>
-            </el-collapse-item>
-          </el-collapse>
-        </div>
+            </div>
+          </div>
+        </Transition>
       </div>
 
-      <!-- 工具调用 -->
-      <div v-if="toolCalls.length > 0" class="section tool-calls-section">
-        <div class="section-header">
+      <!-- 工具调用（可折叠，放在工具定义上方） -->
+      <div v-if="toolCalls.length > 0" class="section tool-calls-section collapsible-section">
+        <div class="section-header clickable" @click="toolCallsCollapsed = !toolCallsCollapsed">
           <el-icon class="section-icon"><Tools /></el-icon>
           <span class="section-title">工具调用</span>
           <span class="section-badge">{{ toolCalls.length }}</span>
+          <el-icon class="collapse-arrow" :class="{ expanded: !toolCallsCollapsed }">
+            <ArrowRight />
+          </el-icon>
         </div>
-        <div class="section-body">
-          <el-collapse v-model="expandedToolCallIndexes" class="tool-calls-collapse">
-            <el-collapse-item
-              v-for="(call, index) in toolCalls"
-              :key="index"
-              :name="index"
-              class="tool-call-item"
-            >
-              <template #title>
-                <div class="tool-call-title">
-                  <span class="call-id">{{ call.id?.slice(0, 8) || '#' + (index + 1) }}</span>
-                  <span class="call-name">{{ call.function?.name || '未知工具' }}</span>
-                </div>
-              </template>
-              <div class="tool-call-details">
-                <div v-if="call.id" class="call-detail-item">
-                  <span class="detail-label">调用 ID</span>
-                  <code class="detail-code">{{ call.id }}</code>
-                </div>
-                <div v-if="call.type" class="call-detail-item">
-                  <span class="detail-label">类型</span>
-                  <el-tag size="small">{{ call.type }}</el-tag>
-                </div>
-                <div v-if="call.function?.arguments" class="call-detail-item">
-                  <span class="detail-label">参数</span>
-                  <div class="code-block">
-                    <pre>{{ typeof call.function.arguments === 'string' 
-                      ? JSON.stringify(JSON.parse(call.function.arguments), null, 2) 
-                      : JSON.stringify(call.function.arguments, null, 2) }}</pre>
+        <Transition name="collapse-section">
+          <div v-show="!toolCallsCollapsed" class="section-body">
+            <el-collapse v-model="expandedToolCallIndexes" class="tool-calls-collapse">
+              <el-collapse-item
+                v-for="(call, index) in toolCalls"
+                :key="index"
+                :name="index"
+                class="tool-call-item"
+              >
+                <template #title>
+                  <div class="tool-call-title">
+                    <span class="call-id">{{ call.id?.slice(0, 8) || '#' + (index + 1) }}</span>
+                    <span class="call-name">{{ call.function?.name || '未知工具' }}</span>
+                  </div>
+                </template>
+                <div class="tool-call-details">
+                  <div v-if="call.id" class="call-detail-item">
+                    <span class="detail-label">调用 ID</span>
+                    <code class="detail-code">{{ call.id }}</code>
+                  </div>
+                  <div v-if="call.type" class="call-detail-item">
+                    <span class="detail-label">类型</span>
+                    <el-tag size="small">{{ call.type }}</el-tag>
+                  </div>
+                  <div v-if="call.function?.arguments" class="call-detail-item">
+                    <span class="detail-label">参数</span>
+                    <div class="code-block">
+                      <pre>{{ typeof call.function.arguments === 'string' 
+                        ? JSON.stringify(JSON.parse(call.function.arguments), null, 2) 
+                        : JSON.stringify(call.function.arguments, null, 2) }}</pre>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </el-collapse-item>
-          </el-collapse>
+              </el-collapse-item>
+            </el-collapse>
+          </div>
+        </Transition>
+      </div>
+
+      <!-- 工具定义（可折叠） -->
+      <div v-if="tools.length > 0" class="section tools-section collapsible-section">
+        <div class="section-header clickable" @click="toolsCollapsed = !toolsCollapsed">
+          <el-icon class="section-icon"><Tools /></el-icon>
+          <span class="section-title">工具定义</span>
+          <span class="section-badge">{{ tools.length }}</span>
+          <el-icon class="collapse-arrow" :class="{ expanded: !toolsCollapsed }">
+            <ArrowRight />
+          </el-icon>
         </div>
+        <Transition name="collapse-section">
+          <div v-show="!toolsCollapsed" class="section-body">
+            <el-collapse v-model="expandedToolIndexes" class="tools-collapse">
+              <el-collapse-item
+                v-for="(tool, index) in tools"
+                :key="index"
+                :name="index"
+                class="tool-item"
+              >
+                <template #title>
+                  <div class="tool-title">
+                    <span class="tool-name">{{ tool.function?.name || tool.name || '未命名工具' }}</span>
+                    <el-tag v-if="tool.type" size="small" type="info">{{ tool.type }}</el-tag>
+                  </div>
+                </template>
+                <div class="tool-details">
+                  <div v-if="tool.function?.description" class="tool-detail-item">
+                    <span class="detail-label">描述</span>
+                    <span class="detail-value">{{ tool.function.description }}</span>
+                  </div>
+                  <div v-if="tool.function?.parameters" class="tool-detail-item">
+                    <span class="detail-label">参数定义</span>
+                    <div class="code-block">
+                      <pre>{{ JSON.stringify(tool.function.parameters, null, 2) }}</pre>
+                    </div>
+                  </div>
+                </div>
+              </el-collapse-item>
+            </el-collapse>
+          </div>
+        </Transition>
       </div>
 
       <!-- 空状态 -->
@@ -392,6 +539,27 @@ function isMessageExpanded(index: number): boolean {
   padding: 14px 18px;
   background: rgba(0, 0, 0, 0.3);
   border-bottom: 1px solid var(--app-border-default);
+}
+
+.section-header.clickable {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.section-header.clickable:hover {
+  background: rgba(0, 212, 255, 0.08);
+}
+
+.collapse-arrow {
+  margin-left: auto;
+  font-size: 14px;
+  color: var(--app-text-tertiary);
+  transition: transform 0.3s ease;
+}
+
+.collapse-arrow.expanded {
+  transform: rotate(90deg);
+  color: var(--app-color-primary);
 }
 
 .section-icon {
@@ -479,6 +647,34 @@ function isMessageExpanded(index: number): boolean {
 .param-value.array {
   font-size: 12px;
   color: var(--app-text-secondary);
+}
+
+/* 思考参数样式 */
+.thinking-params-section .section-header {
+  background: linear-gradient(90deg, rgba(168, 85, 247, 0.15), transparent);
+}
+
+.thinking-params-section .section-icon {
+  color: #a855f7;
+}
+
+.thinking-param {
+  background: rgba(168, 85, 247, 0.08) !important;
+  border-color: rgba(168, 85, 247, 0.2) !important;
+}
+
+.thinking-param:hover {
+  background: rgba(168, 85, 247, 0.12) !important;
+  border-color: rgba(168, 85, 247, 0.3) !important;
+}
+
+.thinking-param .param-key {
+  color: #c084fc;
+}
+
+.thinking-value {
+  color: #e879f9 !important;
+  font-weight: 700;
 }
 
 /* 消息列表 */
@@ -582,6 +778,62 @@ function isMessageExpanded(index: number): boolean {
   padding: 0 16px 16px;
 }
 
+/* 消息内容包装器 */
+.message-content-wrapper {
+  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 思考块样式 */
+.thinking-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.thinking-block {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(139, 92, 246, 0.05));
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.thinking-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(168, 85, 247, 0.15);
+  border-bottom: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.thinking-header .thinking-icon {
+  font-size: 16px;
+  color: #a855f7;
+}
+
+.thinking-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #c084fc;
+  letter-spacing: 0.3px;
+}
+
+.thinking-content {
+  margin: 0;
+  padding: 14px;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--app-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-weight: 450;
+  background: rgba(168, 85, 247, 0.03);
+}
+
 .message-content pre {
   margin: 0;
   padding: 16px;
@@ -615,6 +867,25 @@ function isMessageExpanded(index: number): boolean {
 .collapse-leave-from {
   opacity: 1;
   max-height: 500px;
+}
+
+/* 区块折叠过渡动画 */
+.collapse-section-enter-active,
+.collapse-section-leave-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.collapse-section-enter-from,
+.collapse-section-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+
+.collapse-section-enter-to,
+.collapse-section-leave-from {
+  opacity: 1;
+  max-height: 2000px;
 }
 
 /* 工具折叠面板 */
@@ -1018,8 +1289,89 @@ html.dark .tool-calls-collapse :deep(.el-collapse-item__header:hover) {
 }
 
 html.dark .tools-collapse :deep(.el-collapse-item__arrow),
-html.dark .tool-calls-collapse :deep(.el-collapse-item__arrow) {
+html.tool-calls-collapse :deep(.el-collapse-item__arrow) {
   color: var(--app-color-primary);
+}
+
+/* 暗色主题思考块 */
+html.dark .thinking-block {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.12), rgba(139, 92, 246, 0.06));
+  border-color: rgba(168, 85, 247, 0.35);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.1);
+}
+
+html.dark .thinking-header {
+  background: rgba(168, 85, 247, 0.18);
+}
+
+html.dark .thinking-content {
+  background: rgba(168, 85, 247, 0.05);
+}
+
+html.dark .thinking-param {
+  background: rgba(168, 85, 247, 0.1) !important;
+  border-color: rgba(168, 85, 247, 0.25) !important;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.08);
+}
+
+/* 明色主题思考块 */
+html.light:not(.cyberpunk):not(.dark) .thinking-block {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(139, 92, 246, 0.04));
+  border-color: rgba(168, 85, 247, 0.25);
+}
+
+html.light:not(.cyberpunk):not(.dark) .thinking-header {
+  background: rgba(168, 85, 247, 0.1);
+}
+
+html.light:not(.cyberpunk):not(.dark) .thinking-content {
+  background: rgba(168, 85, 247, 0.02);
+}
+
+html.light:not(.cyberpunk):not(.dark) .thinking-param {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(139, 92, 246, 0.04)) !important;
+  border-color: rgba(168, 85, 247, 0.2) !important;
+}
+
+/* 赛博朋克主题思考块 */
+html.cyberpunk .thinking-block {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.08), rgba(255, 0, 255, 0.04));
+  border-color: rgba(0, 255, 255, 0.4);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.15);
+}
+
+html.cyberpunk .thinking-header {
+  background: linear-gradient(90deg, rgba(0, 255, 255, 0.15), transparent);
+  border-bottom-color: rgba(0, 255, 255, 0.3);
+}
+
+html.cyberpunk .thinking-header .thinking-icon {
+  color: #00ffff;
+  filter: drop-shadow(0 0 5px rgba(0, 255, 255, 0.5));
+}
+
+html.cyberpunk .thinking-label {
+  color: #00ffff;
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+html.cyberpunk .thinking-content {
+  background: rgba(0, 255, 255, 0.02);
+}
+
+html.cyberpunk .thinking-param {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(255, 0, 255, 0.05)) !important;
+  border-color: rgba(0, 255, 255, 0.3) !important;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .thinking-param .param-key {
+  color: #00ffff;
+}
+
+html.cyberpunk .thinking-value {
+  color: #ff00ff !important;
+  text-shadow: 0 0 8px rgba(255, 0, 255, 0.4);
 }
 
 /* 明色主题 (html.light - 非玻璃拟态/非暗色) */

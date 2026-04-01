@@ -95,16 +95,19 @@ function toggleAutoRefresh(enabled: boolean) {
   }
 }
 
-// 页面加载时检查状态
-onMounted(async () => {
-  await store.checkStatus()
-  if (store.isRunning) {
-    await store.refresh()
-    // 默认开启 SSE
-    if (autoRefresh.value) {
-      store.startSSE()
+// 页面加载时检查状态（不阻塞渲染）
+onMounted(() => {
+  // 异步检查状态，不阻塞页面渲染
+  store.checkStatus().then(() => {
+    if (store.isRunning) {
+      // 服务运行中，刷新数据
+      store.refresh()
+      // 默认开启 SSE
+      if (autoRefresh.value) {
+        store.startSSE()
+      }
     }
-  }
+  }).catch(console.error)
 })
 
 // 页面卸载时停止 SSE 连接

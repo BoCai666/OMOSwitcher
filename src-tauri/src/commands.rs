@@ -5,7 +5,7 @@ use std::fs;
 use std::net::TcpStream;
 use std::path::PathBuf;
 use std::process::Command;
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -22,6 +22,9 @@ use std::os::windows::process::CommandExt;
 // 父进程关闭时子进程不受影响
 #[cfg(target_os = "windows")]
 const CREATE_NEW_CONSOLE: u32 = 0x00000010;
+
+// 端口配置缓存（避免每次都读文件）
+static MONITOR_PORTS_CACHE: OnceLock<(u16, u16)> = OnceLock::new();
 
 /// 获取 OpenCode 配置目录路径（主配置文件所在目录）
 /// 使用 ~/.config/opencode 目录（与 OhMyOpenCode 一致）
@@ -84,28 +87,30 @@ struct MonitorConfig {
     ports: Option<MonitorPorts>,
 }
 
-/// 读取 Monitor 端口配置
+/// 读取 Monitor 端口配置（带缓存）
 /// 返回 (web_port, proxy_port)
 pub fn get_monitor_ports() -> (u16, u16) {
-    // 默认端口
-    let default_ports = (7100, 7101);
-    
-    // 尝试读取 monitor/config.jsonc
-    if let Ok(path) = get_monitor_config_path() {
-        if path.exists() {
-            if let Ok(content) = fs::read_to_string(&path) {
-                // 移除 JSONC 注释（简单实现：移除 // 和 /* */ 注释）
-                let json_content = remove_jsonc_comments(&content);
-                if let Ok(config) = serde_json::from_str::<MonitorConfig>(&json_content) {
-                    if let Some(ports) = config.ports {
-                        return (ports.web, ports.proxy);
+    // 使用缓存，避免每次都读文件
+    *MONITOR_PORTS_CACHE.get_or_init(|| {
+        let default_ports = (7100, 7101);
+        
+        // 尝试读取 monitor/config.jsonc
+        if let Ok(path) = get_monitor_config_path() {
+            if path.exists() {
+                if let Ok(content) = fs::read_to_string(&path) {
+                    // 移除 JSONC 注释（简单实现：移除 // 和 /* */ 注释）
+                    let json_content = remove_jsonc_comments(&content);
+                    if let Ok(config) = serde_json::from_str::<MonitorConfig>(&json_content) {
+                        if let Some(ports) = config.ports {
+                            return (ports.web, ports.proxy);
+                        }
                     }
                 }
             }
         }
-    }
-    
-    default_ports
+        
+        default_ports
+    })
 }
 
 /// 移除 JSONC 注释（简单实现）
@@ -752,10 +757,17 @@ pub fn stop_monitor_service() -> Result<(), String> {
 /// 获取 Monitor 服务运行状态
 #[tauri::command]
 pub fn get_monitor_status() -> Result<MonitorStatus, String> {
-    let process = MONITOR_PROCESS.lock().unwrap();
+    // 快速获取状态，减少锁持有时间
+    let is_running = {
+        let process = MONITOR_PROCESS.lock().unwrap();
+        process.is_some()
+    };
+    
+    // 获取端口（使用缓存，很快）
     let (web_port, _) = get_monitor_ports();
+    
     Ok(MonitorStatus {
-        is_running: process.is_some(),
+        is_running,
         port: web_port,
     })
 }

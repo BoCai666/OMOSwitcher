@@ -7,6 +7,7 @@ import { ref, watch } from 'vue'
 import { useMonitorStore } from '@/stores/monitor'
 import { Document, ChatDotRound, Tools, View } from '@element-plus/icons-vue'
 import RequestBodyDetailDialog from './RequestBodyDetailDialog.vue'
+import ResponseBodyDetailDialog from './ResponseBodyDetailDialog.vue'
 
 // 使用状态管理
 const store = useMonitorStore()
@@ -19,6 +20,9 @@ const activeMcpNames = ref<string[]>([])
 
 // 请求体详情弹窗
 const bodyDetailVisible = ref(false)
+
+// 响应体详情弹窗
+const responseDetailVisible = ref(false)
 
 // 格式化 JSON
 function formatJSON(data: unknown): string {
@@ -225,10 +229,21 @@ watch(() => store.selectedRequestId, () => {
           <div class="code-block">
             <div class="code-header">
               <span class="code-title">Response Body</span>
-              <div class="code-dots">
-                <span></span>
-                <span></span>
-                <span></span>
+              <div class="code-actions">
+                <el-button
+                  type="primary"
+                  size="small"
+                  :icon="View"
+                  @click="responseDetailVisible = true"
+                  class="detail-btn"
+                >
+                  详情
+                </el-button>
+                <div class="code-dots">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
               </div>
             </div>
             <div class="code-content">
@@ -313,6 +328,13 @@ watch(() => store.selectedRequestId, () => {
       v-model:visible="bodyDetailVisible"
       :request-body="store.selectedRequest?.parsedBody || store.selectedRequest?.body"
       :actual-tokens="store.selectedMetrics?.totalTokens"
+    />
+
+    <!-- 响应体详情弹窗 -->
+    <ResponseBodyDetailDialog
+      v-model:visible="responseDetailVisible"
+      :response-body="store.selectedResponse?.body"
+      :parsed-body="store.selectedResponse?.parsedBody"
     />
   </div>
 </template>

@@ -15,10 +15,16 @@ export interface LLMRequest {
   headers: Record<string, string>
   body: unknown
   parsedBody?: {
-    messages?: Array<{ role: string; content: string }>
+    messages?: Array<{ role: string; content: string | any[] }>
     prompt?: string
     temperature?: number
     max_tokens?: number
+    // 思考相关字段
+    thinking?: { type: string; budget_tokens?: number } | any
+    thinking_budget?: number
+    reasoning_effort?: 'low' | 'medium' | 'high'
+    reasoning?: any
+    extended_thinking?: any
     [key: string]: unknown
   }
 }
@@ -33,6 +39,7 @@ export interface LLMResponse {
   body: unknown
   parsedBody?: {
     content?: string
+    thinking?: string
     choices?: unknown[]
     usage?: {
       prompt_tokens: number

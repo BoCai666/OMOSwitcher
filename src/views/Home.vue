@@ -374,22 +374,9 @@ onUnmounted(() => {
                   
                   <el-collapse-transition>
                     <div v-if="proxyEnabled" class="proxy-cert-info">
-                      <!-- 证书不存在提示 -->
-                      <el-alert
-                        v-if="certExists === false"
-                        title="正在生成证书"
-                        type="info"
-                        :closable="false"
-                        show-icon
-                      >
-                        <template #default>
-                          首次启用监控代理时会自动生成 CA 证书，请稍候片刻。证书生成完成后即可正常使用监控功能。
-                        </template>
-                      </el-alert>
-                      
                       <div class="proxy-info">
                         <el-icon><InfoFilled /></el-icon>
-                        <span>启用后，流量将通过监控代理 (localhost:{{ proxyPort }})，可监控 LLM API 调用。</span>
+                        <span>启用后，点击启动 OpenCode，流量将通过监控代理 (localhost:{{ proxyPort }})，可监控 LLM API 调用。</span>
                       </div>
                     </div>
                   </el-collapse-transition>

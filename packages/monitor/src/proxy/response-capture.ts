@@ -10,6 +10,7 @@
 
 import http from 'http';
 import { LLMResponse } from '../types.js';
+import { logger } from '../logger.js';
 
 export interface CaptureOptions {
   requestId: string;
@@ -101,6 +102,7 @@ function captureStreamingResponseAsync(
 ): void {
   const chunks: string[] = [];
   const contents: string[] = [];
+  const thinkingContents: string[] = []; // 收集思考内容
   let chunkCount = 0;
 
   proxyRes.on('data', (chunk) => {
@@ -110,7 +112,7 @@ function captureStreamingResponseAsync(
     if (chunkCount >= MAX_STREAM_CHUNKS) {
       const retainCount = Math.floor(MAX_STREAM_CHUNKS * 0.8);
       chunks.splice(0, chunks.length - retainCount);
-      console.warn(`[ResponseCapture] Stream chunks exceeded limit, trimming buffer for response ${responseId}`);
+      logger.warn(`[ResponseCapture] Stream chunks exceeded limit, trimming buffer for response ${responseId}`);
     }
     
     chunks.push(text);
@@ -126,9 +128,16 @@ function captureStreamingResponseAsync(
         }
         try {
           const json = JSON.parse(data);
-          // 提取内容
-          if (json.choices && json.choices[0]?.delta?.content) {
-            contents.push(json.choices[0].delta.content);
+          const delta = json.choices?.[0]?.delta;
+          
+          // 提取主内容
+          if (delta?.content) {
+            contents.push(delta.content);
+          }
+          
+          // 提取思考内容 (DeepSeek R1 格式)
+          if (delta?.reasoning_content) {
+            thinkingContents.push(delta.reasoning_content);
           }
         } catch {
           // 忽略解析错误
@@ -140,18 +149,22 @@ function captureStreamingResponseAsync(
   proxyRes.on('end', () => {
     const duration = Date.now() - options.startTime;
     const fullContent = contents.join('');
-    const promptTokens = 0;
-    const completionTokens = estimateTokens(fullContent);
+    const fullThinking = thinkingContents.join('');
+    const completionTokens = estimateTokens(fullContent + fullThinking);
 
-    console.log(`[ResponseCapture] Streaming response completed: ${responseId}, ` +
+    logger.info(`[ResponseCapture] Streaming response completed: ${responseId}, ` +
                 `${chunkCount} chunks, ${completionTokens} tokens estimated, ${duration}ms`);
+    
+    if (fullThinking) {
+      logger.info(`[ResponseCapture] Streaming thinking content found, length: ${fullThinking.length}`);
+    }
     
     // 这里可以将完整数据保存到存储中（如果实现了存储更新接口）
     // 目前只是记录日志，实际数据已通过流式传输给客户端
   });
 
   proxyRes.on('error', (err) => {
-    console.error(`[ResponseCapture] Error capturing streaming response ${responseId}:`, err);
+    logger.error(`[ResponseCapture] Error capturing streaming response ${responseId}:`, err.message);
   });
 }
 
@@ -174,18 +187,64 @@ function parseResponseBody(body: string): any {
   try {
     const parsed = JSON.parse(body);
 
+    // 打印原始响应体便于调试
+    logger.info('[ResponseCapture] Raw response body keys:', Object.keys(parsed));
+    if (parsed.choices?.[0]?.message) {
+      const msg = parsed.choices[0].message;
+      logger.info('[ResponseCapture] Message keys:', Object.keys(msg));
+      if (msg.reasoning_content) {
+        logger.info('[ResponseCapture] Found reasoning_content, length:', msg.reasoning_content.length);
+      }
+    }
+    if (parsed.content) {
+      logger.info('[ResponseCapture] Content type:', typeof parsed.content, Array.isArray(parsed.content) ? 'array' : '');
+    }
+
     // 提取关键信息
     const result: any = {};
 
     // 提取内容
     if (parsed.choices && parsed.choices.length > 0) {
       const choice = parsed.choices[0];
-      if (choice.message?.content) {
-        result.content = choice.message.content;
+      const message = choice.message;
+      
+      if (message) {
+        // 主内容
+        if (message.content) {
+          result.content = message.content;
+        }
+        
+        // DeepSeek R1 的思考内容
+        if (message.reasoning_content) {
+          result.thinking = message.reasoning_content;
+          logger.info('[ResponseCapture] Extracted thinking (reasoning_content), length:', result.thinking.length);
+        }
       } else if (choice.text) {
         result.content = choice.text;
       } else if (choice.delta?.content) {
         result.content = choice.delta.content;
+      }
+    }
+
+    // Anthropic 格式：content 数组
+    if (Array.isArray(parsed.content)) {
+      logger.info('[ResponseCapture] Parsing Anthropic content array, length:', parsed.content.length);
+      const textParts: string[] = [];
+      
+      for (const block of parsed.content) {
+        logger.info('[ResponseCapture] Block type:', block.type);
+        if (block.type === 'thinking' && block.thinking) {
+          result.thinking = block.thinking;
+          logger.info('[ResponseCapture] Extracted thinking from Anthropic block, length:', result.thinking.length);
+        } else if (block.type === 'text' && block.text) {
+          textParts.push(block.text);
+        } else if (block.type === 'redacted_thinking') {
+          result.thinking = '[思考内容已隐藏]';
+        }
+      }
+      
+      if (textParts.length > 0) {
+        result.content = textParts.join('\n');
       }
     }
 
@@ -223,6 +282,12 @@ function parseResponseBody(body: string): any {
       if (!result[key] && key !== 'choices' && key !== 'usage') {
         result[key] = parsed[key];
       }
+    }
+
+    // 打印最终提取结果
+    logger.info('[ResponseCapture] Parsed result keys:', Object.keys(result));
+    if (result.thinking) {
+      logger.info('[ResponseCapture] Final thinking length:', result.thinking.length);
     }
 
     return Object.keys(result).length > 0 ? result : undefined;

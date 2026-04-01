@@ -142,7 +142,13 @@ function extractKeyFields(body: any): any {
     'n',
     'system',
     'tools',
-    'tool_choice'
+    'tool_choice',
+    // 思考相关字段
+    'thinking',
+    'thinking_budget',
+    'reasoning_effort',
+    'reasoning',
+    'extended_thinking'
   ];
   
   for (const field of keyFields) {

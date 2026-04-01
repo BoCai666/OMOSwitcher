@@ -3,6 +3,8 @@
  * 管理应用设置，存储在 ~/.config/omoswitcher/settings.json
  */
 
+import { invoke } from '@tauri-apps/api/core'
+
 // 设置类型定义
 export interface AppSettings {
   // 工作路径
@@ -42,18 +44,6 @@ const DEFAULT_SETTINGS: AppSettings = {
 let settingsCache: AppSettings | null = null
 
 /**
- * 动态导入 Tauri API
- */
-async function getTauriInvoke() {
-  try {
-    const { invoke } = await import('@tauri-apps/api/core')
-    return invoke
-  } catch {
-    return null
-  }
-}
-
-/**
  * 读取设置
  */
 export async function readSettings(): Promise<AppSettings> {
@@ -63,11 +53,6 @@ export async function readSettings(): Promise<AppSettings> {
   }
 
   try {
-    const invoke = await getTauriInvoke()
-    if (!invoke) {
-      return { ...DEFAULT_SETTINGS }
-    }
-
     const content = await invoke<string>('read_settings')
     if (content) {
       settingsCache = JSON.parse(content)
@@ -84,12 +69,6 @@ export async function readSettings(): Promise<AppSettings> {
  * 保存设置
  */
 export async function writeSettings(settings: AppSettings): Promise<void> {
-  const invoke = await getTauriInvoke()
-  if (!invoke) {
-    console.warn('无法保存设置：Tauri API 不可用')
-    return
-  }
-
   try {
     await invoke('write_settings', { content: JSON.stringify(settings, null, 2) })
     settingsCache = settings
@@ -188,12 +167,6 @@ export async function recordPresetUsage(name: string): Promise<void> {
  */
 export async function initSettings(): Promise<void> {
   try {
-    const invoke = await getTauriInvoke()
-    if (!invoke) {
-      settingsCache = { ...DEFAULT_SETTINGS }
-      return
-    }
-
     // 尝试读取现有设置
     const content = await invoke<string>('read_settings')
     if (content) {
@@ -268,10 +241,6 @@ export async function setProxyEnabled(enabled: boolean): Promise<void> {
  */
 export async function getMonitorPorts(): Promise<{ web: number; proxy: number }> {
   try {
-    const invoke = await getTauriInvoke()
-    if (!invoke) {
-      return { web: 7100, proxy: 7101 }
-    }
     const [web, proxy] = await invoke<[number, number]>('get_monitor_ports_config')
     return { web, proxy }
   } catch (error) {
@@ -312,10 +281,6 @@ export async function getMonitorProxyPort(): Promise<number> {
  */
 export async function checkCaCertExists(): Promise<boolean> {
   try {
-    const invoke = await getTauriInvoke()
-    if (!invoke) {
-      return false
-    }
     return await invoke<boolean>('check_ca_cert_exists')
   } catch (error) {
     console.error('检查证书存在失败:', error)

@@ -1,5 +1,8 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
 
+// 预加载 Monitor 组件（避免懒加载延迟）
+const MonitorPage = import('@/views/Monitor.vue')
+
 // 路由配置
 const routes: RouteRecordRaw[] = [
   {
@@ -37,7 +40,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/monitor',
     name: 'Monitor',
-    component: () => import('@/views/Monitor.vue'),
+    component: () => MonitorPage,
     meta: {
       title: '监控'
     }

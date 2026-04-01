@@ -9,10 +9,16 @@ export interface LLMRequest {
   headers: Record<string, string>;
   body: any; // 完整的请求体
   parsedBody?: {
-    messages?: Array<{ role: string; content: string }>;
+    messages?: Array<{ role: string; content: string | any[] }>;
     prompt?: string;
     temperature?: number;
     max_tokens?: number;
+    // 思考相关字段
+    thinking?: { type: string; budget_tokens?: number } | any;
+    thinking_budget?: number;
+    reasoning_effort?: 'low' | 'medium' | 'high';
+    reasoning?: any;
+    extended_thinking?: any;
     [key: string]: any;
   };
 }
@@ -26,6 +32,7 @@ export interface LLMResponse {
   body: any; // 完整的响应体
   parsedBody?: {
     content?: string;
+    thinking?: string; // 思考内容（DeepSeek R1, Anthropic 等）
     choices?: Array<any>;
     usage?: {
       prompt_tokens: number;

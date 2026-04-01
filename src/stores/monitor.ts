@@ -172,14 +172,6 @@ export const useMonitorStore = defineStore('monitor', () => {
       error.value = null
       const result = await invoke<MonitorStatus>('get_monitor_status')
       status.value = result
-      
-      // 如果 Tauri 认为服务没有运行，但 API 健康检查通过，也认为服务在运行
-      if (!result.is_running) {
-        const isHealthy = await monitorApi.healthCheck()
-        if (isHealthy) {
-          status.value.is_running = true
-        }
-      }
     } catch (e) {
       error.value = String(e)
     }
@@ -388,10 +380,7 @@ export const useMonitorStore = defineStore('monitor', () => {
     console.log('[Monitor] Starting SSE connection')
     sseConnected.value = false
 
-    // 先获取一次全量数据
-    refresh()
-
-    // 连接 SSE
+    // 连接 SSE（数据由 Monitor.vue 的 refresh() 已获取，无需重复）
     sseDisconnect = monitorApi.connectSSE({
       onConnected: (timestamp) => {
         console.log('[Monitor] SSE connected at', new Date(timestamp).toISOString())

@@ -287,13 +287,16 @@ export class ProxyServer extends EventEmitter {
     if (responseData.body) {
       try {
         const bodyStr = responseData.body.toString('utf8');
-        if (responseData.headers['content-type']?.includes('text/event-stream')) {
+        const contentType = responseData.headers['content-type'] || '';
+        const isStreaming = contentType.includes('text/event-stream') || contentType.includes('stream');
+        
+        if (isStreaming) {
           parsedBody = this.parseSSEResponse(bodyStr);
         } else {
-          parsedBody = JSON.parse(bodyStr);
+          parsedBody = this.parseNonStreamResponse(bodyStr);
         }
-      } catch {
-        // 非 JSON 响应体，忽略
+      } catch (err) {
+        console.error(`[Proxy] Failed to parse response: ${err}`);
       }
     }
     
@@ -309,11 +312,17 @@ export class ProxyServer extends EventEmitter {
     };
     
     this.emit('llm-response:captured', llmResponse);
+    
+    if (parsedBody?.thinking) {
+      console.log(`[Proxy] MITM thinking captured for ${responseData.requestId}, length: ${parsedBody.thinking.length}`);
+    }
+    
     console.log(`[Proxy] Captured response: ${responseData.statusCode} for ${responseData.requestId}`);
   }
 
   private parseSSEResponse(body: string): any {
     const contents: string[] = [];
+    const thinkingContents: string[] = [];  // 收集思考内容（DeepSeek R1 等）
     let usage: any = undefined;
     const lines = body.split('\n');
     
@@ -323,10 +332,18 @@ export class ProxyServer extends EventEmitter {
         if (data === '[DONE]') continue;
         try {
           const json = JSON.parse(data);
-          // 提取内容
-          if (json.choices?.[0]?.delta?.content) {
-            contents.push(json.choices[0].delta.content);
+          const delta = json.choices?.[0]?.delta;
+          
+          // 提取主内容
+          if (delta?.content) {
+            contents.push(delta.content);
           }
+          
+          // 提取思考内容（DeepSeek R1 格式：reasoning_content）
+          if (delta?.reasoning_content) {
+            thinkingContents.push(delta.reasoning_content);
+          }
+          
           // 提取 usage（通常在最后一个 chunk）
           if (json.usage) {
             usage = {
@@ -345,10 +362,19 @@ export class ProxyServer extends EventEmitter {
       }
     }
     
+    const fullContent = contents.join('');
+    const fullThinking = thinkingContents.join('');
+    
     const result: any = {
-      content: contents.join(''),
-      choices: [{ delta: { content: contents.join('') } }]
+      content: fullContent,
+      choices: [{ delta: { content: fullContent } }]
     };
+    
+    // 如果捕获到思考内容，添加到结果中
+    if (fullThinking) {
+      result.thinking = fullThinking;
+      console.log(`[Proxy] SSE thinking content captured, length: ${fullThinking.length}`);
+    }
     
     // 如果捕获到 usage，添加到结果中
     if (usage) {
@@ -356,6 +382,49 @@ export class ProxyServer extends EventEmitter {
     }
     
     return result;
+  }
+
+  /**
+   * 解析非流式响应，提取 thinking 内容
+   * 支持 DeepSeek R1 (reasoning_content) 和 Anthropic (thinking block) 格式
+   */
+  private parseNonStreamResponse(bodyStr: string): any {
+    try {
+      const parsed = JSON.parse(bodyStr);
+      const result: any = { ...parsed };
+      
+      // OpenAI/DeepSeek 格式：choices[0].message
+      const message = parsed.choices?.[0]?.message;
+      if (message) {
+        // DeepSeek R1 格式：reasoning_content
+        if (message.reasoning_content) {
+          result.thinking = message.reasoning_content;
+          console.log(`[Proxy] Non-stream thinking (reasoning_content) captured, length: ${result.thinking.length}`);
+        }
+      }
+      
+      // Anthropic 格式：content 数组
+      if (Array.isArray(parsed.content)) {
+        const textParts: string[] = [];
+        for (const block of parsed.content) {
+          if (block.type === 'thinking' && block.thinking) {
+            result.thinking = block.thinking;
+            console.log(`[Proxy] Non-stream thinking (Anthropic block) captured, length: ${result.thinking.length}`);
+          } else if (block.type === 'text' && block.text) {
+            textParts.push(block.text);
+          } else if (block.type === 'redacted_thinking') {
+            result.thinking = '[思考内容已隐藏]';
+          }
+        }
+        if (textParts.length > 0 && !result.content) {
+          result.content = textParts.join('\n');
+        }
+      }
+      
+      return result;
+    } catch {
+      return undefined;
+    }
   }
 
   private detectProvider(url: string): string {

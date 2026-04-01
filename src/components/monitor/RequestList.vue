@@ -3,7 +3,7 @@
  * 请求列表组件
  * 使用 el-table 显示 LLM 请求记录
  */
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useMonitorStore } from '@/stores/monitor'
 import type { RequestListItem } from '@/types/monitor'
 import { Refresh, Search } from '@element-plus/icons-vue'
@@ -133,11 +133,6 @@ function handleRowClick(row: RequestListItem) {
 async function handleRefresh() {
   await store.fetchRequests()
 }
-
-// 组件挂载时加载数据
-onMounted(() => {
-  store.fetchRequests()
-})
 </script>
 
 <template>

@@ -10,8 +10,24 @@ export function parseOpenAIRequest(body: any): any {
 }
 
 export function parseOpenAIResponse(body: any): any {
+  const choice = body.choices?.[0];
+  const message = choice?.message;
+  
+  // 提取 thinking/reasoning 内容
+  let thinking: string | undefined;
+  let content: string | undefined;
+  
+  // DeepSeek R1 格式：reasoning_content 字段
+  if (message?.reasoning_content) {
+    thinking = message.reasoning_content;
+  }
+  
+  // 提取主内容
+  content = message?.content || choice?.text;
+  
   return {
-    content: body.choices?.[0]?.message?.content || body.choices?.[0]?.text,
+    content,
+    thinking,
     usage: body.usage,
     model: body.model,
   };
