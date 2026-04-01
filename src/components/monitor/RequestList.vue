@@ -86,18 +86,8 @@ function getTodayStr(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }
 
-// 计算今日请求总数（用于编号）
-const todayRequestCount = computed(() => {
-  const todayStr = getTodayStr()
-  return store.requests.filter((req: RequestListItem) => {
-    const reqDate = new Date(req.timestamp)
-    const reqStr = `${reqDate.getFullYear()}-${String(reqDate.getMonth() + 1).padStart(2, '0')}-${String(reqDate.getDate()).padStart(2, '0')}`
-    return reqStr === todayStr
-  }).length
-})
-
 // 获取请求编号（按今日请求顺序）
-function getRequestNumber(row: RequestListItem, index: number): number | string {
+function getRequestNumber(row: RequestListItem, _index: number): number | string {
   const todayStr = getTodayStr()
   const reqDate = new Date(row.timestamp)
   const reqStr = `${reqDate.getFullYear()}-${String(reqDate.getMonth() + 1).padStart(2, '0')}-${String(reqDate.getDate()).padStart(2, '0')}`
