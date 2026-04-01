@@ -50,20 +50,32 @@
 <tr>
 <td width="50%">
 
-### 💾 预设管理
-
-- 保存配置预设
-- 一键切换预设
-- 快速适应不同工作场景
-
-</td>
-<td width="50%">
-
 ### 🎯 模型列表管理
 
 - 自定义可用模型
 - 自动读取 `opencode.json` Provider 字段
 - 支持 provider/model-name 格式
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 📊 LLM API 监控
+
+- 实时监控 API 调用
+- Token 消耗统计
+- 费用估算
+- 请求历史记录
+
+</td>
+<td width="50%">
+
+### 🔐 HTTPS 代理
+
+- 透明代理 LLM 请求
+- 自动生成 CA 证书
+- 支持 OpenAI/Anthropic 等
 
 </td>
 </tr>
@@ -118,6 +130,8 @@ https://raw.githubusercontent.com/BoCai666/OMOSwitcher/main/docs/installation.md
 | 模型列表 | `~/.config/omoswitcher/models.json` |
 | 预设目录 | `~/.config/omoswitcher/presets/` |
 | 应用设置 | `~/.config/omoswitcher/settings.json` |
+| 监控数据库 | `~/.config/omoswitcher/monitor.db` |
+| CA 证书 | `~/.config/omoswitcher/certs/` |
 
 > 💡 主配置文件与 OhMyOpenCode 共享，其他数据存储在独立的 `omoswitcher` 目录
 
@@ -131,7 +145,10 @@ https://raw.githubusercontent.com/BoCai666/OMOSwitcher/main/docs/installation.md
 |:-----|:-----|
 | `npm run tauri:dev` | Tauri 开发模式（热重载） |
 | `npm run tauri:build` | 构建生产版本 |
+| `npm run build:all` | 一键打包（monitor + Tauri） |
 | `npm run build` | 构建前端 |
+| `npm run build:monitor` | 构建 monitor sidecar（开发版） |
+| `npm run build:monitor:prod` | 构建 monitor sidecar（生产版） |
 | `npm run type-check` | TypeScript 类型检查 |
 | `npm run kill-port` | 清理 1420 端口（Windows） |
 
