@@ -6,6 +6,7 @@
 import { computed, ref } from 'vue'
 import type { Preset } from '@/types'
 import { AGENT_NAMES, CATEGORY_NAMES } from '@/types'
+import { ArrowRight } from '@element-plus/icons-vue'
 
 // Props 定义
 const props = defineProps<{
@@ -24,8 +25,11 @@ const dialogVisible = computed({
   set: (value) => emit('update:visible', value)
 })
 
-// JSON 预览显示控制
-const showJsonPreview = ref(false)
+// Agent 配置折叠状态（默认展开）
+const showAgentConfig = ref(true)
+
+// Category 配置折叠状态（默认展开）
+const showCategoryConfig = ref(true)
 
 // 格式化日期显示
 const formatDate = (dateStr: string) => {
@@ -57,43 +61,6 @@ const categoryConfigs = computed(() => {
     model: props.preset!.config.categories[name]?.model || '-'
   }))
 })
-
-// 格式化 JSON 带语法高亮
-const formattedJson = computed(() => {
-  if (!props.preset?.config) return '{}'
-  try {
-    return JSON.stringify(props.preset.config, null, 2)
-  } catch {
-    return '{}'
-  }
-})
-
-// 语法高亮处理
-const highlightJson = (json: string): string => {
-  return json
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/(".*?"):/g, '<span class="json-key">$1</span>:')
-    .replace(/: "(.*?)"/g, ': <span class="json-string">"$1"</span>')
-    .replace(/: (\d+)/g, ': <span class="json-number">$1</span>')
-    .replace(/: (true|false)/g, ': <span class="json-boolean">$1</span>')
-    .replace(/: (null)/g, ': <span class="json-null">$1</span>')
-    .replace(/([{}\[\]])/g, '<span class="json-bracket">$1</span>')
-}
-
-// 高亮后的 JSON
-const highlightedJson = computed(() => highlightJson(formattedJson.value))
-
-// 关闭对话框
-const handleClose = () => {
-  dialogVisible.value = false
-}
-
-// 切换 JSON 预览
-const toggleJsonPreview = () => {
-  showJsonPreview.value = !showJsonPreview.value
-}
 </script>
 
 <template>
@@ -119,7 +86,7 @@ const toggleJsonPreview = () => {
             <span class="info-label">创建时间</span>
             <span class="info-value">{{ formatDate(preset.createdAt) }}</span>
           </div>
-          <div class="info-item full-width">
+          <div class="info-item">
             <span class="info-label">描述</span>
             <span class="info-value description">{{ preset.description || '无描述' }}</span>
           </div>
@@ -132,88 +99,74 @@ const toggleJsonPreview = () => {
 
       <!-- Agent 配置 -->
       <div class="config-section">
-        <div class="config-header">
-          <h4 class="config-title">Agent 模型配置</h4>
+        <div class="config-header" @click="showAgentConfig = !showAgentConfig">
+          <div class="config-header-left">
+            <el-icon class="collapse-icon" :class="{ 'is-expanded': showAgentConfig }">
+              <ArrowRight />
+            </el-icon>
+            <h4 class="config-title">Agent 模型配置</h4>
+          </div>
           <span class="config-badge">{{ agentConfigs.length }}</span>
         </div>
-        <el-table
-          :data="agentConfigs"
-          size="small"
-          :border="false"
-          max-height="200"
-        >
-          <el-table-column prop="name" label="Agent 名称" width="180">
-            <template #default="{ row }">
-              <span class="agent-name">{{ row.name }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="model" label="模型">
-            <template #default="{ row }">
-              <span :class="['model-name', { 'model-empty': row.model === '-' }]">
-                {{ row.model === '-' ? '未配置' : row.model }}
-              </span>
-            </template>
-          </el-table-column>
-        </el-table>
+        <transition name="collapse">
+          <el-table
+            v-show="showAgentConfig"
+            :data="agentConfigs"
+            size="small"
+            :border="false"
+            :show-header="false"
+          >
+            <el-table-column prop="name" label="Agent 名称" width="180">
+              <template #default="{ row }">
+                <span class="agent-name">{{ row.name }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="model" label="模型">
+              <template #default="{ row }">
+                <span :class="['model-name', { 'model-empty': row.model === '-' }]">
+                  {{ row.model === '-' ? '未配置' : row.model }}
+                </span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </transition>
       </div>
 
       <!-- Category 配置 -->
       <div class="config-section">
-        <div class="config-header">
-          <h4 class="config-title">Category 模型配置</h4>
+        <div class="config-header" @click="showCategoryConfig = !showCategoryConfig">
+          <div class="config-header-left">
+            <el-icon class="collapse-icon" :class="{ 'is-expanded': showCategoryConfig }">
+              <ArrowRight />
+            </el-icon>
+            <h4 class="config-title">Category 模型配置</h4>
+          </div>
           <span class="config-badge">{{ categoryConfigs.length }}</span>
         </div>
-        <el-table
-          :data="categoryConfigs"
-          size="small"
-          :border="false"
-          max-height="200"
-        >
-          <el-table-column prop="name" label="Category 名称" width="180">
-            <template #default="{ row }">
-              <span class="category-name">{{ row.name }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="model" label="模型">
-            <template #default="{ row }">
-              <span :class="['model-name', { 'model-empty': row.model === '-' }]">
-                {{ row.model === '-' ? '未配置' : row.model }}
-              </span>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
-
-      <!-- JSON 配置预览 -->
-      <div class="json-section">
-        <div class="json-header">
-          <h4 class="section-title" style="margin: 0;">原始配置</h4>
-          <span class="json-toggle" @click="toggleJsonPreview">
-            <el-icon>
-              <component :is="showJsonPreview ? 'ArrowUp' : 'ArrowDown'" />
-            </el-icon>
-            {{ showJsonPreview ? '收起' : '展开' }} JSON
-          </span>
-        </div>
-        <transition name="json-fade">
-          <div v-show="showJsonPreview" class="json-code-block">
-            <div class="json-code-header">
-              <div class="json-code-dots">
-                <span class="json-code-dot red"></span>
-                <span class="json-code-dot yellow"></span>
-                <span class="json-code-dot green"></span>
-              </div>
-              <span class="json-code-label">config.json</span>
-            </div>
-            <pre class="json-code-content" v-html="highlightedJson"></pre>
-          </div>
+        <transition name="collapse">
+          <el-table
+            v-show="showCategoryConfig"
+            :data="categoryConfigs"
+            size="small"
+            :border="false"
+            :show-header="false"
+          >
+            <el-table-column prop="name" label="Category 名称" width="180">
+              <template #default="{ row }">
+                <span class="category-name">{{ row.name }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="model" label="模型">
+              <template #default="{ row }">
+                <span :class="['model-name', { 'model-empty': row.model === '-' }]">
+                  {{ row.model === '-' ? '未配置' : row.model }}
+                </span>
+              </template>
+            </el-table-column>
+          </el-table>
         </transition>
       </div>
     </div>
-
-    <template #footer>
-      <el-button @click="handleClose">关闭</el-button>
-    </template>
   </el-dialog>
 </template>
 
@@ -246,6 +199,27 @@ const toggleJsonPreview = () => {
 :deep(.glass-detail-dialog .el-dialog__body) {
   padding: var(--app-spacing-5) var(--app-spacing-6);
   background: transparent;
+  max-height: 60vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 弹窗 body 滚动条样式 */
+:deep(.glass-detail-dialog .el-dialog__body::-webkit-scrollbar) {
+  width: 6px;
+}
+
+:deep(.glass-detail-dialog .el-dialog__body::-webkit-scrollbar-track) {
+  background: transparent;
+}
+
+:deep(.glass-detail-dialog .el-dialog__body::-webkit-scrollbar-thumb) {
+  background: var(--app-border-default);
+  border-radius: var(--app-radius-full);
+}
+
+:deep(.glass-detail-dialog .el-dialog__body::-webkit-scrollbar-thumb:hover) {
+  background: var(--app-border-hover);
 }
 
 :deep(.glass-detail-dialog .el-dialog__headerbtn .el-dialog__close) {
@@ -361,10 +335,31 @@ const toggleJsonPreview = () => {
 .config-header {
   padding: var(--app-spacing-3) var(--app-spacing-4);
   background: linear-gradient(135deg, rgba(0, 212, 255, 0.03) 0%, transparent 100%);
-  border-bottom: 1px solid var(--app-border-default);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--app-transition-fast);
+}
+
+.config-header:hover {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.06) 0%, transparent 100%);
+}
+
+.config-header-left {
   display: flex;
   align-items: center;
   gap: var(--app-spacing-2);
+}
+
+.collapse-icon {
+  color: var(--app-text-tertiary);
+  transition: transform 0.3s ease;
+}
+
+.collapse-icon.is-expanded {
+  transform: rotate(90deg);
 }
 
 .config-title {
@@ -389,6 +384,7 @@ const toggleJsonPreview = () => {
   --el-table-border-color: var(--app-border-default);
   --el-table-header-bg-color: rgba(0, 212, 255, 0.05);
   --el-table-row-hover-bg-color: rgba(0, 212, 255, 0.03);
+  border-top: 1px solid var(--app-border-default);
 }
 
 :deep(.config-section .el-table__header-wrapper th) {
@@ -423,13 +419,15 @@ const toggleJsonPreview = () => {
 
 /* 模型名称特殊样式 */
 .model-name {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--app-color-secondary);
   background: rgba(0, 255, 213, 0.08);
-  padding: 2px 8px;
+  padding: 2px 10px;
   border-radius: var(--app-radius-sm);
   display: inline-block;
+  letter-spacing: 0.3px;
 }
 
 .model-empty {
@@ -437,150 +435,48 @@ const toggleJsonPreview = () => {
   font-style: italic;
 }
 
-/* ==================== JSON 预览区块 ==================== */
-.json-section {
-  margin-top: var(--app-spacing-5);
-}
-
-.json-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--app-spacing-3);
-}
-
-.json-toggle {
-  font-size: 12px;
-  color: var(--app-color-primary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: var(--app-spacing-1);
-  transition: all var(--app-transition-fast);
-}
-
-.json-toggle:hover {
-  color: var(--app-color-secondary);
-}
-
-.json-code-block {
-  background: var(--app-bg-card);
-  border: 1px solid var(--app-border-default);
-  border-radius: var(--app-radius-md);
+/* ==================== 折叠动画 ==================== */
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: all 0.3s ease;
   overflow: hidden;
-  position: relative;
 }
 
-.json-code-block::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, var(--app-color-primary), var(--app-color-secondary), transparent);
+.collapse-enter-from,
+.collapse-leave-to {
+  opacity: 0;
+  max-height: 0;
 }
 
-.json-code-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--app-spacing-2) var(--app-spacing-3);
-  background: rgba(0, 212, 255, 0.03);
-  border-bottom: 1px solid var(--app-border-default);
+.collapse-enter-to,
+.collapse-leave-from {
+  opacity: 1;
+  max-height: 1000px;
+}
+</style>
+
+<style>
+/* 非 scoped 样式 - 确保滚动条样式正确应用 */
+.glass-detail-dialog .el-dialog__body {
+  max-height: 60vh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
 }
 
-.json-code-dots {
-  display: flex;
-  gap: 6px;
-}
-
-.json-code-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.json-code-dot.red {
-  background: #ff5f56;
-}
-
-.json-code-dot.yellow {
-  background: #ffbd2e;
-}
-
-.json-code-dot.green {
-  background: #27ca40;
-}
-
-.json-code-label {
-  font-size: 11px;
-  color: var(--app-text-tertiary);
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.json-code-content {
-  padding: var(--app-spacing-4);
-  margin: 0;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--app-text-secondary);
-  overflow-x: auto;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-/* JSON 语法高亮 */
-.json-key {
-  color: #9cdcfe;
-}
-
-.json-string {
-  color: #ce9178;
-}
-
-.json-number {
-  color: #b5cea8;
-}
-
-.json-boolean {
-  color: #569cd6;
-}
-
-.json-null {
-  color: #569cd6;
-}
-
-.json-bracket {
-  color: #ffd700;
-}
-
-/* 滚动条样式 */
-.json-code-content::-webkit-scrollbar {
+.glass-detail-dialog .el-dialog__body::-webkit-scrollbar {
   width: 6px;
-  height: 6px;
 }
 
-.json-code-content::-webkit-scrollbar-track {
+.glass-detail-dialog .el-dialog__body::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.json-code-content::-webkit-scrollbar-thumb {
-  background: var(--app-border-default);
-  border-radius: var(--app-radius-full);
+.glass-detail-dialog .el-dialog__body::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+  border-radius: 3px;
 }
 
-.json-code-content::-webkit-scrollbar-thumb:hover {
-  background: var(--app-border-hover);
-}
-
-/* ==================== 底部按钮 ==================== */
-:deep(.el-button) {
-  transition: all var(--app-transition-normal);
-}
-
-:deep(.el-button:hover) {
-  transform: translateY(-1px);
+.glass-detail-dialog .el-dialog__body::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
 }
 </style>
