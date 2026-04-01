@@ -368,7 +368,7 @@ onUnmounted(() => {
                       class="glass-switch"
                     />
                     <el-tag v-if="proxyEnabled" :type="certExists === true ? 'success' : 'info'" size="small" effect="dark">
-                      {{ certExists === true ? '证书已就绪' : (certExists === false ? '证书生成中...' : '检查中...') }}
+                      {{ certExists === true ? '证书已就绪' : '证书检查中' }}
                     </el-tag>
                   </div>
                   
