@@ -1,8 +1,8 @@
 <script setup lang="ts">
 // 预设管理页面组件
 // 提供预设列表展示、切换、删除和保存功能
-import { ref, onMounted, nextTick } from 'vue'
-import { Plus, Edit } from '@element-plus/icons-vue'
+import { ref, onMounted, computed } from 'vue'
+import { Plus } from '@element-plus/icons-vue'
 import type { Preset } from '@/types'
 import { useConfigStore } from '@/stores'
 import {
@@ -31,12 +31,13 @@ const dialogVisible = ref(false)
 
 // 预设详情对话框
 const detailDialogVisible = ref(false)
-const selectedPreset = ref<Preset | null>(null)
+const selectedPresetName = ref<string | null>(null)
 
-// 编辑描述相关
-const editingPresetName = ref<string | null>(null)
-const editingDescription = ref('')
-const descriptionInputRef = ref<HTMLInputElement | null>(null)
+// 选中的预设（响应式，从列表中获取最新数据）
+const selectedPreset = computed(() => {
+  if (!selectedPresetName.value) return null
+  return presets.value.find(p => p.name === selectedPresetName.value) || null
+})
 
 // 加载预设列表
 const loadPresets = async () => {
@@ -179,36 +180,8 @@ const formatDate = (dateStr: string) => {
 
 // 查看预设详情
 const handleViewPreset = (preset: Preset) => {
-  selectedPreset.value = preset
+  selectedPresetName.value = preset.name
   detailDialogVisible.value = true
-}
-
-// 编辑描述
-const handleEditDescription = (preset: Preset) => {
-  editingPresetName.value = preset.name
-  editingDescription.value = preset.description || ''
-  nextTick(() => {
-    descriptionInputRef.value?.focus()
-  })
-}
-
-// 取消编辑描述
-const handleCancelEditDescription = () => {
-  editingPresetName.value = null
-  editingDescription.value = ''
-}
-
-// 保存描述
-const handleSaveDescription = async (preset: Preset) => {
-  try {
-    await savePreset(preset.name, preset.config, editingDescription.value.trim() || undefined)
-    showSuccess('描述已更新')
-    editingPresetName.value = null
-    editingDescription.value = ''
-    await loadPresets()
-  } catch (error) {
-    showError(error)
-  }
 }
 </script>
 
@@ -232,9 +205,10 @@ const handleSaveDescription = async (preset: Preset) => {
           style="width: 100%"
           v-loading="false"
           :row-class-name="getRowClassName"
+          @row-click="handleViewPreset"
         >
           <!-- 预设名称列 -->
-          <el-table-column prop="name" label="预设名称" min-width="150">
+          <el-table-column prop="name" label="预设名称" min-width="120">
             <template #default="{ row }">
               <div class="preset-name-cell">
                 <span class="preset-name">{{ row.name }}</span>
@@ -246,80 +220,45 @@ const handleSaveDescription = async (preset: Preset) => {
           </el-table-column>
 
           <!-- 描述列 -->
-          <el-table-column prop="description" label="描述" min-width="280">
+          <el-table-column prop="description" label="描述" min-width="200">
             <template #default="{ row }">
-              <div v-if="editingPresetName === row.name" class="description-edit">
-                <el-input
-                  ref="descriptionInputRef"
-                  v-model="editingDescription"
-                  placeholder="输入描述"
-                  size="small"
-                  @keyup.enter="handleSaveDescription(row)"
-                  @keyup.esc="handleCancelEditDescription"
-                />
-                <div class="edit-actions">
-                  <el-button size="small" type="primary" @click="handleSaveDescription(row)">
-                    保存
-                  </el-button>
-                  <el-button size="small" @click="handleCancelEditDescription">
-                    取消
-                  </el-button>
-                </div>
-              </div>
-              <div v-else class="description-cell">
-                <span class="preset-description">
-                  {{ row.description || '无描述' }}
-                </span>
-                <el-button
-                  size="small"
-                  text
-                  class="edit-btn"
-                  @click.stop="handleEditDescription(row)"
-                >
-                  <el-icon><Edit /></el-icon>
-                </el-button>
-              </div>
+              <span class="preset-description">
+                {{ row.description || '无描述' }}
+              </span>
             </template>
           </el-table-column>
 
           <!-- 创建时间列 -->
-          <el-table-column prop="createdAt" label="创建时间" width="180">
+          <el-table-column prop="createdAt" label="创建时间" min-width="150">
             <template #default="{ row }">
               {{ formatDate(row.createdAt) }}
             </template>
           </el-table-column>
 
           <!-- 更新时间列 -->
-          <el-table-column prop="updatedAt" label="更新时间" width="180">
+          <el-table-column prop="updatedAt" label="更新时间" min-width="150">
             <template #default="{ row }">
               {{ formatDate(row.updatedAt) }}
             </template>
           </el-table-column>
 
           <!-- 操作列 -->
-          <el-table-column label="操作" width="280" fixed="right">
+          <el-table-column label="操作" width="150" fixed="right" class-name="action-column">
             <template #default="{ row }">
               <div class="action-buttons">
                 <el-button
                   size="small"
-                  class="neon-button-view"
-                  @click="handleViewPreset(row)"
-                >
-                  <span class="btn-text">查看</span>
-                </el-button>
-                <el-button
-                  size="small"
                   class="neon-button-switch"
-                  @click="handleSwitchPreset(row)"
+                  @click.stop="handleSwitchPreset(row)"
                 >
-                  <span class="btn-text">切换</span>
+                  切换
                 </el-button>
                 <el-button
                   size="small"
                   class="neon-button-delete"
-                  @click="handleDeletePreset(row)"
+                  @click.stop="handleDeletePreset(row)"
                 >
-                  <span class="btn-text">删除</span>
+                  删除
                 </el-button>
               </div>
             </template>
@@ -379,6 +318,7 @@ const handleSaveDescription = async (preset: Preset) => {
       <PresetDetailDialog
         v-model:visible="detailDialogVisible"
         :preset="selectedPreset"
+        @updated="loadPresets"
       />
     </div>
 </template>
@@ -542,55 +482,10 @@ const handleSaveDescription = async (preset: Preset) => {
   font-size: 13px;
 }
 
-.description-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.description-cell .edit-btn {
-  opacity: 0;
-  transition: all 0.3s ease;
-  color: var(--app-color-primary) !important;
-}
-
-.description-cell:hover .edit-btn {
-  opacity: 1;
-}
-
-.description-edit {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.edit-actions {
-  display: flex;
-  gap: 8px;
-}
-
 /* 操作按钮容器 */
 .action-buttons {
   display: flex;
-  gap: 8px;
-}
-
-/* 霓虹效果按钮 - 查看 */
-.neon-button-view {
-  background: transparent !important;
-  border: 1px solid var(--app-text-secondary) !important;
-  color: var(--app-text-secondary) !important;
-  transition: all 0.3s ease !important;
-  padding: 6px 14px !important;
-}
-
-.neon-button-view:hover {
-  background: rgba(144, 144, 160, 0.1) !important;
-  border-color: #ffffff !important;
-  color: #ffffff !important;
-  box-shadow: 
-    0 0 10px rgba(255, 255, 255, 0.3),
-    inset 0 0 10px rgba(255, 255, 255, 0.05) !important;
+  gap: 6px;
 }
 
 /* 霓虹效果按钮 - 切换 */
@@ -599,7 +494,8 @@ const handleSaveDescription = async (preset: Preset) => {
   border: 1px solid var(--app-color-success) !important;
   color: var(--app-color-success) !important;
   transition: all 0.3s ease !important;
-  padding: 6px 14px !important;
+  padding: 5px 10px !important;
+  font-size: 12px !important;
 }
 
 .neon-button-switch:hover {
@@ -608,7 +504,6 @@ const handleSaveDescription = async (preset: Preset) => {
     0 0 15px rgba(0, 255, 157, 0.4),
     0 0 30px rgba(0, 255, 157, 0.2),
     inset 0 0 10px rgba(0, 255, 157, 0.1) !important;
-  transform: translateY(-1px);
 }
 
 /* 霓虹效果按钮 - 删除 */
@@ -617,7 +512,8 @@ const handleSaveDescription = async (preset: Preset) => {
   border: 1px solid var(--app-color-danger) !important;
   color: var(--app-color-danger) !important;
   transition: all 0.3s ease !important;
-  padding: 6px 14px !important;
+  padding: 5px 10px !important;
+  font-size: 12px !important;
 }
 
 .neon-button-delete:hover {
@@ -626,12 +522,6 @@ const handleSaveDescription = async (preset: Preset) => {
     0 0 15px rgba(255, 71, 87, 0.4),
     0 0 30px rgba(255, 71, 87, 0.2),
     inset 0 0 10px rgba(255, 71, 87, 0.1) !important;
-  transform: translateY(-1px);
-}
-
-.btn-text {
-  font-weight: 500;
-  letter-spacing: 0.5px;
 }
 
 /* 空状态样式 */

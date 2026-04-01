@@ -178,14 +178,14 @@ async function handleRefresh() {
       </el-table-column>
 
       <!-- 模型列 -->
-      <el-table-column label="模型" width="140" show-overflow-tooltip>
+      <el-table-column label="模型" width="140">
         <template #default="{ row }">
           <span class="model-text">{{ row.model }}</span>
         </template>
       </el-table-column>
 
       <!-- URL 列 -->
-      <el-table-column label="URL" min-width="180" show-overflow-tooltip>
+      <el-table-column label="URL" min-width="180">
         <template #default="{ row }">
           <span class="url-text">{{ row.url }}</span>
         </template>

@@ -3,10 +3,12 @@
  * 预设详情对话框组件
  * 用于展示预设的完整配置信息
  */
-import { computed, ref } from 'vue'
+import { computed, ref, nextTick, watch } from 'vue'
 import type { Preset } from '@/types'
 import { AGENT_NAMES, CATEGORY_NAMES } from '@/types'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ArrowRight, Edit } from '@element-plus/icons-vue'
+import { savePreset } from '@/services/presetStore'
+import { showError, showSuccess } from '@/utils/errorHandler'
 
 // Props 定义
 const props = defineProps<{
@@ -17,6 +19,7 @@ const props = defineProps<{
 // Emits 定义
 const emit = defineEmits<{
   (e: 'update:visible', value: boolean): void
+  (e: 'updated'): void
 }>()
 
 // 对话框可见性控制
@@ -30,6 +33,11 @@ const showAgentConfig = ref(true)
 
 // Category 配置折叠状态（默认展开）
 const showCategoryConfig = ref(true)
+
+// 编辑描述相关
+const isEditingDescription = ref(false)
+const editingDescription = ref('')
+const descriptionInputRef = ref<HTMLInputElement | null>(null)
 
 // 格式化日期显示
 const formatDate = (dateStr: string) => {
@@ -61,6 +69,44 @@ const categoryConfigs = computed(() => {
     model: props.preset!.config.categories[name]?.model || '-'
   }))
 })
+
+// 开始编辑描述
+const handleEditDescription = () => {
+  if (!props.preset) return
+  isEditingDescription.value = true
+  editingDescription.value = props.preset.description || ''
+  nextTick(() => {
+    descriptionInputRef.value?.focus()
+  })
+}
+
+// 取消编辑描述
+const handleCancelEditDescription = () => {
+  isEditingDescription.value = false
+  editingDescription.value = ''
+}
+
+// 保存描述
+const handleSaveDescription = async () => {
+  if (!props.preset) return
+  try {
+    await savePreset(props.preset.name, props.preset.config, editingDescription.value.trim() || undefined)
+    showSuccess('描述已更新')
+    isEditingDescription.value = false
+    editingDescription.value = ''
+    emit('updated')
+  } catch (error) {
+    showError(error)
+  }
+}
+
+// 监听弹窗关闭，重置编辑状态
+watch(() => props.visible, (val) => {
+  if (!val) {
+    isEditingDescription.value = false
+    editingDescription.value = ''
+  }
+})
 </script>
 
 <template>
@@ -83,12 +129,40 @@ const categoryConfigs = computed(() => {
             <span class="info-value">{{ preset.name }}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">创建时间</span>
-            <span class="info-value">{{ formatDate(preset.createdAt) }}</span>
+            <span class="info-label">描述</span>
+            <div v-if="isEditingDescription" class="description-edit">
+              <el-input
+                ref="descriptionInputRef"
+                v-model="editingDescription"
+                placeholder="输入描述"
+                size="small"
+                @keyup.enter="handleSaveDescription"
+                @keyup.esc="handleCancelEditDescription"
+              />
+              <div class="edit-actions">
+                <el-button size="small" type="primary" @click="handleSaveDescription">
+                  保存
+                </el-button>
+                <el-button size="small" @click="handleCancelEditDescription">
+                  取消
+                </el-button>
+              </div>
+            </div>
+            <div v-else class="description-display">
+              <span class="info-value description">{{ preset.description || '无描述' }}</span>
+              <el-button
+                size="small"
+                text
+                class="edit-btn"
+                @click="handleEditDescription"
+              >
+                <el-icon><Edit /></el-icon>
+              </el-button>
+            </div>
           </div>
           <div class="info-item">
-            <span class="info-label">描述</span>
-            <span class="info-value description">{{ preset.description || '无描述' }}</span>
+            <span class="info-label">创建时间</span>
+            <span class="info-value">{{ formatDate(preset.createdAt) }}</span>
           </div>
           <div class="info-item">
             <span class="info-label">更新时间</span>
@@ -297,10 +371,6 @@ const categoryConfigs = computed(() => {
   gap: var(--app-spacing-1);
 }
 
-.info-item.full-width {
-  grid-column: 1 / -1;
-}
-
 .info-label {
   font-size: 11px;
   color: var(--app-text-tertiary);
@@ -318,6 +388,34 @@ const categoryConfigs = computed(() => {
 .info-value.description {
   color: var(--app-text-secondary);
   font-style: italic;
+}
+
+/* 描述编辑 */
+.description-display {
+  display: flex;
+  align-items: center;
+  gap: var(--app-spacing-2);
+}
+
+.description-display .edit-btn {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  color: var(--app-color-primary) !important;
+}
+
+.description-display:hover .edit-btn {
+  opacity: 1;
+}
+
+.description-edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-spacing-2);
+}
+
+.edit-actions {
+  display: flex;
+  gap: var(--app-spacing-2);
 }
 
 /* ==================== 配置区块 ==================== */
@@ -453,6 +551,34 @@ const categoryConfigs = computed(() => {
 .collapse-leave-from {
   opacity: 1;
   max-height: 1000px;
+}
+
+/* ==================== 明色主题按钮修复 ==================== */
+html.glassmorphism .edit-actions :deep(.el-button:not(.el-button--primary)),
+html.light:not(.cyberpunk):not(.dark) .edit-actions :deep(.el-button:not(.el-button--primary)) {
+  background: var(--app-bg-card) !important;
+  border: 1px solid var(--app-border-default) !important;
+  color: var(--app-text-secondary) !important;
+}
+
+html.glassmorphism .edit-actions :deep(.el-button:not(.el-button--primary):hover),
+html.light:not(.cyberpunk):not(.dark) .edit-actions :deep(.el-button:not(.el-button--primary):hover) {
+  background: var(--app-bg-hover) !important;
+  border-color: var(--app-color-primary) !important;
+  color: var(--app-color-primary) !important;
+}
+
+/* ==================== 暗色主题按钮修复 ==================== */
+html.dark .edit-actions :deep(.el-button:not(.el-button--primary)) {
+  background: rgba(30, 30, 46, 0.8) !important;
+  border: 1px solid var(--app-border-default) !important;
+  color: var(--app-text-secondary) !important;
+}
+
+html.dark .edit-actions :deep(.el-button:not(.el-button--primary):hover) {
+  background: rgba(0, 212, 255, 0.1) !important;
+  border-color: var(--app-color-primary) !important;
+  color: var(--app-color-primary) !important;
 }
 </style>
 
