@@ -122,6 +122,7 @@ const isCurrentPreset = (name: string): boolean => {
   border: 1px solid var(--app-border-default);
   border-radius: var(--app-radius-lg);
   box-shadow: var(--app-shadow-xl), var(--app-shadow-glow-primary);
+  max-width: 90vw;
 }
 
 :deep(.glass-dialog .el-dialog__header) {

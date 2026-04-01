@@ -180,6 +180,7 @@ const categoryConfigs = computed(() => {
   border-radius: var(--app-radius-lg);
   box-shadow: var(--app-shadow-xl), var(--app-shadow-glow-primary);
   overflow: hidden;
+  max-width: 90vw;
 }
 
 :deep(.glass-detail-dialog .el-dialog__header) {

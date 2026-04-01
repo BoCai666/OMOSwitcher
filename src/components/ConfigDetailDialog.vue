@@ -203,6 +203,7 @@ watch(dialogVisible, (val) => {
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--app-border-default);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  max-width: 90vw;
 }
 
 /* 对话框标题霓虹下划线 */
