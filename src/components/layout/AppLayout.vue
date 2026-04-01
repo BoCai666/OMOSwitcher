@@ -42,7 +42,7 @@ const isDark = computed(() => {
     
     <el-container class="app-layout">
       <!-- 左侧侧边栏 - 固定 200px 宽度 -->
-      <el-aside width="200px" class="app-aside">
+      <el-aside width="220px" class="app-aside">
         <Sidebar />
       </el-aside>
       
@@ -125,7 +125,7 @@ const isDark = computed(() => {
 
 .app-layout {
   flex: 1;
-  height: calc(100vh - 32px);
+  height: calc(100vh - 36px);
   width: 100%;
   overflow: hidden;
   position: relative;

@@ -89,7 +89,7 @@ const handleSelect = (index: string) => {
 <style scoped>
 /* ==================== 基础样式变量 ==================== */
 .sidebar {
-  --sidebar-width: 220px;
+  --sidebar-width: var(--app-sidebar-width);
   --sidebar-transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
