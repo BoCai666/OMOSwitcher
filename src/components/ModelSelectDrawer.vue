@@ -3,7 +3,7 @@
  * 模型选择抽屉组件
  * 从右侧滑出，支持搜索和按供应商分组选择模型
  */
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { Search, ArrowRight } from '@element-plus/icons-vue'
 import type { Model } from '@/types'
 
@@ -25,11 +25,32 @@ const searchKeyword = ref('')
 // 折叠状态：记录每个 provider 是否展开，默认全部折叠
 const expandedProviders = ref<Set<string>>(new Set())
 
-// 抽屉关闭时清空搜索和折叠状态
+// 模型列表容器的引用
+const modelListRef = ref<HTMLElement | null>(null)
+
+// 抽屉关闭时清空搜索，打开时重置滚动位置
 watch(() => props.visible, (newVal) => {
   if (!newVal) {
+    // 关闭时清空搜索
     searchKeyword.value = ''
-    expandedProviders.value = new Set()
+  } else {
+    // 打开时只重置滚动位置，保留折叠状态
+    nextTick(() => {
+      // 重置模型列表滚动
+      if (modelListRef.value) {
+        modelListRef.value.scrollTop = 0
+      }
+      // 重置 el-drawer 的 body 滚动（通过 DOM 查询）
+      const drawerBody = document.querySelector('.el-drawer__body') as HTMLElement
+      if (drawerBody) {
+        drawerBody.scrollTop = 0
+      }
+      // 也重置 drawer-content 的滚动
+      const drawerContent = document.querySelector('.drawer-content') as HTMLElement
+      if (drawerContent) {
+        drawerContent.scrollTop = 0
+      }
+    })
   }
 })
 
@@ -118,6 +139,7 @@ const isAllExpanded = computed(() => {
     size="400px"
     :modal-class="'model-drawer-modal'"
     :drawer-class="'model-glass-drawer'"
+    append-to-body
     @update:model-value="emit('update:visible', $event)"
   >
     <div class="drawer-content">
@@ -137,7 +159,7 @@ const isAllExpanded = computed(() => {
       />
       
       <!-- 模型列表 -->
-      <div class="model-list">
+      <div class="model-list" ref="modelListRef">
         <template v-if="groupedModels.size > 0">
           <!-- 全部展开/折叠按钮 -->
           <div class="list-actions">
@@ -211,6 +233,12 @@ const isAllExpanded = computed(() => {
   border-bottom: 1px solid var(--app-border-default);
   padding: 16px 20px;
   margin-bottom: 0;
+}
+
+/* 确保 drawer body 不滚动，滚动只在 .model-list 内 */
+:deep(.model-glass-drawer .el-drawer__body) {
+  overflow: hidden;
+  padding: 0;
 }
 
 :deep(.model-glass-drawer .el-drawer__title) {

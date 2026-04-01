@@ -148,3 +148,41 @@ export interface DailyRecord {
     cost: number
   }>
 }
+
+// ========== SSE 事件类型 ==========
+
+// SSE 连接成功事件
+export interface SSEConnectedEvent {
+  type: 'connected'
+  timestamp: number
+}
+
+// SSE 新请求事件
+export interface SSENewRequestEvent {
+  type: 'new-request'
+  request: LLMRequest
+}
+
+// SSE 响应事件
+export interface SSEResponseEvent {
+  type: 'response'
+  response: LLMResponse
+}
+
+// SSE 指标事件
+export interface SSEMetricsEvent {
+  type: 'metrics'
+  metrics: LLMMetrics
+}
+
+// SSE 事件联合类型
+export type SSEEvent = SSEConnectedEvent | SSENewRequestEvent | SSEResponseEvent | SSEMetricsEvent
+
+// SSE 事件回调
+export interface SSEEventCallbacks {
+  onConnected?: (timestamp: number) => void
+  onNewRequest?: (request: LLMRequest) => void
+  onResponse?: (response: LLMResponse) => void
+  onMetrics?: (metrics: LLMMetrics) => void
+  onError?: (error: Error) => void
+}

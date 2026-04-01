@@ -5,6 +5,7 @@
  * 初始值使用环境变量/默认值，启动时会从配置文件更新
  */
 import logger from './logger.js';
+import { CA_CERT_FILE } from './paths.js';
 
 export const config = {
   // 现有配置
@@ -32,7 +33,8 @@ export const config = {
   },
 
   // 企业代理 CA 证书路径（用于信任企业代理的自签名证书）
-  enterpriseCaCertPath: process.env.ENTERPRISE_CA_CERT_PATH || '',
+  // 直接使用 Monitor 内部的 CA 证书路径
+  enterpriseCaCertPath: CA_CERT_FILE,
 };
 
 /**

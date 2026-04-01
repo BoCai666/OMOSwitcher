@@ -4,7 +4,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useConfigStore } from '@/stores/config'
 import { listPresets, loadPreset } from '@/services/presetStore'
-import { getWorkingPath, setWorkingPath, getProxyConfig, setProxyConfig, getDefaultCaCertPath, checkCaCertExists, getMonitorPorts } from '@/services/settingsStore'
+import { getWorkingPath, setWorkingPath, getProxyConfig, setProxyConfig, checkCaCertExists, getMonitorPorts } from '@/services/settingsStore'
 import { AGENT_NAMES, CATEGORY_NAMES, type OhMyOpenCodeConfig } from '@/types'
 import { showSuccess, showError } from '@/utils/errorHandler'
 import { useOpenCode } from '@/composables/useOpenCode'
@@ -24,9 +24,6 @@ const proxyEnabled = ref(false)
 
 // 证书是否存在
 const certExists = ref<boolean | null>(null) // null 表示未检查
-
-// 默认证书路径
-const defaultCertPath = ref('')
 
 // 代理端口
 const proxyPort = ref(7101) // 默认端口
@@ -86,8 +83,6 @@ function stopCertPolling() {
 async function loadProxyConfig() {
   const config = await getProxyConfig()
   proxyEnabled.value = config.enabled
-  // 获取默认证书路径
-  defaultCertPath.value = await getDefaultCaCertPath()
   // 检查证书是否存在
   await checkCertStatus()
   // 获取代理端口配置
@@ -103,9 +98,7 @@ async function loadProxyConfig() {
 // 保存代理配置
 async function saveProxyConfig() {
   await setProxyConfig({
-    enabled: proxyEnabled.value,
-    // 使用默认证书路径
-    caCertPath: defaultCertPath.value || undefined
+    enabled: proxyEnabled.value
   })
 }
 
@@ -129,7 +122,7 @@ async function browseFolder() {
 async function handleLaunchOpenCode() {
   await savePath()
   await saveProxyConfig()
-  launchOpenCode(workingPath.value, proxyEnabled.value, defaultCertPath.value)
+  launchOpenCode(workingPath.value, proxyEnabled.value)
   
   // 如果启用了代理，启动证书状态轮询
   if (proxyEnabled.value) {
@@ -381,13 +374,6 @@ onUnmounted(() => {
                   
                   <el-collapse-transition>
                     <div v-if="proxyEnabled" class="proxy-cert-info">
-                      <!-- 证书路径显示 -->
-                      <div class="cert-path-display">
-                        <el-icon><Key /></el-icon>
-                        <span class="cert-label">CA 证书路径：</span>
-                        <code class="cert-path">{{ defaultCertPath }}</code>
-                      </div>
-                      
                       <!-- 证书不存在提示 -->
                       <el-alert
                         v-if="certExists === false"

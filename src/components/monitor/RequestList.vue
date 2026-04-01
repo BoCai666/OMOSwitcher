@@ -80,6 +80,48 @@ const filteredRequests = computed(() => {
   return [...list].sort((a, b) => b.timestamp - a.timestamp)
 })
 
+// 获取今日日期字符串 (YYYY-MM-DD)
+function getTodayStr(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
+// 计算今日请求总数（用于编号）
+const todayRequestCount = computed(() => {
+  const todayStr = getTodayStr()
+  return store.requests.filter((req: RequestListItem) => {
+    const reqDate = new Date(req.timestamp)
+    const reqStr = `${reqDate.getFullYear()}-${String(reqDate.getMonth() + 1).padStart(2, '0')}-${String(reqDate.getDate()).padStart(2, '0')}`
+    return reqStr === todayStr
+  }).length
+})
+
+// 获取请求编号（按今日请求顺序）
+function getRequestNumber(row: RequestListItem, index: number): number | string {
+  const todayStr = getTodayStr()
+  const reqDate = new Date(row.timestamp)
+  const reqStr = `${reqDate.getFullYear()}-${String(reqDate.getMonth() + 1).padStart(2, '0')}-${String(reqDate.getDate()).padStart(2, '0')}`
+  
+  // 只给今日请求编号
+  if (reqStr !== todayStr) {
+    return '-'
+  }
+  
+  // 由于列表是倒序排列的，编号 = 今日总数 - 当前索引
+  // 但需要找到该请求在今日请求中的实际位置
+  const todayRequests = filteredRequests.value.filter((req: RequestListItem) => {
+    const d = new Date(req.timestamp)
+    const s = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return s === todayStr
+  })
+  
+  // 按时间正序排列今日请求，获取原始顺序
+  const sortedTodayRequests = [...todayRequests].sort((a, b) => a.timestamp - b.timestamp)
+  const originalIndex = sortedTodayRequests.findIndex(req => req.id === row.id)
+  
+  return originalIndex + 1
+}
+
 // 处理行点击事件
 function handleRowClick(row: RequestListItem) {
   selectedId.value = row.id
@@ -129,8 +171,15 @@ onMounted(() => {
       row-class-name="monitor-table-row"
       max-height="500"
     >
+      <!-- 编号列 -->
+      <el-table-column label="编号" width="70" align="center" fixed="left">
+        <template #default="{ row, $index }">
+          <span class="number-text">{{ getRequestNumber(row, $index) }}</span>
+        </template>
+      </el-table-column>
+
       <!-- 时间列 -->
-      <el-table-column label="时间" width="170" fixed="left">
+      <el-table-column label="时间" width="170">
         <template #default="{ row }">
           <span class="time-text">{{ formatTime(row.timestamp) }}</span>
         </template>
@@ -151,23 +200,9 @@ onMounted(() => {
       </el-table-column>
 
       <!-- URL 列 -->
-      <el-table-column label="URL" min-width="200" show-overflow-tooltip>
+      <el-table-column label="URL" min-width="180" show-overflow-tooltip>
         <template #default="{ row }">
           <span class="url-text">{{ row.url }}</span>
-        </template>
-      </el-table-column>
-
-      <!-- Tokens 列 -->
-      <el-table-column label="Tokens" width="90" align="right">
-        <template #default="{ row }">
-          <span class="tokens-text">{{ formatTokens(row.tokens) }}</span>
-        </template>
-      </el-table-column>
-
-      <!-- 费用列 -->
-      <el-table-column label="费用" width="90" align="right">
-        <template #default="{ row }">
-          <span class="cost-text">{{ formatCost(row.cost) }}</span>
         </template>
       </el-table-column>
 
@@ -189,6 +224,20 @@ onMounted(() => {
       <el-table-column label="耗时" width="90" align="right">
         <template #default="{ row }">
           <span class="duration-text">{{ formatDuration(row.duration) }}</span>
+        </template>
+      </el-table-column>
+
+      <!-- Tokens 列 -->
+      <el-table-column label="Tokens" width="90" align="right">
+        <template #default="{ row }">
+          <span class="tokens-text">{{ formatTokens(row.tokens) }}</span>
+        </template>
+      </el-table-column>
+
+      <!-- 费用列 -->
+      <el-table-column label="费用" width="90" align="right">
+        <template #default="{ row }">
+          <span class="cost-text">{{ formatCost(row.cost) }}</span>
         </template>
       </el-table-column>
     </el-table>
@@ -324,6 +373,14 @@ onMounted(() => {
 }
 
 /* 文本样式 */
+.number-text {
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  color: var(--app-text-secondary);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
 .time-text {
   font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
   font-size: 12px;
@@ -341,7 +398,7 @@ onMounted(() => {
 
 .url-text {
   font-size: 12px;
-  color: var(--app-text-secondary);
+  color: #909399;
   font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
   font-weight: 450;
 }
@@ -349,17 +406,16 @@ onMounted(() => {
 .tokens-text {
   font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
   font-size: 13px;
-  color: var(--app-color-success);
+  color: #00F5A0;
   font-weight: 700;
-  text-shadow: 0 0 10px rgba(0, 245, 160, 0.4);
+  text-shadow: 0 0 10px rgba(0, 245, 160, 0.8), 0 0 20px rgba(0, 245, 160, 0.4);
 }
 
 .cost-text {
   font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
   font-size: 13px;
-  color: var(--app-color-warning);
+  color: #E6A23C;
   font-weight: 700;
-  text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
 }
 
 .duration-text {
@@ -576,7 +632,7 @@ html.glassmorphism .monitor-table :deep(.el-table__row:hover) {
 
 html.glassmorphism .tokens-text,
 html.glassmorphism .cost-text {
-  text-shadow: none;
+  /* 保持发光效果 */
 }
 
 html.glassmorphism .provider-tag {
@@ -680,9 +736,13 @@ html.light:not(.cyberpunk):not(.dark) .monitor-table :deep(.el-table__row:hover)
   background: #93c5fd !important;
 }
 
-html.light:not(.cyberpunk):not(.dark) .tokens-text,
-html.light:not(.cyberpunk):not(.dark) .cost-text {
+html.light:not(.cyberpunk):not(.dark) .tokens-text {
+  color: var(--app-color-success);
   text-shadow: none;
+}
+
+html.light:not(.cyberpunk):not(.dark) .cost-text {
+  /* 保持发光效果 */
 }
 
 html.light:not(.cyberpunk):not(.dark) .provider-tag {
@@ -785,7 +845,7 @@ html.dark .monitor-table :deep(.el-table__row:hover) {
 
 html.dark .tokens-text,
 html.dark .cost-text {
-  text-shadow: none;
+  /* 保持发光效果 */
 }
 
 html.dark .provider-tag {

@@ -2,7 +2,6 @@
 import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useMonitorStore } from '@/stores/monitor'
-import { getProxyConfig } from '@/services/settingsStore'
 import { listModels } from '@/services/modelStore'
 import { listPresets } from '@/services/presetStore'
 import { ElMessage } from 'element-plus'
@@ -23,8 +22,7 @@ onMounted(async () => {
     (async () => {
       try {
         startupAttempted.value = true
-        const proxyConfig = await getProxyConfig()
-        await monitorStore.startMonitor(proxyConfig.caCertPath)
+        await monitorStore.startMonitor()
         console.log('[App] Monitor service started successfully')
       } catch (error) {
         console.warn('[App] Failed to start monitor service:', error)

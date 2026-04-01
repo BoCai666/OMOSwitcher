@@ -35,7 +35,6 @@ pub fn run() {
             commands::stop_monitor_service,
             commands::get_monitor_status,
             // 证书相关命令
-            commands::get_default_ca_cert_path,
             commands::check_ca_cert_exists,
             // Monitor 端口配置命令
             commands::get_monitor_ports_config,

@@ -66,12 +66,6 @@ fn get_settings_path() -> Result<PathBuf, String> {
     Ok(get_omoswitcher_dir()?.join("settings.json"))
 }
 
-/// 获取 Monitor CA 证书文件路径
-/// ~/.config/omoswitcher/monitor/certs/ca.crt
-fn get_ca_cert_path() -> Result<PathBuf, String> {
-    Ok(get_omoswitcher_dir()?.join("monitor").join("certs").join("ca.crt"))
-}
-
 /// 获取 Monitor 配置文件路径
 /// ~/.config/omoswitcher/monitor/config.jsonc
 fn get_monitor_config_path() -> Result<PathBuf, String> {
@@ -237,16 +231,20 @@ pub async fn write_config(content: String) -> Result<(), String> {
 /// 启动 opencode 命令行工具
 /// working_path: 工作目录路径，为空则使用用户主目录
 /// proxy_enabled: 是否启用监控代理
-/// proxy_ca_cert_path: 企业代理 CA 证书路径（可选）
 #[tauri::command]
 pub fn launch_opencode(
     working_path: String,
     proxy_enabled: bool,
-    proxy_ca_cert_path: String,
 ) -> Result<(), String> {
     // 从配置读取代理端口
     let (_, proxy_port) = get_monitor_ports();
     let proxy_url = format!("http://localhost:{}", proxy_port);
+    
+    // Monitor CA 证书固定路径
+    let ca_cert_path = get_omoswitcher_dir()
+        .map(|p| p.join("monitor").join("certs").join("ca.crt"))
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_default();
     
     #[cfg(target_os = "windows")]
     {
@@ -263,20 +261,11 @@ pub fn launch_opencode(
 
         // 构建启动命令
         let ps_command = if proxy_enabled {
-            // 启用代理模式
-            if proxy_ca_cert_path.is_empty() {
-                // 没有配置企业代理证书，只设置代理
-                format!(
-                    "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; cd '{}'; opencode",
-                    proxy_url, proxy_url, path
-                )
-            } else {
-                // 配置了企业代理证书，设置代理和证书路径
-                format!(
-                    "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; $env:NODE_EXTRA_CA_CERTS='{}'; cd '{}'; opencode",
-                    proxy_url, proxy_url, proxy_ca_cert_path, path
-                )
-            }
+            // 启用代理模式，设置代理和证书路径
+            format!(
+                "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; $env:NODE_EXTRA_CA_CERTS='{}'; cd '{}'; opencode",
+                proxy_url, proxy_url, ca_cert_path, path
+            )
         } else {
             // 直连模式，不设置代理
             format!("cd '{}'; opencode", path)
@@ -304,20 +293,11 @@ pub fn launch_opencode(
 
         // 构建启动命令
         let bash_command = if proxy_enabled {
-            // 启用代理模式
-            if proxy_ca_cert_path.is_empty() {
-                // 没有配置企业代理证书，只设置代理
-                format!(
-                    "export HTTP_PROXY='{}' HTTPS_PROXY='{}' && cd '{}' && opencode; exec bash",
-                    proxy_url, proxy_url, path
-                )
-            } else {
-                // 配置了企业代理证书，设置代理和证书路径
-                format!(
-                    "export HTTP_PROXY='{}' HTTPS_PROXY='{}' NODE_EXTRA_CA_CERTS='{}' && cd '{}' && opencode; exec bash",
-                    proxy_url, proxy_url, proxy_ca_cert_path, path
-                )
-            }
+            // 启用代理模式，设置代理和证书路径
+            format!(
+                "export HTTP_PROXY='{}' HTTPS_PROXY='{}' NODE_EXTRA_CA_CERTS='{}' && cd '{}' && opencode; exec bash",
+                proxy_url, proxy_url, ca_cert_path, path
+            )
         } else {
             // 直连模式，不设置代理
             format!("cd '{}' && opencode; exec bash", path)
@@ -667,11 +647,9 @@ pub struct MonitorStatus {
 }
 
 /// 启动 Monitor Sidecar 服务
-/// enterprise_ca_cert_path: 企业代理 CA 证书路径（可选）
 #[tauri::command]
 pub async fn start_monitor_service(
     app: tauri::AppHandle,
-    enterprise_ca_cert_path: String,
 ) -> Result<String, String> {
     // 检查是否已经在运行
     {
@@ -711,11 +689,6 @@ pub async fn start_monitor_service(
         .env("ALL_PROXY", "")
         .env("all_proxy", "")
         .env("NO_PROXY", "*");  // 禁用所有上游代理
-
-    // 如果配置了企业代理 CA 证书，设置环境变量
-    if !enterprise_ca_cert_path.is_empty() {
-        sidecar = sidecar.env("ENTERPRISE_CA_CERT_PATH", &enterprise_ca_cert_path);
-    }
 
     // 启动 sidecar 进程
     let (mut rx, child) = sidecar
@@ -787,18 +760,35 @@ pub fn get_monitor_status() -> Result<MonitorStatus, String> {
     })
 }
 
-/// 获取默认 CA 证书路径
+/// 检查 CA 证书是否存在（通过调用 Monitor API）
 #[tauri::command]
-pub fn get_default_ca_cert_path() -> Result<String, String> {
-    let path = get_ca_cert_path()?;
-    Ok(path.to_string_lossy().to_string())
-}
-
-/// 检查 CA 证书文件是否存在
-#[tauri::command]
-pub fn check_ca_cert_exists() -> Result<bool, String> {
-    let path = get_ca_cert_path()?;
-    Ok(path.exists())
+pub async fn check_ca_cert_exists() -> Result<bool, String> {
+    let (web_port, _) = get_monitor_ports();
+    let url = format!("http://localhost:{}/api/cert-status", web_port);
+    
+    // 使用 reqwest 调用 Monitor API
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
+    
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("请求 Monitor API 失败: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("Monitor API 返回错误: {}", response.status()));
+    }
+    
+    let json: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| format!("解析响应失败: {}", e))?;
+    
+    let exists = json["exists"].as_bool().unwrap_or(false);
+    Ok(exists)
 }
 
 /// 获取 Monitor 端口配置

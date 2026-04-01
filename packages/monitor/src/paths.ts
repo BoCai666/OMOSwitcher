@@ -35,6 +35,12 @@ export const BACKUPS_DIR = join(MONITOR_ROOT, 'backups');
  */
 export const LOGS_DIR = join(MONITOR_ROOT, 'logs');
 
+/**
+ * 归档目录
+ * ~/.config/omoswitcher/monitor/archives/
+ */
+export const ARCHIVE_DIR = join(MONITOR_ROOT, 'archives');
+
 // ============ 文件路径 ============
 
 /**

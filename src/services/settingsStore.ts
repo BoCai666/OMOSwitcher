@@ -17,8 +17,6 @@ export interface AppSettings {
   proxy: {
     // 是否启用代理（监控代理）
     enabled: boolean
-    // 企业代理 CA 证书路径（用于信任企业代理的自签名证书）
-    caCertPath?: string
   }
   // Monitor 服务端口配置
   monitorPorts: {
@@ -227,37 +225,17 @@ export async function initSettings(): Promise<void> {
 /**
  * 获取代理配置
  */
-export async function getProxyConfig(): Promise<{ enabled: boolean; caCertPath?: string }> {
+export async function getProxyConfig(): Promise<{ enabled: boolean }> {
   const settings = await readSettings()
-  return settings.proxy || { enabled: false }
+  return { enabled: settings.proxy?.enabled ?? false }
 }
 
 /**
  * 设置代理配置
  */
-export async function setProxyConfig(config: { enabled: boolean; caCertPath?: string }): Promise<void> {
+export async function setProxyConfig(config: { enabled: boolean }): Promise<void> {
   const settings = await readSettings()
-  settings.proxy = config
-  await writeSettings(settings)
-}
-
-/**
- * 获取代理 CA 证书路径
- */
-export async function getProxyCaCertPath(): Promise<string | undefined> {
-  const settings = await readSettings()
-  return settings.proxy?.caCertPath
-}
-
-/**
- * 设置代理 CA 证书路径
- */
-export async function setProxyCaCertPath(path: string | undefined): Promise<void> {
-  const settings = await readSettings()
-  if (!settings.proxy) {
-    settings.proxy = { enabled: false }
-  }
-  settings.proxy.caCertPath = path
+  settings.proxy = { enabled: config.enabled }
   await writeSettings(settings)
 }
 
@@ -330,28 +308,7 @@ export async function getMonitorProxyPort(): Promise<number> {
 // ==================== 证书相关函数 ====================
 
 /**
- * 获取默认 CA 证书路径
- * ~/.config/omoswitcher/monitor/certs/ca.crt
- */
-export async function getDefaultCaCertPath(): Promise<string> {
-  try {
-    const invoke = await getTauriInvoke()
-    if (!invoke) {
-      // 返回默认路径
-      const homeDir = await getHomeDir()
-      return `${homeDir}/.config/omoswitcher/monitor/certs/ca.crt`
-    }
-    return await invoke<string>('get_default_ca_cert_path')
-  } catch (error) {
-    console.error('获取默认证书路径失败:', error)
-    // 返回默认路径
-    const homeDir = await getHomeDir()
-    return `${homeDir}/.config/omoswitcher/monitor/certs/ca.crt`
-  }
-}
-
-/**
- * 检查 CA 证书文件是否存在
+ * 检查 CA 证书是否存在（通过 Tauri 后端调用 Monitor API）
  */
 export async function checkCaCertExists(): Promise<boolean> {
   try {
@@ -363,22 +320,5 @@ export async function checkCaCertExists(): Promise<boolean> {
   } catch (error) {
     console.error('检查证书存在失败:', error)
     return false
-  }
-}
-
-/**
- * 获取用户主目录
- */
-async function getHomeDir(): Promise<string> {
-  try {
-    const invoke = await getTauriInvoke()
-    if (!invoke) {
-      return ''
-    }
-    // 使用 Tauri 的 home_dir API（如果可用）
-    // 否则返回空字符串，让调用方处理
-    return ''
-  } catch {
-    return ''
   }
 }

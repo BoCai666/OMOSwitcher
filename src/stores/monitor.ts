@@ -47,8 +47,12 @@ export const useMonitorStore = defineStore('monitor', () => {
   const mcpCallsCache = ref<Map<string, MCPCall[]>>(new Map())
   const metricsCache = ref<Map<string, LLMMetrics>>(new Map())
 
-  // 自动刷新定时器
+  // 自动刷新定时器（保留用于降级场景）
   let refreshTimer: ReturnType<typeof setInterval> | null = null
+
+  // SSE 连接状态
+  const sseConnected = ref(false)
+  let sseDisconnect: (() => void) | null = null
 
   // ========== 计算属性 ==========
 
@@ -133,14 +137,11 @@ export const useMonitorStore = defineStore('monitor', () => {
 
   /**
    * 启动监控服务
-   * @param enterpriseCaCertPath 企业代理 CA 证书路径（可选）
    */
-  async function startMonitor(enterpriseCaCertPath?: string): Promise<string> {
+  async function startMonitor(): Promise<string> {
     try {
       error.value = null
-      const result = await invoke<string>('start_monitor_service', {
-        enterpriseCaCertPath: enterpriseCaCertPath || ''
-      })
+      const result = await invoke<string>('start_monitor_service')
       status.value.is_running = true
       return result
     } catch (e) {
@@ -374,11 +375,109 @@ export const useMonitorStore = defineStore('monitor', () => {
     }
   }
 
+  // ========== SSE 实时推送 ==========
+
+  /**
+   * 启动 SSE 实时推送
+   * 替代轮询机制，实现服务端主动推送数据更新
+   */
+  function startSSE(): void {
+    // 如果已连接，先断开
+    stopSSE()
+
+    console.log('[Monitor] Starting SSE connection')
+    sseConnected.value = false
+
+    // 先获取一次全量数据
+    refresh()
+
+    // 连接 SSE
+    sseDisconnect = monitorApi.connectSSE({
+      onConnected: (timestamp) => {
+        console.log('[Monitor] SSE connected at', new Date(timestamp).toISOString())
+        sseConnected.value = true
+        error.value = null
+      },
+
+      onNewRequest: (request) => {
+        console.log('[Monitor] SSE: new request', request.id)
+        // 将新请求添加到列表头部
+        const newItem: RequestListItem = {
+          id: request.id,
+          timestamp: request.timestamp,
+          provider: request.provider,
+          model: request.model,
+          method: request.method,
+          url: request.url,
+          domain: request.domain
+        }
+        // 避免重复
+        const exists = requests.value.some(r => r.id === request.id)
+        if (!exists) {
+          requests.value = [newItem, ...requests.value]
+        }
+      },
+
+      onResponse: (response) => {
+        console.log('[Monitor] SSE: response', response.requestId)
+        // 更新列表中对应请求的状态码和时长
+        const index = requests.value.findIndex(r => r.id === response.requestId)
+        if (index !== -1) {
+          requests.value[index] = {
+            ...requests.value[index],
+            statusCode: response.statusCode,
+            duration: response.duration
+          }
+        }
+        // 缓存响应详情
+        responseDetails.value.set(response.requestId, response)
+      },
+
+      onMetrics: (metrics) => {
+        console.log('[Monitor] SSE: metrics', metrics.requestId, metrics.totalTokens, 'tokens')
+        // 更新列表中对应请求的 tokens 和 cost
+        const index = requests.value.findIndex(r => r.id === metrics.requestId)
+        if (index !== -1) {
+          requests.value[index] = {
+            ...requests.value[index],
+            tokens: metrics.totalTokens,
+            cost: metrics.estimatedCost,
+            duration: metrics.duration
+          }
+        }
+        // 缓存指标
+        metricsCache.value.set(metrics.requestId, metrics)
+        // 刷新统计数据
+        fetchStats()
+      },
+
+      onError: (err) => {
+        console.error('[Monitor] SSE error:', err)
+        sseConnected.value = false
+        error.value = 'SSE 连接错误，尝试重连中...'
+      }
+    })
+  }
+
+  /**
+   * 停止 SSE 实时推送
+   */
+  function stopSSE(): void {
+    if (sseDisconnect) {
+      sseDisconnect()
+      sseDisconnect = null
+    }
+    sseConnected.value = false
+    monitorApi.disconnectSSE()
+    console.log('[Monitor] SSE stopped')
+  }
+
   /**
    * 重置状态
    */
   function reset(): void {
     stopAutoRefresh()
+    stopSSE()
     requests.value = []
     stats.value = null
     status.value = { is_running: false, port: 7100 }
@@ -400,6 +499,7 @@ export const useMonitorStore = defineStore('monitor', () => {
     responseDetails,
     mcpCallsCache,
     metricsCache,
+    sseConnected,
 
     // 计算属性
     isRunning,
@@ -429,6 +529,8 @@ export const useMonitorStore = defineStore('monitor', () => {
     clearData,
     startAutoRefresh,
     stopAutoRefresh,
+    startSSE,
+    stopSSE,
     reset
   }
 })

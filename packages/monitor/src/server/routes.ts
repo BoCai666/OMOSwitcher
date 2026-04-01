@@ -4,6 +4,8 @@ import { LLMRequest } from '../types.js';
 import { ConfigManager } from '../config-manager.js';
 import { RequestListItem } from '../storage/interface.js';
 import { getStorage } from '../storage/storage-manager.js';
+import { existsSync } from 'fs';
+import { CA_CERT_FILE } from '../paths.js';
 
 // 创建 ConfigManager 实例
 const configManager = new ConfigManager();
@@ -74,6 +76,12 @@ const router = Router();
 
 // 最大返回记录数限制
 const MAX_REQUEST_LIMIT = 500;
+
+// GET /api/cert-status - 获取 CA 证书状态
+router.get('/cert-status', (req, res) => {
+  const exists = existsSync(CA_CERT_FILE);
+  res.json({ exists });
+});
 
 // GET /api/requests - 获取最近请求列表
 router.get('/requests', async (req, res) => {

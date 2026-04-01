@@ -28,8 +28,8 @@ function closeDetailDialog() {
   detailDialogVisible.value = false
 }
 
-// 自动刷新开关
-const autoRefresh = ref(false)
+// 实时推送开关（默认开启）
+const autoRefresh = ref(true)
 
 // 处理启动监控服务
 async function handleStart() {
@@ -37,8 +37,11 @@ async function handleStart() {
   try {
     await store.startMonitor()
     await store.checkStatus()
-    // 启动成功后刷新数据
+    // 启动成功后刷新数据并开启 SSE
     await store.refresh()
+    if (autoRefresh.value) {
+      store.startSSE()
+    }
   } catch (e) {
     console.error('启动监控服务失败:', e)
   } finally {
@@ -50,6 +53,8 @@ async function handleStart() {
 async function handleStop() {
   loading.value = true
   try {
+    // 先停止 SSE
+    store.stopSSE()
     await store.stopMonitor()
     await store.checkStatus()
   } catch (e) {
@@ -81,12 +86,12 @@ async function handleClear() {
   }
 }
 
-// 切换自动刷新
+// 切换自动刷新（SSE 实时推送）
 function toggleAutoRefresh(enabled: boolean) {
   if (enabled) {
-    store.startAutoRefresh(5000) // 5秒刷新一次
+    store.startSSE() // 使用 SSE 实时推送
   } else {
-    store.stopAutoRefresh()
+    store.stopSSE()
   }
 }
 
@@ -95,12 +100,16 @@ onMounted(async () => {
   await store.checkStatus()
   if (store.isRunning) {
     await store.refresh()
+    // 默认开启 SSE
+    if (autoRefresh.value) {
+      store.startSSE()
+    }
   }
 })
 
-// 页面卸载时停止自动刷新
+// 页面卸载时停止 SSE 连接
 onUnmounted(() => {
-  store.stopAutoRefresh()
+  store.stopSSE()
 })
 </script>
 
@@ -186,19 +195,26 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <!-- 自动刷新 -->
-            <div class="status-card">
-              <div class="status-icon auto-refresh-icon" :class="{ active: autoRefresh }">
+            <!-- 实时推送 -->
+            <div class="status-card" :class="{ 'sse-active': autoRefresh && store.sseConnected }">
+              <div class="status-icon auto-refresh-icon" :class="{ active: autoRefresh && store.sseConnected }">
                 <el-icon><Timer /></el-icon>
               </div>
               <div class="status-content">
-                <div class="status-label">自动刷新</div>
-                <el-switch
-                  v-model="autoRefresh"
-                  @change="toggleAutoRefresh"
-                  :disabled="!store.isRunning"
-                  class="glass-switch"
-                />
+                <div class="status-label">实时推送</div>
+                <div class="status-control-row">
+                  <el-switch
+                    v-model="autoRefresh"
+                    @change="toggleAutoRefresh"
+                    :disabled="!store.isRunning"
+                    class="glass-switch"
+                  />
+                  <!-- SSE 连接状态 -->
+                  <div v-if="autoRefresh && store.isRunning" class="sse-indicator" :class="{ connected: store.sseConnected }">
+                    <div class="sse-dot"></div>
+                    <span>{{ store.sseConnected ? 'SSE 已连接' : 'SSE 连接中...' }}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -615,6 +631,63 @@ onUnmounted(() => {
 .error-icon {
   font-size: 20px;
   filter: drop-shadow(0 0 8px rgba(255, 71, 87, 0.5));
+}
+
+/* 开关和控制行 */
+.status-control-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 6px;
+}
+
+/* SSE 激活状态卡片 */
+.status-card.sse-active {
+  border-color: rgba(0, 245, 160, 0.3);
+  box-shadow: 0 0 15px rgba(0, 245, 160, 0.1);
+}
+
+/* SSE 连接状态指示器 */
+.sse-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: var(--app-bg-hover);
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--app-text-tertiary);
+  transition: all 0.3s ease;
+}
+
+.sse-indicator.connected {
+  background: linear-gradient(135deg, rgba(0, 245, 160, 0.15), rgba(0, 245, 160, 0.05));
+  color: var(--app-color-success);
+}
+
+.sse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--app-text-disabled);
+  transition: all 0.3s ease;
+}
+
+.sse-indicator.connected .sse-dot {
+  background: var(--app-color-success);
+  box-shadow: 0 0 6px rgba(0, 245, 160, 0.6);
+  animation: pulse-dot 2s ease-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
 }
 
 /* ==================== 统计行 ==================== */

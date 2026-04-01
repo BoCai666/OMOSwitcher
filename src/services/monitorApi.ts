@@ -9,7 +9,8 @@ import type {
   LLMRequest,
   LLMResponse,
   MCPCall,
-  LLMMetrics
+  LLMMetrics,
+  SSEEventCallbacks
 } from '@/types/monitor'
 
 // 端口缓存
@@ -168,5 +169,106 @@ export const monitorApi = {
    */
   clearPortCache(): void {
     cachedPort = null
+  },
+
+  // ========== SSE 实时推送 ==========
+
+  // SSE 连接实例
+  _eventSource: null as EventSource | null,
+
+  /**
+   * 连接 SSE 实时推送
+   * @param callbacks 事件回调函数
+   * @returns 断开连接函数
+   */
+  connectSSE(callbacks: SSEEventCallbacks): () => void {
+    // 如果已有连接，先断开
+    if (this._eventSource) {
+      this._eventSource.close()
+      this._eventSource = null
+    }
+
+    // 创建 EventSource 连接
+    getBaseUrl().then(baseUrl => {
+      const sseUrl = baseUrl.replace('/api', '') + '/api/events'
+      console.log('[Monitor] Connecting to SSE:', sseUrl)
+
+      const eventSource = new EventSource(sseUrl)
+      this._eventSource = eventSource
+
+      // 连接成功
+      eventSource.onopen = () => {
+        console.log('[Monitor] SSE connected')
+      }
+
+      // 接收消息
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+
+          switch (data.type) {
+            case 'connected':
+              callbacks.onConnected?.(data.timestamp as number)
+              break
+
+            case 'new-request':
+              callbacks.onNewRequest?.(data.request as LLMRequest)
+              break
+
+            case 'response':
+              callbacks.onResponse?.(data.response as LLMResponse)
+              break
+
+            case 'metrics':
+              callbacks.onMetrics?.(data.metrics as LLMMetrics)
+              break
+
+            default:
+              console.warn('[Monitor] Unknown SSE event type:', data.type)
+          }
+        } catch (err) {
+          console.error('[Monitor] Failed to parse SSE message:', err)
+        }
+      }
+
+      // 连接错误
+      eventSource.onerror = (err) => {
+        console.error('[Monitor] SSE connection error:', err)
+        callbacks.onError?.(new Error('SSE connection error'))
+
+        // 自动重连逻辑由 EventSource 内置处理
+        // 如果连接彻底失败，EventSource 会自动尝试重连
+      }
+    }).catch(err => {
+      console.error('[Monitor] Failed to get monitor port:', err)
+      callbacks.onError?.(err)
+    })
+
+    // 返回断开连接函数
+    return () => {
+      if (this._eventSource) {
+        console.log('[Monitor] Disconnecting SSE')
+        this._eventSource.close()
+        this._eventSource = null
+      }
+    }
+  },
+
+  /**
+   * 断开 SSE 连接
+   */
+  disconnectSSE(): void {
+    if (this._eventSource) {
+      this._eventSource.close()
+      this._eventSource = null
+      console.log('[Monitor] SSE disconnected')
+    }
+  },
+
+  /**
+   * 检查 SSE 是否已连接
+   */
+  isSSEConnected(): boolean {
+    return this._eventSource !== null && this._eventSource.readyState === EventSource.OPEN
   }
 }

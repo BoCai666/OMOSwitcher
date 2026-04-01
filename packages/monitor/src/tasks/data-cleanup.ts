@@ -1,17 +1,13 @@
 import fs from 'fs/promises';
 import path from 'path';
-import os from 'os';
 import { createGzip } from 'zlib';
 import { promisify } from 'util';
 import { pipeline } from 'stream';
 import { createReadStream, createWriteStream } from 'fs';
 import { dbManager } from '../db/index.js';
+import { ARCHIVE_DIR } from '../paths.js';
 
 const pipelineAsync = promisify(pipeline);
-
-// 用户配置目录
-const USER_CONFIG_DIR = path.join(os.homedir(), '.config', 'omoswitcher');
-const ARCHIVE_DIR = path.join(USER_CONFIG_DIR, 'archives');
 
 // 数据保留配置
 const RETENTION_CONFIG = {
