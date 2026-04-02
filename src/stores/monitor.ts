@@ -142,9 +142,10 @@ export const useMonitorStore = defineStore('monitor', () => {
     try {
       error.value = null
       const result = await invoke<string>('start_monitor_service')
-      status.value.is_running = true
+      await checkStatus()
       return result
     } catch (e) {
+      status.value.is_running = false
       error.value = String(e)
       throw e
     }

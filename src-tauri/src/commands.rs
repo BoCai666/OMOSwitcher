@@ -4,15 +4,14 @@
 use std::fs;
 use std::net::TcpStream;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Child, Command};
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use tauri::Emitter;
-use tauri_plugin_shell::process::{CommandChild, CommandEvent};
-use tauri_plugin_shell::ShellExt;
+use tauri::{path::BaseDirectory, Manager};
 use tokio::fs as async_fs;
+use tokio::time::sleep;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -22,6 +21,26 @@ use std::os::windows::process::CommandExt;
 // 父进程关闭时子进程不受影响
 #[cfg(target_os = "windows")]
 const CREATE_NEW_CONSOLE: u32 = 0x00000010;
+
+/// 清理 Windows 扩展长度路径前缀 (\\?\)
+/// Tauri 的 path.resolve() 在 Windows 上会返回带 \\?\ 前缀的路径，
+/// 但 Command::new() 和 CreateProcess API 不支持此前缀，会导致 ERROR_BAD_PATHNAME (267)。
+/// 此函数在 Windows 上移除该前缀，其他平台直接返回原路径。
+#[cfg(target_os = "windows")]
+fn normalize_path(path: PathBuf) -> PathBuf {
+    let path_str = path.to_string_lossy().to_string();
+    if path_str.starts_with(r"\\?\") {
+        // 移除 \\?\ 前缀
+        PathBuf::from(&path_str[4..])
+    } else {
+        path
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn normalize_path(path: PathBuf) -> PathBuf {
+    path
+}
 
 // 端口配置缓存（避免每次都读文件）
 static MONITOR_PORTS_CACHE: OnceLock<(u16, u16)> = OnceLock::new();
@@ -640,7 +659,82 @@ fn cleanup_monitor_ports() -> Result<(), String> {
 // ============== Sidecar 监控服务管理 ==============
 
 /// 全局状态存储 Monitor Sidecar 进程句柄
-static MONITOR_PROCESS: Mutex<Option<CommandChild>> = Mutex::new(None);
+static MONITOR_PROCESS: Mutex<Option<Child>> = Mutex::new(None);
+
+/// 检查 Monitor Web API 是否已就绪
+async fn is_monitor_api_ready(port: u16) -> bool {
+    let url = format!("http://localhost:{}/api/health", port);
+
+    let client = match reqwest::Client::builder()
+        .timeout(Duration::from_millis(500))
+        .build()
+    {
+        Ok(client) => client,
+        Err(_) => return false,
+    };
+
+    match client.get(&url).send().await {
+        Ok(response) => response.status().is_success(),
+        Err(_) => false,
+    }
+}
+
+/// 清理已退出的 Monitor 进程句柄
+fn cleanup_exited_monitor_process() -> Result<bool, String> {
+    let mut process = MONITOR_PROCESS.lock().unwrap();
+
+    let Some(child) = process.as_mut() else {
+        return Ok(false);
+    };
+
+    match child.try_wait() {
+        Ok(Some(status)) => {
+            println!("[Monitor] 检测到已退出的进程: {}", status);
+            *process = None;
+            Ok(false)
+        }
+        Ok(None) => Ok(true),
+        Err(e) => {
+            *process = None;
+            Err(format!("检查 Monitor 进程状态失败: {}", e))
+        }
+    }
+}
+
+/// 等待 Monitor 服务真正就绪
+async fn wait_for_monitor_ready(port: u16) -> Result<(), String> {
+    const MAX_ATTEMPTS: usize = 40;
+    const SLEEP_MS: u64 = 250;
+
+    for _ in 0..MAX_ATTEMPTS {
+        {
+            let mut process = MONITOR_PROCESS.lock().unwrap();
+            let Some(child) = process.as_mut() else {
+                return Err("Monitor 进程句柄丢失".to_string());
+            };
+
+            match child.try_wait() {
+                Ok(Some(status)) => {
+                    *process = None;
+                    return Err(format!("Monitor 进程启动后立即退出: {}", status));
+                }
+                Ok(None) => {}
+                Err(e) => {
+                    *process = None;
+                    return Err(format!("检查 Monitor 进程状态失败: {}", e));
+                }
+            }
+        }
+
+        if is_monitor_api_ready(port).await {
+            return Ok(());
+        }
+
+        sleep(Duration::from_millis(SLEEP_MS)).await;
+    }
+
+    Err(format!("等待 Monitor 服务就绪超时（端口 {}）", port))
+}
 
 /// Monitor 服务运行状态
 #[derive(Serialize)]
@@ -651,15 +745,15 @@ pub struct MonitorStatus {
     pub port: u16,
 }
 
-/// 启动 Monitor Sidecar 服务
+/// 启动 Monitor Sidecar 服务（使用内嵌的 Node.js 运行时）
 #[tauri::command]
 pub async fn start_monitor_service(
     app: tauri::AppHandle,
 ) -> Result<String, String> {
     // 检查是否已经在运行
     {
-        let process = MONITOR_PROCESS.lock().unwrap();
-        if process.is_some() {
+        let process_running = cleanup_exited_monitor_process()?;
+        if process_running {
             return Ok("Monitor service already running".to_string());
         }
     }
@@ -673,65 +767,62 @@ pub async fn start_monitor_service(
         println!("[Monitor] 警告: 端口清理失败: {}", e);
     }
 
-    // 创建 sidecar 命令
-    let mut sidecar = app
-        .shell()
-        .sidecar("monitor")
-        .map_err(|e| format!("创建 sidecar 失败: {}", e))?;
+    // ★ 使用 Tauri 2 推荐的 resolve 方法解析资源路径
+    // 这在开发模式和生产模式下都能正确工作
+    let node_exe_raw = app
+        .path()
+        .resolve("binaries/node/node.exe", BaseDirectory::Resource)
+        .map_err(|e| format!("解析 Node.js 路径失败: {}", e))?;
+    
+    let monitor_dir_raw = app
+        .path()
+        .resolve("binaries/monitor-package", BaseDirectory::Resource)
+        .map_err(|e| format!("解析 Monitor 目录路径失败: {}", e))?;
 
-    // 设置端口环境变量
-    sidecar = sidecar
+    // ★ 清理 Windows 扩展长度路径前缀 (\\?\)
+    // Tauri 的 resolve() 在 Windows 上返回带 \\?\ 前缀的路径，
+    // 但 Command::new() 和 current_dir() 不支持此前缀，会导致 ERROR_BAD_PATHNAME (267)
+    let node_exe = normalize_path(node_exe_raw);
+    let monitor_dir = normalize_path(monitor_dir_raw);
+
+    println!("[Monitor] 使用内嵌 Node.js: {:?}", node_exe);
+    println!("[Monitor] Monitor 目录: {:?}", monitor_dir);
+    
+    // 检查路径是否存在
+    if !node_exe.exists() {
+        return Err(format!("Node.js 可执行文件不存在: {:?}", node_exe));
+    }
+    if !monitor_dir.exists() {
+        return Err(format!("Monitor 目录不存在: {:?}", monitor_dir));
+    }
+
+    // 创建进程
+    let mut cmd = Command::new(&node_exe);
+    cmd.arg("dist/index.js")
+        .current_dir(&monitor_dir)
         .env("PORT", web_port.to_string())
-        .env("PROXY_PORT", proxy_port.to_string());
-
-    // 清除代理环境变量，避免 http-proxy 尝试连接上游代理
-    // Monitor 作为透明代理，不应链式代理
-    sidecar = sidecar
+        .env("PROXY_PORT", proxy_port.to_string())
         .env("HTTP_PROXY", "")
         .env("HTTPS_PROXY", "")
         .env("http_proxy", "")
         .env("https_proxy", "")
         .env("ALL_PROXY", "")
         .env("all_proxy", "")
-        .env("NO_PROXY", "*");  // 禁用所有上游代理
+        .env("NO_PROXY", "*");
 
-    // 启动 sidecar 进程
-    let (mut rx, child) = sidecar
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(CREATE_NEW_CONSOLE);
+    }
+
+    // 启动进程
+    let child = cmd
         .spawn()
-        .map_err(|e| format!("启动 sidecar 失败: {}", e))?;
+        .map_err(|e| format!("启动 monitor 失败: {} (Node.js: {:?})", e, node_exe))?;
 
-    // 获取 app handle 用于在异步任务中发送事件
-    let app_handle = app.clone();
-
-    // 在后台异步读取 sidecar 输出并打印到终端
-    tauri::async_runtime::spawn(async move {
-        println!("[Monitor Sidecar] 开始监听输出...");
-        while let Some(event) = rx.recv().await {
-            match event {
-                CommandEvent::Stdout(line) => {
-                    let output = String::from_utf8_lossy(&line);
-                    println!("[Monitor] {}", output.trim());
-                    // 同时发送事件到前端（可选）
-                    let _ = app_handle.emit("monitor:log", output.trim().to_string());
-                }
-                CommandEvent::Stderr(line) => {
-                    let output = String::from_utf8_lossy(&line);
-                    eprintln!("[Monitor ERR] {}", output.trim());
-                    let _ = app_handle.emit("monitor:error", output.trim().to_string());
-                }
-                CommandEvent::Error(err) => {
-                    eprintln!("[Monitor ERROR] {}", err);
-                    let _ = app_handle.emit("monitor:error", err);
-                }
-                CommandEvent::Terminated(payload) => {
-                    println!("[Monitor] 进程已终止: code={:?}, signal={:?}", payload.code, payload.signal);
-                    let _ = app_handle.emit("monitor:terminated", payload);
-                    break;
-                }
-                _ => {}
-            }
-        }
-    });
+    let pid = child.id();
+    println!("[Monitor] 已启动 (PID: {})", pid);
 
     // 存储进程句柄
     {
@@ -739,14 +830,22 @@ pub async fn start_monitor_service(
         *process = Some(child);
     }
 
-    Ok("Monitor service started".to_string())
+    println!("[Monitor] 等待 Web API 端口 {} 就绪...", web_port);
+    if let Err(e) = wait_for_monitor_ready(web_port).await {
+        let _ = stop_monitor_service();
+        return Err(format!("启动 monitor 失败: {}", e));
+    }
+
+    println!("[Monitor] Web API 已就绪: http://localhost:{}", web_port);
+
+    Ok(format!("Monitor service started (PID: {}, Port: {})", pid, web_port))
 }
 
 /// 停止 Monitor Sidecar 服务
 #[tauri::command]
 pub fn stop_monitor_service() -> Result<(), String> {
     let mut process = MONITOR_PROCESS.lock().unwrap();
-    if let Some(child) = process.take() {
+    if let Some(mut child) = process.take() {
         child
             .kill()
             .map_err(|e| format!("停止 sidecar 失败: {}", e))?;
@@ -757,14 +856,10 @@ pub fn stop_monitor_service() -> Result<(), String> {
 /// 获取 Monitor 服务运行状态
 #[tauri::command]
 pub fn get_monitor_status() -> Result<MonitorStatus, String> {
-    // 快速获取状态，减少锁持有时间
-    let is_running = {
-        let process = MONITOR_PROCESS.lock().unwrap();
-        process.is_some()
-    };
-    
     // 获取端口（使用缓存，很快）
     let (web_port, _) = get_monitor_ports();
+    let process_running = cleanup_exited_monitor_process()?;
+    let is_running = process_running && is_port_in_use(web_port);
     
     Ok(MonitorStatus {
         is_running,
