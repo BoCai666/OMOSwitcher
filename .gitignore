@@ -54,3 +54,6 @@ test-results/
 
 # AI 生成输出目录
 minimax-output/
+
+# 本地测试配置
+config.json

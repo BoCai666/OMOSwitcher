@@ -284,15 +284,17 @@ pub fn launch_opencode(
         };
 
         // 构建启动命令
+        // --port 4096 让 OpenCode 启动 HTTP Server（热重载用）
+        // --inspect 让 OpenCode 暴露调试端口（CDP 用）
         let ps_command = if proxy_enabled {
             // 启用代理模式，设置代理和证书路径
             format!(
-                "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; $env:NODE_EXTRA_CA_CERTS='{}'; cd '{}'; opencode",
+                "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; $env:NODE_EXTRA_CA_CERTS='{}'; cd '{}'; opencode --port 4096 --inspect",
                 proxy_url, proxy_url, ca_cert_path, path
             )
         } else {
             // 直连模式，不设置代理
-            format!("cd '{}'; opencode", path)
+            format!("cd '{}'; opencode --port 4096 --inspect", path)
         };
 
         // 使用 CREATE_NEW_CONSOLE 标志创建独立的控制台窗口
@@ -796,9 +798,25 @@ pub async fn start_monitor_service(
         return Err(format!("Monitor 目录不存在: {:?}", monitor_dir));
     }
 
+    let monitor_entry = monitor_dir.join("dist").join("index.js");
+    if !monitor_entry.exists() {
+        return Err(format!(
+            "内嵌 Monitor 包不完整：缺少入口文件 {:?}。请先执行 monitor build/prepare 流程后重新打包。",
+            monitor_entry
+        ));
+    }
+
+    let monitor_node_modules = monitor_dir.join("node_modules");
+    if !monitor_node_modules.exists() {
+        return Err(format!(
+            "内嵌 Monitor 包不完整：缺少依赖目录 {:?}。请先执行 monitor build/prepare 流程后重新打包。",
+            monitor_node_modules
+        ));
+    }
+
     // 创建进程
     let mut cmd = Command::new(&node_exe);
-    cmd.arg("dist/index.js")
+    cmd.arg(&monitor_entry)
         .current_dir(&monitor_dir)
         .env("PORT", web_port.to_string())
         .env("PROXY_PORT", proxy_port.to_string())
@@ -903,4 +921,293 @@ pub async fn check_ca_cert_exists() -> Result<bool, String> {
 pub fn get_monitor_ports_config() -> Result<(u16, u16), String> {
     let (web, proxy) = get_monitor_ports();
     Ok((web, proxy))
+}
+
+// ============== OpenCode 热重载 ==============
+
+/// 热重载结果
+#[derive(Serialize, Clone)]
+pub struct HotReloadResult {
+    /// 是否成功推送到 OpenCode
+    pub success: bool,
+    /// 可读的状态描述
+    pub message: String,
+    /// 是否因为 OpenCode 未运行而跳过（不是错误）
+    pub skipped: bool,
+}
+
+/// 探测 OpenCode Server 是否在指定端口运行
+async fn probe_opencode_server(client: &reqwest::Client, port: u16) -> bool {
+    let url = format!("http://127.0.0.1:{}/config", port);
+    match client.get(&url).send().await {
+        Ok(res) => res.status().is_success(),
+        Err(_) => false,
+    }
+}
+
+/// 自动发现 OpenCode Server 端口
+/// 依次尝试 4096/4097/4098
+async fn discover_opencode_port(client: &reqwest::Client) -> Option<u16> {
+    for port in [4096u16, 4097, 4098] {
+        if probe_opencode_server(client, port).await {
+            return Some(port);
+        }
+    }
+    None
+}
+
+/// 调用 OpenCode Server PATCH /config 推送 agent 模型变更
+/// 仅在无活跃对话时安全使用
+async fn patch_opencode_config(
+    client: &reqwest::Client,
+    port: u16,
+    agent_config: &serde_json::Value,
+) -> Result<bool, String> {
+    let url = format!("http://127.0.0.1:{}/config", port);
+    let body = serde_json::json!({ "agent": agent_config });
+    match client
+        .patch(&url)
+        .json(&body)
+        .send()
+        .await
+    {
+        Ok(res) => {
+            let status = res.status();
+            if status.is_success() {
+                Ok(true)
+            } else {
+                let text = res.text().await.unwrap_or_default();
+                Err(format!("PATCH /config 返回 {}: {}", status, text))
+            }
+        }
+        Err(e) => Err(format!("PATCH /config 请求失败: {}", e)),
+    }
+}
+
+/// 磀查是否有活跃的 session（正在生成中的）
+async fn has_active_session(client: &reqwest::Client, port: u16) -> bool {
+    let url = format!("http://127.0.0.1:{}/session/status", port);
+    match client.get(&url).send().await {
+        Ok(res) => {
+            if !res.status().is_success() {
+                return false;
+            }
+            // 解析响应，检查是否有活跃 session
+            match res.json::<serde_json::Value>().await {
+                Ok(status_map) => {
+                    if let Some(obj) = status_map.as_object() {
+                        // session status 中如果有 "active" 状态的 session，说明正在对话
+                        return obj.values().any(|v| {
+                            v.get("status")
+                                .and_then(|s| s.as_str())
+                                .map(|s| s == "running" || s == "generating" || s == "busy")
+                                .unwrap_or(false)
+                        });
+                    }
+                    false
+                }
+                Err(_) => false,
+            }
+        }
+        Err(_) => false,
+    }
+}
+
+/// 通过 CDP 执行 JavaScript 代码
+async fn cdp_runtime_evaluate(
+    client: &reqwest::Client,
+    port: u16,
+    expression: &str,
+) -> Result<serde_json::Value, String> {
+    // 1. 获取 CDP WebSocket URL
+    let list_url = format!("http://127.0.0.1:{}/json/list", port);
+    let list_response = client.get(&list_url).send().await
+        .map_err(|e| format!("获取 CDP 目标列表失败: {}", e))?;
+    
+    let targets: serde_json::Value = list_response.json().await
+        .map_err(|e| format!("解析 CDP 目标列表失败: {}", e))?;
+    
+    // 找到第一个有效的 WebSocket URL
+    let ws_url = targets
+        .as_array()
+        .and_then(|arr| arr.first())
+        .and_then(|t| t.get("webSocketDebuggerUrl"))
+        .and_then(|url| url.as_str())
+        .ok_or_else(|| "未找到 CDP WebSocket URL".to_string())?;
+    
+    // 2. 连接到 WebSocket
+    let ws_client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .map_err(|e| format!("创建 WebSocket 客户端失败: {}", e))?
+    
+    let ws_response = ws_client
+        .get(ws_url)
+        .header("Upgrade", "websocket")
+        .header("Connection", "Upgrade")
+        .header("Sec-WebSocket-Key-Protocol", "chat")
+        .header("Sec-WebSocket-Version", "13")
+        .send()
+        .await
+        .map_err(|e| format!("连接 CDP WebSocket 失败: {}", e))?;
+    
+    // 3. 发送 Runtime.evaluate 命令
+    let request_id = "1";
+    let cdp_message = serde_json::json!({
+        "id": request_id,
+        "method": "Runtime.evaluate",
+        "params": {
+            "expression": expression,
+            "returnByValue": true
+        }
+    });
+    
+    // WebSocket 返回的是文本，需要手动解析
+    let ws_response_text = ws_client
+        .post(ws_url)
+        .header("Content-Type", "application/json")
+        .body(cdp_message.to_string())
+        .send()
+        .await
+        .map_err(|e| format!("发送 CDP 命令失败: {}", e))?;
+    
+    let response_text = ws_response_text.text().await
+        .map_err(|e| format!("读取 CDP 响应失败: {}", e))?;
+    
+    let response: serde_json::Value = serde_json::from_str(&response_text)
+        .map_err(|e| format!("解析 CDP 响应失败: {}", e))?;
+    
+    // 检查是否有错误
+    if let Some(error) = response.get("error") {
+        return Err(format!("CDP 执行错误: {}", error));
+    }
+    
+    Ok(response)
+}
+
+/// 在 OpenCode TUI 中显示 toast 通知
+async fn show_opencode_toast(
+    client: &reqwest::Client,
+    port: u16,
+    message: &str,
+    variant: &str,
+) -> bool {
+    let url = format!("http://127.0.0.1:{}/tui/show-toast", port);
+    let body = serde_json::json!({
+        "message": message,
+        "variant": variant,
+        "duration": 5000
+    });
+    match client
+        .post(&url)
+        .json(&body)
+        .send()
+        .await
+    {
+        Ok(res) => res.status().is_success(),
+        Err(_) => false,
+    }
+}
+
+/// 热重载：将 oh-my-opencode.json 中的 agent/model 配置推送到运行中的 OpenCode
+///
+/// 策略：
+/// - 无活跃对话 → PATCH /config 全局热重载（安全，不会崩溃）
+/// - 有活跃对话 → 仅显示 toast 提示用户手动 /models 切换（避免崩溃）
+///
+/// 映射规则：
+/// - oh-my-opencode.json 的 agents.{name}.model → opencode agent.{name}.model
+/// - oh-my-opencode.json 的 categories.{name}.model → opencode agent.{name}.model
+///
+/// 尽力而为：OpenCode 未运行则跳过，不报错
+#[tauri::command]
+pub async fn hot_reload_opencode_config(config_json: String) -> Result<HotReloadResult, String> {
+    // 解析前端传入的 OhMyOpenCodeConfig
+    let config: serde_json::Value = serde_json::from_str(&config_json)
+        .map_err(|e| format!("解析配置 JSON 失败: {}", e))?;
+
+    // 构建 agent 映射
+    let mut agent_map = serde_json::Map::new();
+
+    // Agent 配置
+    if let Some(agents) = config.get("agents").and_then(|v| v.as_object()) {
+        for (name, val) in agents {
+            if let Some(model) = val.get("model").and_then(|m| m.as_str()) {
+                let mut agent_obj = serde_json::Map::new();
+                agent_obj.insert("model".to_string(), serde_json::Value::String(model.to_string()));
+                agent_map.insert(name.clone(), serde_json::Value::Object(agent_obj));
+            }
+        }
+    }
+
+    // Category 配置也映射为 agent 条目
+    if let Some(categories) = config.get("categories").and_then(|v| v.as_object()) {
+        for (name, val) in categories {
+            if let Some(model) = val.get("model").and_then(|m| m.as_str()) {
+                let mut agent_obj = serde_json::Map::new();
+                agent_obj.insert("model".to_string(), serde_json::Value::String(model.to_string()));
+                agent_map.insert(name.clone(), serde_json::Value::Object(agent_obj));
+            }
+        }
+    }
+
+    let agent_config = serde_json::Value::Object(agent_map);
+
+    // 构建 HTTP 客户端（短超时，避免阻塞）
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(3))
+        .build()
+        .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
+
+    // 探测端口
+    let port = match discover_opencode_port(&client).await {
+        Some(p) => p,
+        None => {
+            return Ok(HotReloadResult {
+                success: false,
+                skipped: true,
+                message: "OpenCode 未运行，配置将在下次启动时生效".to_string(),
+            });
+        }
+    };
+
+    // 检查是否有活跃对话
+    let active = has_active_session(&client, port).await;
+    if active {
+        // 有活跃对话：不能用 PATCH /config（会导致崩溃），改为 toast 提示
+        show_opencode_toast(
+            &client,
+            port,
+            "OMOSwitcher 已更新模型配置，对话结束后将自动生效。或使用 /models 手动切换",
+            "info",
+        )
+        .await;
+        return Ok(HotReloadResult {
+            success: true,
+            skipped: false,
+            message: "配置已保存，有活跃对话，将在对话结束后生效".to_string(),
+        });
+    }
+
+    // 无活跃对话：安全地推送配置
+    match patch_opencode_config(&client, port, &agent_config).await {
+        Ok(true) => Ok(HotReloadResult {
+            success: true,
+            skipped: false,
+            message: "配置已保存并热重载到 OpenCode".to_string(),
+        }),
+        Ok(false) => Ok(HotReloadResult {
+            success: false,
+            skipped: false,
+            message: "热重载推送失败，配置将在下次启动时生效".to_string(),
+        }),
+        Err(e) => {
+            println!("[HotReload] 热重载错误: {}", e);
+            Ok(HotReloadResult {
+                success: false,
+                skipped: false,
+                message: format!("热重载失败: {}", e),
+            })
+        }
+    }
 }

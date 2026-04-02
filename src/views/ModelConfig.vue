@@ -191,6 +191,17 @@ watch(() => configStore.error, (newError) => {
         @close="saveMessage = ''"
       />
 
+      <!-- 热重载状态提示 -->
+      <el-alert
+        v-if="configStore.hotReloadStatus"
+        :title="configStore.hotReloadStatus.message"
+        :type="configStore.hotReloadStatus.success ? 'success' : configStore.hotReloadStatus.skipped ? 'info' : 'warning'"
+        show-icon
+        class="save-alert"
+        closable
+        @close="configStore.hotReloadStatus = null"
+      />
+
       <!-- Tab 切换 -->
       <el-tabs v-model="activeTab" class="config-tabs">
         <!-- Agent 配置 -->

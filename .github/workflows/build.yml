@@ -32,8 +32,8 @@ jobs:
       - name: Build monitor sidecar
         run: |
           npm run build:monitor:prod
-          npm run pkg:monitor
-          Copy-Item packages/monitor/dist/monitor.exe src-tauri/binaries/monitor-x86_64-pc-windows-msvc.exe -Force
+          npm run prepare:monitor
+          npm run verify:monitor-package
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0

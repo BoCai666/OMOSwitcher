@@ -6,7 +6,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import type { OhMyOpenCodeConfig, AgentName, CategoryName } from '@/types'
-import { readConfig, writeConfig, savePreset, getCurrentPreset } from '@/services'
+import { readConfig, writeConfig, savePreset, getCurrentPreset, hotReloadConfig } from '@/services'
+import type { HotReloadResult } from '@/services/opencodeApi'
 
 // 保存状态类型
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -37,6 +38,9 @@ export const useConfigStore = defineStore('config', () => {
 
   // 错误信息
   const error = ref<string | null>(null)
+
+  // 热重载状态
+  const hotReloadStatus = ref<HotReloadResult | null>(null)
 
   // 防抖定时器
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -73,6 +77,7 @@ export const useConfigStore = defineStore('config', () => {
     try {
       saveStatus.value = 'saving'
       error.value = null
+      hotReloadStatus.value = null
       
       // 保存主配置文件
       await writeConfig(config.value)
@@ -87,12 +92,17 @@ export const useConfigStore = defineStore('config', () => {
       // 更新原始配置为当前配置
       originalConfig.value = JSON.parse(JSON.stringify(config.value))
 
+      // TODO: 热重载功能暂时屏蔽，待方案调通后启用
+      // hotReloadStatus.value = await hotReloadConfig(config.value)
+
       // 3秒后重置为 idle
       setTimeout(() => {
         if (saveStatus.value === 'saved') {
           saveStatus.value = 'idle'
         }
-      }, 3000)
+        // 同时清除热重载状态
+        hotReloadStatus.value = null
+      }, 5000)
     } catch (e) {
       saveStatus.value = 'error'
       error.value = (e as Error).message
@@ -248,6 +258,7 @@ export const useConfigStore = defineStore('config', () => {
     isDirty.value = false
     saveStatus.value = 'idle'
     error.value = null
+    hotReloadStatus.value = null
     currentPresetName.value = null
     if (debounceTimer) {
       clearTimeout(debounceTimer)
@@ -287,6 +298,7 @@ export const useConfigStore = defineStore('config', () => {
     saveStatus,
     isDirty,
     error,
+    hotReloadStatus,
 
     // 计算属性
     isLoaded,

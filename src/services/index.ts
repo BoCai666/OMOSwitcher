@@ -53,3 +53,9 @@ export {
   getMonitorWebPort,
   getMonitorProxyPort
 } from './settingsStore'
+
+// OpenCode Server 热重载服务
+export {
+  hotReloadConfig,
+  type HotReloadResult
+} from './opencodeApi'

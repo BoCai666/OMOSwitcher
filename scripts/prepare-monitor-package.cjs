@@ -7,11 +7,13 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const rootDir = path.join(__dirname, '..');
 const monitorDir = path.join(rootDir, 'packages', 'monitor');
 const rootNodeModules = path.join(rootDir, 'node_modules');
 const binariesDir = path.join(rootDir, 'src-tauri', 'binaries', 'monitor-package');
+const embeddedNodeExe = path.join(rootDir, 'src-tauri', 'binaries', 'node', 'node.exe');
 
 // Monitor 的直接依赖（从 package.json 读取）
 const monitorDeps = [
@@ -126,6 +128,13 @@ cleanTypeFilesInNodeModules(nodeModulesDest);
 const totalSize = getDirSize(binariesDir);
 console.log(`\n✅ 准备完成！总大小: ${(totalSize / 1024 / 1024).toFixed(2)} MB`);
 
+// 8. 使用内嵌 Node 目标版本重建 better-sqlite3 原生模块
+rebuildBetterSqliteForEmbeddedNode();
+
+// 9. 校验关键运行时资源
+verifyRequiredArtifacts();
+console.log('✅ monitor-package 关键资源校验通过');
+
 // ============ 辅助函数 ============
 
 /**
@@ -222,4 +231,98 @@ function getDirSize(dir) {
   }
   
   return size;
+}
+
+/**
+ * 校验关键运行时资源是否已准备完成
+ */
+function verifyRequiredArtifacts() {
+  const requiredPaths = [
+    path.join(binariesDir, 'dist', 'index.js'),
+    path.join(binariesDir, 'package.json'),
+    path.join(binariesDir, 'config.jsonc'),
+    path.join(binariesDir, 'node_modules'),
+    path.join(binariesDir, 'node_modules', 'better-sqlite3', 'build'),
+  ];
+
+  const missing = requiredPaths.filter((targetPath) => !fs.existsSync(targetPath));
+  if (missing.length > 0) {
+    console.error('\n❌ monitor-package 缺少关键运行时资源：');
+    for (const targetPath of missing) {
+      console.error(`  - ${targetPath}`);
+    }
+    process.exit(1);
+  }
+}
+
+/**
+ * 针对内嵌 Node 版本重建 better-sqlite3 原生模块，避免 ABI 不匹配
+ */
+function rebuildBetterSqliteForEmbeddedNode() {
+  if (!fs.existsSync(embeddedNodeExe)) {
+    console.error(`\n❌ 内嵌 Node.js 不存在，无法重建 better-sqlite3: ${embeddedNodeExe}`);
+    process.exit(1);
+  }
+
+  const versionResult = spawnSync(embeddedNodeExe, ['-p', 'process.versions.node'], {
+    cwd: binariesDir,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  if (versionResult.status !== 0) {
+    console.error('\n❌ 获取内嵌 Node.js 版本失败');
+    process.stderr.write(versionResult.stderr || '');
+    process.exit(versionResult.status || 1);
+  }
+
+  const embeddedNodeVersion = versionResult.stdout.trim();
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const rebuildArgs = [
+    'rebuild',
+    'better-sqlite3',
+    '--foreground-scripts',
+    `--target=${embeddedNodeVersion}`,
+    '--runtime=node',
+    '--dist-url=https://nodejs.org/download/release/',
+    '--build-from-source',
+  ];
+
+  console.log(`\n🔧 使用内嵌 Node ${embeddedNodeVersion} 重建 better-sqlite3...`);
+
+  const rebuildResult = process.platform === 'win32'
+    ? spawnSync(
+        'cmd.exe',
+        ['/d', '/s', '/c', `${npmCommand} ${rebuildArgs.join(' ')}`],
+        {
+          cwd: binariesDir,
+          stdio: 'inherit',
+          env: {
+            ...process.env,
+            npm_config_target: embeddedNodeVersion,
+            npm_config_runtime: 'node',
+            npm_config_disturl: 'https://nodejs.org/download/release/',
+            npm_config_build_from_source: 'true',
+          },
+        }
+      )
+    : spawnSync(npmCommand, rebuildArgs, {
+        cwd: binariesDir,
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          npm_config_target: embeddedNodeVersion,
+          npm_config_runtime: 'node',
+          npm_config_disturl: 'https://nodejs.org/download/release/',
+          npm_config_build_from_source: 'true',
+        },
+      });
+
+  if (rebuildResult.status !== 0) {
+    console.error('\n❌ better-sqlite3 重建失败');
+    if (rebuildResult.error) {
+      console.error(rebuildResult.error);
+    }
+    process.exit(rebuildResult.status || 1);
+  }
 }
