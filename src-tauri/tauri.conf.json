@@ -10,8 +10,9 @@
   "identifier": "com.ohmyopencode.omoswitcher",
   "bundle": {
     "targets": "all",
-    "externalBin": [
-      "binaries/monitor"
+    "resources": [
+      "binaries/node/**/*",
+      "binaries/monitor-package/**/*"
     ],
     "icon": [
       "icons/32x32.png",

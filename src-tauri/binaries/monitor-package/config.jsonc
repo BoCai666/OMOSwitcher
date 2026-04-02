@@ -1,0 +1,141 @@
+// OpenCode Monitor 配置文件
+// 支持 JSONC 格式（带注释的 JSON）
+
+{
+  // 域名配置：需要监控的 API 域名列表
+  "domains": [
+    {
+      // 域名（主机名）
+      "domain": "api.openai.com",
+      // 服务商名称
+      "provider": "OpenAI",
+      // 是否启用监控
+      "enabled": true
+    },
+    {
+      "domain": "qianfan.baidubce.com",
+      "provider": "qianfan",
+      "enabled": true
+    },
+    {
+      "domain": "api.anthropic.com",
+      "provider": "Anthropic",
+      "enabled": true
+    },
+    {
+      "domain": "api.kimi.com",
+      "provider": "kimi",
+      "enabled": true
+    },
+    {
+      "domain": "ark.cn-beijing.volces.com",
+      "provider": "volces",
+      "enabled": true
+    },
+    {
+      "domain": "cloud.infini-ai.com",
+      "provider": "infini",
+      "enabled": true
+    },
+    {
+      "domain": "api.minimaxi.com",
+      "provider": "minimax",
+      "enabled": true
+    },
+    {
+      "domain": "modelservice.jdcloud.com",
+      "provider": "jdcloud",
+      "enabled": true
+    }
+  ],
+
+  // 定价配置：各模型的输入输出定价（美元 per 1M tokens）
+  "pricing": {
+    // 匹配策略：'prefix'（前缀匹配）或 'exact'（精确匹配）
+    "matchStrategy": "prefix",
+    // 模型定价列表
+    "models": [
+      {
+        // 模型名称（前缀匹配）
+        "model": "gpt-4",
+        // 输入定价（美元/1M tokens）
+        "input": 30,
+        // 输出定价（美元/1M tokens）
+        "output": 60
+      },
+      {
+        "model": "gpt-4-turbo",
+        "input": 10,
+        "output": 30
+      },
+      {
+        "model": "gpt-3.5-turbo",
+        "input": 0.5,
+        "output": 1.5
+      },
+      {
+        "model": "gpt-4o",
+        "input": 5,
+        "output": 15
+      },
+      {
+        "model": "gpt-4o-mini",
+        "input": 0.15,
+        "output": 0.6
+      },
+      {
+        "model": "claude-3-opus",
+        "input": 15,
+        "output": 75
+      },
+      {
+        "model": "claude-3-sonnet",
+        "input": 3,
+        "output": 15
+      },
+      {
+        "model": "doubao",
+        "input": 0.1,
+        "output": 0.2
+      },
+      {
+        "model": "kimi",
+        "input": 1,
+        "output": 3
+      },
+      {
+        "model": "kimi-k2.5",
+        "input": 0.6,
+        "output": 3
+      },
+      {
+        "model": "minimax-m2.5",
+        "input": 0.3,
+        "output": 1.2
+      },
+      {
+        "model": "glm-4.7",
+        "input": 0.6,
+        "output": 2.2
+      },
+      {
+        "model": "glm-5",
+        "input": 0.5,
+        "output": 2.25
+      },
+      {
+        "model": "doubao-seed-2.0-code",
+        "input": 0.2,
+        "output": 1
+      }
+    ]
+  },
+
+  // 端口配置：各服务监听的端口
+  "ports": {
+    // Web API 端口（Tauri 前端调用）
+    "web": 7100,
+    // 代理服务端口（拦截 LLM API）
+    "proxy": 7101
+  }
+}

@@ -19,8 +19,8 @@
     "tauri:build": "tauri build",
     "build:monitor": "npm run build -w @omoswitcher/monitor",
     "build:monitor:prod": "npm run build:prod -w @omoswitcher/monitor",
-    "pkg:monitor": "npm run pkg -w @omoswitcher/monitor",
-    "build:all": "npm run build:monitor:prod && npm run pkg:monitor && node scripts/copy-monitor.cjs && npm run tauri:build"
+    "prepare:monitor": "node scripts/prepare-monitor-package.cjs",
+    "build:all": "npm run build:monitor:prod && npm run prepare:monitor && npm run tauri:build"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",
