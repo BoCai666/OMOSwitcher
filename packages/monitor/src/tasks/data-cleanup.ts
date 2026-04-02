@@ -66,12 +66,8 @@ export class DataCleanupTask {
     // 删除数据
     const deleteStmt = dbManager.prepare('DELETE FROM requests WHERE timestamp < ?');
     const result = deleteStmt.run(cutoffTimestamp);
-    deleteStmt.free();
     
     const deleteCount = result.changes;
-    
-    // 保存数据库
-    await dbManager.saveToFile();
     
     console.log(`[Cleanup] Completed: archived ${archived}, deleted ${deleteCount}`);
     

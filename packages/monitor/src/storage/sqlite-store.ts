@@ -5,8 +5,9 @@ import { dbManager } from '../db/index.js';
 /**
  * SQLite 存储实现类
  * 
- * 使用 sql.js（纯 WASM SQLite）实现持久化存储
- * 可以在 pkg 打包环境中正常工作
+ * 使用 better-sqlite3（原生 SQLite 绑定）实现持久化存储
+ * - 同步 API，性能更好
+ * - 自动持久化，无需手动保存
  */
 export class SQLiteStorage implements StorageInterface {
   /**
@@ -49,9 +50,6 @@ export class SQLiteStorage implements StorageInterface {
       JSON.stringify(request.body),
       JSON.stringify(request.parsedBody || null)
     );
-    
-    stmt.free();
-    dbManager.scheduleSave();
   }
 
   /**
@@ -75,9 +73,6 @@ export class SQLiteStorage implements StorageInterface {
       JSON.stringify(response.parsedBody || null),
       response.duration || 0
     );
-    
-    stmt.free();
-    dbManager.scheduleSave();
   }
 
   /**
@@ -103,9 +98,6 @@ export class SQLiteStorage implements StorageInterface {
       metrics.duration || 0,
       metrics.timestamp || Date.now()
     );
-    
-    stmt.free();
-    dbManager.scheduleSave();
   }
 
   /**
@@ -137,9 +129,6 @@ export class SQLiteStorage implements StorageInterface {
       mcpCall.traceId || null,
       mcpCall.timestamp
     );
-    
-    stmt.free();
-    dbManager.scheduleSave();
   }
 
   /**
@@ -154,9 +143,7 @@ export class SQLiteStorage implements StorageInterface {
       LIMIT ?
     `);
     
-    const rows = stmt.all(limit);
-    stmt.free();
-    
+    const rows = stmt.all(limit) as any[];
     return rows.map(row => this.parseRequest(row));
   }
 
@@ -179,9 +166,7 @@ export class SQLiteStorage implements StorageInterface {
       LIMIT ?
     `);
     
-    const rows = stmt.all(limit);
-    stmt.free();
-    
+    const rows = stmt.all(limit) as any[];
     return rows.map(row => this.parseRequestWithMetrics(row));
   }
 
@@ -192,9 +177,7 @@ export class SQLiteStorage implements StorageInterface {
    */
   getRequestById(id: string): LLMRequest | null {
     const stmt = dbManager.prepare('SELECT * FROM requests WHERE id = ?');
-    const row = stmt.get(id);
-    stmt.free();
-    
+    const row = stmt.get(id) as any;
     return row ? this.parseRequest(row) : null;
   }
 
@@ -205,9 +188,7 @@ export class SQLiteStorage implements StorageInterface {
    */
   getResponseByRequestId(requestId: string): LLMResponse | null {
     const stmt = dbManager.prepare('SELECT * FROM responses WHERE request_id = ?');
-    const row = stmt.get(requestId);
-    stmt.free();
-    
+    const row = stmt.get(requestId) as any;
     return row ? this.parseResponse(row) : null;
   }
 
@@ -218,9 +199,7 @@ export class SQLiteStorage implements StorageInterface {
    */
   getMetricsByRequestId(requestId: string): LLMMetrics | null {
     const stmt = dbManager.prepare('SELECT * FROM metrics WHERE request_id = ?');
-    const row = stmt.get(requestId);
-    stmt.free();
-    
+    const row = stmt.get(requestId) as any;
     return row ? this.parseMetrics(row) : null;
   }
 
@@ -231,9 +210,7 @@ export class SQLiteStorage implements StorageInterface {
    */
   getMcpCallsByRequestId(requestId: string): MCPCall[] {
     const stmt = dbManager.prepare('SELECT * FROM mcp_calls WHERE request_id = ? ORDER BY timestamp ASC');
-    const rows = stmt.all(requestId);
-    stmt.free();
-    
+    const rows = stmt.all(requestId) as any[];
     return rows.map(row => this.parseMcpCall(row));
   }
 
@@ -253,8 +230,7 @@ export class SQLiteStorage implements StorageInterface {
       FROM metrics 
       WHERE timestamp >= ? AND timestamp <= ?
     `);
-    const statsRow = statsStmt.get(startTime, endTime);
-    statsStmt.free();
+    const statsRow = statsStmt.get(startTime, endTime) as any;
     
     // 获取按模型分组的统计数据
     const modelStmt = dbManager.prepare(`
@@ -267,8 +243,7 @@ export class SQLiteStorage implements StorageInterface {
       WHERE timestamp >= ? AND timestamp <= ?
       GROUP BY model
     `);
-    const modelRows = modelStmt.all(startTime, endTime);
-    modelStmt.free();
+    const modelRows = modelStmt.all(startTime, endTime) as any[];
     
     // 构建模型统计对象
     const modelStats: Record<string, { count: number; tokens: number; cost: number }> = {};
@@ -301,9 +276,7 @@ export class SQLiteStorage implements StorageInterface {
       ORDER BY date ASC
     `);
     
-    const rows = stmt.all(startDate, endDate);
-    stmt.free();
-    
+    const rows = stmt.all(startDate, endDate) as any[];
     return rows.map(row => this.parseDailyRecord(row));
   }
 
@@ -314,9 +287,7 @@ export class SQLiteStorage implements StorageInterface {
    */
   getDailyRecord(date: string): DailyRecord | null {
     const stmt = dbManager.prepare('SELECT * FROM daily_records WHERE date = ?');
-    const row = stmt.get(date);
-    stmt.free();
-    
+    const row = stmt.get(date) as any;
     return row ? this.parseDailyRecord(row) : null;
   }
 
@@ -340,13 +311,11 @@ export class SQLiteStorage implements StorageInterface {
     if (limit !== undefined) {
       sql += ' LIMIT ?';
       const stmt = dbManager.prepare(sql);
-      const rows = stmt.all(startTimestamp, endTimestamp, limit);
-      stmt.free();
+      const rows = stmt.all(startTimestamp, endTimestamp, limit) as any[];
       return rows.map(row => this.parseRequest(row));
     } else {
       const stmt = dbManager.prepare(sql);
-      const rows = stmt.all(startTimestamp, endTimestamp);
-      stmt.free();
+      const rows = stmt.all(startTimestamp, endTimestamp) as any[];
       return rows.map(row => this.parseRequest(row));
     }
   }
@@ -378,13 +347,11 @@ export class SQLiteStorage implements StorageInterface {
     if (limit !== undefined) {
       sql += ' LIMIT ?';
       const stmt = dbManager.prepare(sql);
-      const rows = stmt.all(startTimestamp, endTimestamp, limit);
-      stmt.free();
+      const rows = stmt.all(startTimestamp, endTimestamp, limit) as any[];
       return rows.map(row => this.parseRequestWithMetrics(row));
     } else {
       const stmt = dbManager.prepare(sql);
-      const rows = stmt.all(startTimestamp, endTimestamp);
-      stmt.free();
+      const rows = stmt.all(startTimestamp, endTimestamp) as any[];
       return rows.map(row => this.parseRequestWithMetrics(row));
     }
   }
@@ -413,13 +380,11 @@ export class SQLiteStorage implements StorageInterface {
     if (limit !== undefined) {
       sql += ' LIMIT ?';
       const stmt = dbManager.prepare(sql);
-      const rows = stmt.all(startTime, endTime, limit);
-      stmt.free();
+      const rows = stmt.all(startTime, endTime, limit) as any[];
       return rows.map(row => this.parseRequestWithMetrics(row));
     } else {
       const stmt = dbManager.prepare(sql);
-      const rows = stmt.all(startTime, endTime);
-      stmt.free();
+      const rows = stmt.all(startTime, endTime) as any[];
       return rows.map(row => this.parseRequestWithMetrics(row));
     }
   }
@@ -430,9 +395,7 @@ export class SQLiteStorage implements StorageInterface {
    */
   hasData(): boolean {
     const stmt = dbManager.prepare('SELECT COUNT(*) as count FROM requests LIMIT 1');
-    const row = stmt.get();
-    stmt.free();
-    
+    const row = stmt.get() as any;
     return row && row.count > 0;
   }
 
@@ -442,9 +405,7 @@ export class SQLiteStorage implements StorageInterface {
    */
   getAllModels(): string[] {
     const stmt = dbManager.prepare('SELECT DISTINCT model FROM metrics WHERE model IS NOT NULL AND model != \'\' ORDER BY model');
-    const rows = stmt.all();
-    stmt.free();
-    
+    const rows = stmt.all() as any[];
     return rows.map(row => row.model);
   }
 
@@ -469,8 +430,7 @@ export class SQLiteStorage implements StorageInterface {
       GROUP BY r.domain
       ORDER BY count DESC
     `);
-    const domainRows = domainStmt.all(startTime, endTime);
-    domainStmt.free();
+    const domainRows = domainStmt.all(startTime, endTime) as any[];
     
     // 获取域名+模型组合的统计
     const modelStmt = dbManager.prepare(`
@@ -485,8 +445,7 @@ export class SQLiteStorage implements StorageInterface {
       WHERE r.timestamp >= ? AND r.timestamp <= ?
       GROUP BY r.domain, model_name
     `);
-    const modelRows = modelStmt.all(startTime, endTime);
-    modelStmt.free();
+    const modelRows = modelStmt.all(startTime, endTime) as any[];
     
     // 构建模型统计映射
     const modelStatsByDomain: Record<string, Record<string, { count: number; tokens: number; cost: number }>> = {};
@@ -519,7 +478,6 @@ export class SQLiteStorage implements StorageInterface {
    */
   clear(): void {
     dbManager.exec('DELETE FROM requests');
-    dbManager.saveToFile();
   }
 
   /**
@@ -543,8 +501,7 @@ export class SQLiteStorage implements StorageInterface {
       ORDER BY r.timestamp DESC
       LIMIT ?
     `);
-    const newRows = newStmt.all(since, limit);
-    newStmt.free();
+    const newRows = newStmt.all(since, limit) as any[];
     
     // 查询更新的请求
     const updatedStmt = dbManager.prepare(`
@@ -560,8 +517,7 @@ export class SQLiteStorage implements StorageInterface {
       ORDER BY r.updated_at DESC
       LIMIT ?
     `);
-    const updatedRows = updatedStmt.all(since, since, limit);
-    updatedStmt.free();
+    const updatedRows = updatedStmt.all(since, since, limit) as any[];
     
     return {
       newRequests: newRows.map(row => this.parseRequestWithMetrics(row)),

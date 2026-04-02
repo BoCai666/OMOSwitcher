@@ -1,19 +1,20 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { MONITOR_ROOT, BACKUPS_DIR, DATABASE_FILE } from '../paths.js';
+import { BACKUPS_DIR, DATABASE_FILE } from '../paths.js';
+import Database from 'better-sqlite3';
 
 /**
  * 数据库备份管理器
  * 
- * 使用 sql.js 的 export() 方法创建备份
+ * 使用 better-sqlite3 的 backup() 方法创建备份
  */
 export class DatabaseBackup {
-  private db: any; // sql.js Database
+  private db: Database.Database;
   private backupDir: string;
   private maxBackups: number;
   private dbPath: string;
   
-  constructor(db: any, dbPath?: string) {
+  constructor(db: Database.Database, dbPath?: string) {
     this.db = db;
     this.backupDir = BACKUPS_DIR;
     this.maxBackups = 7;
@@ -27,7 +28,7 @@ export class DatabaseBackup {
   
   /**
    * 创建备份
-   * 使用 sql.js 的 export() 方法导出数据库
+   * 使用 better-sqlite3 的 backup() 方法
    */
   async createBackup(): Promise<string> {
     const timestamp = new Date().toISOString()
@@ -38,12 +39,11 @@ export class DatabaseBackup {
     console.log(`[Backup] Creating backup: ${backupPath}`);
     
     try {
-      // 使用 sql.js 的 export() 方法
-      const data = this.db.export();
-      const buffer = Buffer.from(data);
-      await fs.writeFile(backupPath, buffer);
+      // 使用 better-sqlite3 的 backup() 方法
+      await this.db.backup(backupPath);
       
-      console.log(`[Backup] Backup completed: ${backupPath} (${buffer.length} bytes)`);
+      const stats = await fs.stat(backupPath);
+      console.log(`[Backup] Backup completed: ${backupPath} (${stats.size} bytes)`);
       
       await this.cleanupOldBackups();
       

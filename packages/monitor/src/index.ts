@@ -327,7 +327,7 @@ async function main() {
     await proxyServer.start();
     
     // 8. 启动 Web 服务器
-    startServer();
+    await startServer();
     
     // 9. 处理关闭信号
     process.on('SIGINT', async () => {
