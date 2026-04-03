@@ -6,14 +6,20 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import type { OhMyOpenCodeConfig, AgentName, CategoryName } from '@/types'
-import { readConfig, writeConfig, savePreset, getCurrentPreset, hotReloadConfig } from '@/services'
-import type { HotReloadResult } from '@/services/opencodeApi'
+import { readConfig, writeConfig, savePreset, getCurrentPreset, requestSoftReload, checkPendingSoftReload } from '@/services'
+import type { SoftReloadResult } from '@/services/opencodeApi'
 
 // 保存状态类型
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 // 防抖保存延迟时间（毫秒）
 const DEBOUNCE_DELAY = 1000
+
+// 软重载轮询间隔（毫秒）
+const SOFT_RELOAD_POLL_DELAY = 3000
+
+// 状态提示自动清除时间（毫秒）
+const STATUS_CLEAR_DELAY = 5000
 
 export const useConfigStore = defineStore('config', () => {
   // ========== 状态 ==========
@@ -39,11 +45,17 @@ export const useConfigStore = defineStore('config', () => {
   // 错误信息
   const error = ref<string | null>(null)
 
-  // 热重载状态
-  const hotReloadStatus = ref<HotReloadResult | null>(null)
+  // 软重载状态
+  const softReloadStatus = ref<SoftReloadResult | null>(null)
 
   // 防抖定时器
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+  // 软重载轮询定时器
+  let softReloadPollTimer: ReturnType<typeof setTimeout> | null = null
+
+  // 状态自动清除定时器
+  let statusClearTimer: ReturnType<typeof setTimeout> | null = null
 
   // ========== 计算属性 ==========
 
@@ -70,6 +82,63 @@ export const useConfigStore = defineStore('config', () => {
 
   // ========== 内部方法 ==========
 
+  // 清除软重载轮询
+  function clearSoftReloadPolling(): void {
+    if (softReloadPollTimer) {
+      clearTimeout(softReloadPollTimer)
+      softReloadPollTimer = null
+    }
+  }
+
+  // 清除状态自动清理定时器
+  function clearStatusClearTimer(): void {
+    if (statusClearTimer) {
+      clearTimeout(statusClearTimer)
+      statusClearTimer = null
+    }
+  }
+
+  // 安排状态自动清理
+  function scheduleStatusCleanup(): void {
+    clearStatusClearTimer()
+    statusClearTimer = setTimeout(() => {
+      if (saveStatus.value === 'saved') {
+        saveStatus.value = 'idle'
+      }
+
+      if (softReloadStatus.value?.state !== 'pending_idle') {
+        softReloadStatus.value = null
+      }
+    }, STATUS_CLEAR_DELAY)
+  }
+
+  // 检查并推进待处理的软重载
+  async function pollPendingSoftReload(): Promise<void> {
+    try {
+      const result = await checkPendingSoftReload()
+      softReloadStatus.value = result
+
+      if (result.state === 'pending_idle') {
+        softReloadPollTimer = setTimeout(() => {
+          void pollPendingSoftReload()
+        }, SOFT_RELOAD_POLL_DELAY)
+        return
+      }
+
+      clearSoftReloadPolling()
+      scheduleStatusCleanup()
+    } catch (e) {
+      clearSoftReloadPolling()
+      softReloadStatus.value = {
+        success: false,
+        skipped: false,
+        state: 'failed',
+        message: '配置已保存，但自动应用到新会话失败：' + (e as Error).message,
+      }
+      scheduleStatusCleanup()
+    }
+  }
+
   // 实际保存配置
   async function performSave(): Promise<void> {
     if (!config.value) return
@@ -77,7 +146,9 @@ export const useConfigStore = defineStore('config', () => {
     try {
       saveStatus.value = 'saving'
       error.value = null
-      hotReloadStatus.value = null
+      softReloadStatus.value = null
+      clearSoftReloadPolling()
+      clearStatusClearTimer()
       
       // 保存主配置文件
       await writeConfig(config.value)
@@ -92,17 +163,24 @@ export const useConfigStore = defineStore('config', () => {
       // 更新原始配置为当前配置
       originalConfig.value = JSON.parse(JSON.stringify(config.value))
 
-      // TODO: 热重载功能暂时屏蔽，待方案调通后启用
-      // hotReloadStatus.value = await hotReloadConfig(config.value)
-
-      // 3秒后重置为 idle
-      setTimeout(() => {
-        if (saveStatus.value === 'saved') {
-          saveStatus.value = 'idle'
+      // 软重载是“尽力而为”的，不应影响主保存流程
+      try {
+        softReloadStatus.value = await requestSoftReload()
+        if (softReloadStatus.value.state === 'pending_idle') {
+          softReloadPollTimer = setTimeout(() => {
+            void pollPendingSoftReload()
+          }, SOFT_RELOAD_POLL_DELAY)
         }
-        // 同时清除热重载状态
-        hotReloadStatus.value = null
-      }, 5000)
+      } catch (reloadError) {
+        softReloadStatus.value = {
+          success: false,
+          skipped: false,
+          state: 'failed',
+          message: '配置已保存，但软重载失败：' + (reloadError as Error).message,
+        }
+      }
+
+      scheduleStatusCleanup()
     } catch (e) {
       saveStatus.value = 'error'
       error.value = (e as Error).message
@@ -258,12 +336,14 @@ export const useConfigStore = defineStore('config', () => {
     isDirty.value = false
     saveStatus.value = 'idle'
     error.value = null
-    hotReloadStatus.value = null
+    softReloadStatus.value = null
     currentPresetName.value = null
     if (debounceTimer) {
       clearTimeout(debounceTimer)
       debounceTimer = null
     }
+    clearSoftReloadPolling()
+    clearStatusClearTimer()
   }
 
   /**
@@ -298,7 +378,7 @@ export const useConfigStore = defineStore('config', () => {
     saveStatus,
     isDirty,
     error,
-    hotReloadStatus,
+    softReloadStatus,
 
     // 计算属性
     isLoaded,

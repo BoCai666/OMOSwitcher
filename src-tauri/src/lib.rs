@@ -40,6 +40,8 @@ pub fn run() {
             commands::get_monitor_ports_config,
             // OpenCode 热重载命令
             commands::hot_reload_opencode_config,
+            commands::request_soft_reload_opencode_config,
+            commands::check_pending_soft_reload,
         ])
         .on_window_event(|_window, event| {
             // 窗口关闭时确保停止 sidecar（异步执行，不阻塞关闭）

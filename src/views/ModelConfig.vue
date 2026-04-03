@@ -193,13 +193,19 @@ watch(() => configStore.error, (newError) => {
 
       <!-- 热重载状态提示 -->
       <el-alert
-        v-if="configStore.hotReloadStatus"
-        :title="configStore.hotReloadStatus.message"
-        :type="configStore.hotReloadStatus.success ? 'success' : configStore.hotReloadStatus.skipped ? 'info' : 'warning'"
+        v-if="configStore.softReloadStatus"
+        :title="configStore.softReloadStatus.message"
+        :type="configStore.softReloadStatus.state === 'pending_idle'
+          ? 'info'
+          : configStore.softReloadStatus.success
+            ? 'success'
+            : configStore.softReloadStatus.skipped
+              ? 'info'
+              : 'warning'"
         show-icon
         class="save-alert"
         closable
-        @close="configStore.hotReloadStatus = null"
+        @close="configStore.softReloadStatus = null"
       />
 
       <!-- Tab 切换 -->

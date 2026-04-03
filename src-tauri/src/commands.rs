@@ -285,16 +285,15 @@ pub fn launch_opencode(
 
         // 构建启动命令
         // --port 4096 让 OpenCode 启动 HTTP Server（热重载用）
-        // --inspect 让 OpenCode 暴露调试端口（CDP 用）
         let ps_command = if proxy_enabled {
             // 启用代理模式，设置代理和证书路径
             format!(
-                "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; $env:NODE_EXTRA_CA_CERTS='{}'; cd '{}'; opencode --port 4096 --inspect",
+                "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; $env:NODE_EXTRA_CA_CERTS='{}'; cd '{}'; opencode --port 4096",
                 proxy_url, proxy_url, ca_cert_path, path
             )
         } else {
             // 直连模式，不设置代理
-            format!("cd '{}'; opencode --port 4096 --inspect", path)
+            format!("cd '{}'; opencode --port 4096", path)
         };
 
         // 使用 CREATE_NEW_CONSOLE 标志创建独立的控制台窗口
@@ -318,15 +317,16 @@ pub fn launch_opencode(
         };
 
         // 构建启动命令
+        // --port 4096 让 OpenCode 启动 HTTP Server（热重载用）
         let bash_command = if proxy_enabled {
             // 启用代理模式，设置代理和证书路径
             format!(
-                "export HTTP_PROXY='{}' HTTPS_PROXY='{}' NODE_EXTRA_CA_CERTS='{}' && cd '{}' && opencode; exec bash",
+                "export HTTP_PROXY='{}' HTTPS_PROXY='{}' NODE_EXTRA_CA_CERTS='{}' && cd '{}' && opencode --port 4096; exec bash",
                 proxy_url, proxy_url, ca_cert_path, path
             )
         } else {
             // 直连模式，不设置代理
-            format!("cd '{}' && opencode; exec bash", path)
+            format!("cd '{}' && opencode --port 4096; exec bash", path)
         };
 
         // 尝试使用常见的终端模拟器
@@ -936,6 +936,33 @@ pub struct HotReloadResult {
     pub skipped: bool,
 }
 
+/// 软重载结果
+#[derive(Serialize, Clone)]
+pub struct SoftReloadResult {
+    /// 是否成功进入预期状态
+    pub success: bool,
+    /// 可读的状态描述
+    pub message: String,
+    /// 是否因为 OpenCode 未运行而延后到下次启动
+    pub skipped: bool,
+    /// 当前软重载状态
+    pub state: String,
+}
+
+fn make_soft_reload_result(
+    success: bool,
+    skipped: bool,
+    state: &str,
+    message: impl Into<String>,
+) -> SoftReloadResult {
+    SoftReloadResult {
+        success,
+        skipped,
+        state: state.to_string(),
+        message: message.into(),
+    }
+}
+
 /// 探测 OpenCode Server 是否在指定端口运行
 async fn probe_opencode_server(client: &reqwest::Client, port: u16) -> bool {
     let url = format!("http://127.0.0.1:{}/config", port);
@@ -1013,78 +1040,6 @@ async fn has_active_session(client: &reqwest::Client, port: u16) -> bool {
     }
 }
 
-/// 通过 CDP 执行 JavaScript 代码
-async fn cdp_runtime_evaluate(
-    client: &reqwest::Client,
-    port: u16,
-    expression: &str,
-) -> Result<serde_json::Value, String> {
-    // 1. 获取 CDP WebSocket URL
-    let list_url = format!("http://127.0.0.1:{}/json/list", port);
-    let list_response = client.get(&list_url).send().await
-        .map_err(|e| format!("获取 CDP 目标列表失败: {}", e))?;
-    
-    let targets: serde_json::Value = list_response.json().await
-        .map_err(|e| format!("解析 CDP 目标列表失败: {}", e))?;
-    
-    // 找到第一个有效的 WebSocket URL
-    let ws_url = targets
-        .as_array()
-        .and_then(|arr| arr.first())
-        .and_then(|t| t.get("webSocketDebuggerUrl"))
-        .and_then(|url| url.as_str())
-        .ok_or_else(|| "未找到 CDP WebSocket URL".to_string())?;
-    
-    // 2. 连接到 WebSocket
-    let ws_client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(5))
-        .build()
-        .map_err(|e| format!("创建 WebSocket 客户端失败: {}", e))?
-    
-    let ws_response = ws_client
-        .get(ws_url)
-        .header("Upgrade", "websocket")
-        .header("Connection", "Upgrade")
-        .header("Sec-WebSocket-Key-Protocol", "chat")
-        .header("Sec-WebSocket-Version", "13")
-        .send()
-        .await
-        .map_err(|e| format!("连接 CDP WebSocket 失败: {}", e))?;
-    
-    // 3. 发送 Runtime.evaluate 命令
-    let request_id = "1";
-    let cdp_message = serde_json::json!({
-        "id": request_id,
-        "method": "Runtime.evaluate",
-        "params": {
-            "expression": expression,
-            "returnByValue": true
-        }
-    });
-    
-    // WebSocket 返回的是文本，需要手动解析
-    let ws_response_text = ws_client
-        .post(ws_url)
-        .header("Content-Type", "application/json")
-        .body(cdp_message.to_string())
-        .send()
-        .await
-        .map_err(|e| format!("发送 CDP 命令失败: {}", e))?;
-    
-    let response_text = ws_response_text.text().await
-        .map_err(|e| format!("读取 CDP 响应失败: {}", e))?;
-    
-    let response: serde_json::Value = serde_json::from_str(&response_text)
-        .map_err(|e| format!("解析 CDP 响应失败: {}", e))?;
-    
-    // 检查是否有错误
-    if let Some(error) = response.get("error") {
-        return Err(format!("CDP 执行错误: {}", error));
-    }
-    
-    Ok(response)
-}
-
 /// 在 OpenCode TUI 中显示 toast 通知
 async fn show_opencode_toast(
     client: &reqwest::Client,
@@ -1098,6 +1053,7 @@ async fn show_opencode_toast(
         "variant": variant,
         "duration": 5000
     });
+    
     match client
         .post(&url)
         .json(&body)
@@ -1208,6 +1164,196 @@ pub async fn hot_reload_opencode_config(config_json: String) -> Result<HotReload
                 skipped: false,
                 message: format!("热重载失败: {}", e),
             })
+        }
+    }
+}
+
+/// 请求软重载：当前忙则等待空闲，当前空闲则立即让下一个新会话生效
+#[tauri::command]
+pub async fn request_soft_reload_opencode_config() -> Result<SoftReloadResult, String> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(3))
+        .build()
+        .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
+
+    let port = match discover_opencode_port(&client).await {
+        Some(port) => port,
+        None => {
+            return Ok(make_soft_reload_result(
+                true,
+                true,
+                "deferred_offline",
+                "OpenCode 未运行，配置将在下次启动时生效",
+            ))
+        }
+    };
+
+    if has_active_session(&client, port).await {
+        show_opencode_toast(
+            &client,
+            port,
+            "OMOSwitcher 已更新模型配置，当前对话不受影响，将在新会话自动生效",
+            "info",
+        )
+        .await;
+
+        return Ok(make_soft_reload_result(
+            true,
+            false,
+            "pending_idle",
+            "配置已保存，当前有活跃对话，将在对话结束后自动应用到新会话",
+        ));
+    }
+
+    // 无活跃对话：读取配置并推送到 OpenCode
+    let config_path = get_config_path()?;
+    let config_content = async_fs::read_to_string(&config_path)
+        .await
+        .map_err(|e| format!("读取配置文件失败: {}", e))?;
+    
+    let config: serde_json::Value = serde_json::from_str(&config_content)
+        .map_err(|e| format!("解析配置 JSON 失败: {}", e))?;
+    
+    // 构建 agent 映射
+    let mut agent_map = serde_json::Map::new();
+
+    // Agent 配置
+    if let Some(agents) = config.get("agents").and_then(|v| v.as_object()) {
+        for (name, val) in agents {
+            if let Some(model) = val.get("model").and_then(|m| m.as_str()) {
+                let mut agent_obj = serde_json::Map::new();
+                agent_obj.insert("model".to_string(), serde_json::Value::String(model.to_string()));
+                agent_map.insert(name.clone(), serde_json::Value::Object(agent_obj));
+            }
+        }
+    }
+
+    // Category 配置也映射为 agent 条目
+    if let Some(categories) = config.get("categories").and_then(|v| v.as_object()) {
+        for (name, val) in categories {
+            if let Some(model) = val.get("model").and_then(|m| m.as_str()) {
+                let mut agent_obj = serde_json::Map::new();
+                agent_obj.insert("model".to_string(), serde_json::Value::String(model.to_string()));
+                agent_map.insert(name.clone(), serde_json::Value::Object(agent_obj));
+            }
+        }
+    }
+
+    let agent_config = serde_json::Value::Object(agent_map);
+
+    // 使用 PATCH /config 推送到 OpenCode
+    match patch_opencode_config(&client, port, &agent_config).await {
+        Ok(true) => Ok(make_soft_reload_result(
+            true,
+            false,
+            "applied_next_session",
+            "配置已保存并推送到 OpenCode，下一个新会话将使用新模型",
+        )),
+        Ok(false) => Ok(make_soft_reload_result(
+            false,
+            false,
+            "failed",
+            "配置已保存，但推送到 OpenCode 失败",
+        )),
+        Err(e) => {
+            println!("[SoftReload] 推送配置错误: {}", e);
+            Ok(make_soft_reload_result(
+                false,
+                false,
+                "failed",
+                format!("配置已保存，但推送到 OpenCode 失败: {}", e),
+            ))
+        }
+    }
+}
+
+/// 检查并推进待处理的软重载
+#[tauri::command]
+pub async fn check_pending_soft_reload() -> Result<SoftReloadResult, String> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(3))
+        .build()
+        .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
+
+    let port = match discover_opencode_port(&client).await {
+        Some(port) => port,
+        None => {
+            return Ok(make_soft_reload_result(
+                true,
+                true,
+                "deferred_offline",
+                "OpenCode 当前未运行，配置将在下次启动时生效",
+            ))
+        }
+    };
+
+    if has_active_session(&client, port).await {
+        return Ok(make_soft_reload_result(
+            true,
+            false,
+            "pending_idle",
+            "当前仍有活跃对话，系统会在空闲后自动应用到新会话",
+        ));
+    }
+
+    // 无活跃对话：读取配置并推送到 OpenCode
+    let config_path = get_config_path()?;
+    let config_content = async_fs::read_to_string(&config_path)
+        .await
+        .map_err(|e| format!("读取配置文件失败: {}", e))?;
+    
+    let config: serde_json::Value = serde_json::from_str(&config_content)
+        .map_err(|e| format!("解析配置 JSON 失败: {}", e))?;
+    
+    // 构建 agent 映射
+    let mut agent_map = serde_json::Map::new();
+
+    // Agent 配置
+    if let Some(agents) = config.get("agents").and_then(|v| v.as_object()) {
+        for (name, val) in agents {
+            if let Some(model) = val.get("model").and_then(|m| m.as_str()) {
+                let mut agent_obj = serde_json::Map::new();
+                agent_obj.insert("model".to_string(), serde_json::Value::String(model.to_string()));
+                agent_map.insert(name.clone(), serde_json::Value::Object(agent_obj));
+            }
+        }
+    }
+
+    // Category 配置也映射为 agent 条目
+    if let Some(categories) = config.get("categories").and_then(|v| v.as_object()) {
+        for (name, val) in categories {
+            if let Some(model) = val.get("model").and_then(|m| m.as_str()) {
+                let mut agent_obj = serde_json::Map::new();
+                agent_obj.insert("model".to_string(), serde_json::Value::String(model.to_string()));
+                agent_map.insert(name.clone(), serde_json::Value::Object(agent_obj));
+            }
+        }
+    }
+
+    let agent_config = serde_json::Value::Object(agent_map);
+
+    // 使用 PATCH /config 推送到 OpenCode
+    match patch_opencode_config(&client, port, &agent_config).await {
+        Ok(true) => Ok(make_soft_reload_result(
+            true,
+            false,
+            "applied_next_session",
+            "配置已推送到 OpenCode，下一个新会话将使用新模型",
+        )),
+        Ok(false) => Ok(make_soft_reload_result(
+            false,
+            false,
+            "failed",
+            "推送到 OpenCode 失败",
+        )),
+        Err(e) => {
+            println!("[SoftReload] 推送配置错误: {}", e);
+            Ok(make_soft_reload_result(
+                false,
+                false,
+                "failed",
+                format!("当前对话已结束，但推送到 OpenCode 失败: {}", e),
+            ))
         }
     }
 }
