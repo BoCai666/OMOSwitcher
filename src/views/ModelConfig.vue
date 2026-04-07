@@ -277,7 +277,6 @@ watch(() => configStore.error, (newError) => {
       <ModelSelectDrawer
         v-model:visible="modelDrawerVisible"
         :current-model="modelDrawerCurrentModel"
-        :models="models"
         :title="modelDrawerTitle"
         @select="handleSelectModel"
       />

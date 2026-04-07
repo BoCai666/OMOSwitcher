@@ -1,16 +1,16 @@
 <script setup lang="ts">
 /**
- * 模型选择抽屉组件
- * 从右侧滑出，支持搜索和按供应商分组选择模型
+ * 模型选择弹窗组件
+ * 双栏布局：左侧供应商列表 + 右侧模型网格
+ * 数据来源：模型管理页的可用模型列表 (getAvailableModels)
  */
-import { ref, computed, watch, nextTick } from 'vue'
-import { Search, ArrowRight } from '@element-plus/icons-vue'
-import type { Model } from '@/types'
+import { ref, computed, watch } from 'vue'
+import { Search, Check } from '@element-plus/icons-vue'
+import { getAvailableModels, type AvailableModel } from '@/services/opencodeModels'
 
 const props = defineProps<{
   visible: boolean
   currentModel: string
-  models: Model[]
   title?: string
 }>()
 
@@ -19,73 +19,119 @@ const emit = defineEmits<{
   'select': [modelId: string]
 }>()
 
+// 对话框可见性（双向绑定)
+const dialogVisible = computed({
+  get: () => props.visible,
+  set: (value) => emit('update:visible', value)
+})
+
+// 可用模型列表（从模型管理页获取）
+const availableModels = ref<AvailableModel[]>([])
+const loading = ref(false)
+
 // 搜索关键词
 const searchKeyword = ref('')
 
-// 折叠状态：记录每个 provider 是否展开，默认全部折叠
-const expandedProviders = ref<Set<string>>(new Set())
+// 当前选中的供应商
+const selectedProvider = ref<string | null>(null)
 
-// 模型列表容器的引用
-const modelListRef = ref<HTMLElement | null>(null)
+// 能力筛选
+const capabilityFilter = ref<'all' | 'tool' | 'reasoning' | 'attachment'>('all')
 
-// 抽屉关闭时清空搜索，打开时重置滚动位置
+// 加载可用模型
+async function loadAvailableModels() {
+  loading.value = true
+  try {
+    availableModels.value = await getAvailableModels()
+    // 默认选中第一个供应商
+    if (availableModels.value.length > 0 && !selectedProvider.value) {
+      selectedProvider.value = availableModels.value[0].provider
+    }
+  } catch (error) {
+    console.error('加载可用模型失败:', error)
+    availableModels.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+// 弹窗打开时加载数据
 watch(() => props.visible, (newVal) => {
-  if (!newVal) {
-    // 关闭时清空搜索
+  if (newVal) {
+    loadAvailableModels()
     searchKeyword.value = ''
-  } else {
-    // 打开时只重置滚动位置，保留折叠状态
-    nextTick(() => {
-      // 重置模型列表滚动
-      if (modelListRef.value) {
-        modelListRef.value.scrollTop = 0
-      }
-      // 重置 el-drawer 的 body 滚动（通过 DOM 查询）
-      const drawerBody = document.querySelector('.el-drawer__body') as HTMLElement
-      if (drawerBody) {
-        drawerBody.scrollTop = 0
-      }
-      // 也重置 drawer-content 的滚动
-      const drawerContent = document.querySelector('.drawer-content') as HTMLElement
-      if (drawerContent) {
-        drawerContent.scrollTop = 0
-      }
-    })
+    capabilityFilter.value = 'all'
   }
 })
 
-// 按供应商分组的模型（过滤后）
-const groupedModels = computed(() => {
-  const groups = new Map<string, Model[]>()
+// 按供应商分组的模型
+const providerStats = computed(() => {
+  const stats = new Map<string, AvailableModel[]>()
   
-  for (const model of props.models) {
-    // 搜索过滤
-    if (searchKeyword.value) {
-      const keyword = searchKeyword.value.toLowerCase()
-      const nameMatch = model.name.toLowerCase().includes(keyword)
-      const idMatch = model.id.toLowerCase().includes(keyword)
-      if (!nameMatch && !idMatch) continue
-    }
-    
+  for (const model of availableModels.value) {
     const provider = model.provider
-    if (!groups.has(provider)) {
-      groups.set(provider, [])
+    if (!stats.has(provider)) {
+      stats.set(provider, [])
     }
-    groups.get(provider)!.push(model)
+    stats.get(provider)!.push(model)
   }
   
-  // 按供应商名称排序
-  return new Map(Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0])))
+  // 按模型数量排序
+  return new Map(Array.from(stats.entries()).sort((a, b) => b[1].length - a[1].length))
 })
 
-// 当前选中的模型名称
-const currentModelName = computed(() => {
-  return props.models.find(m => m.id === props.currentModel)?.name || props.currentModel
+// 供应商列表（过滤搜索）
+const filteredProviders = computed(() => {
+  if (!searchKeyword.value) {
+    return Array.from(providerStats.value.keys())
+  }
+  const keyword = searchKeyword.value.toLowerCase()
+  return Array.from(providerStats.value.keys()).filter(provider => 
+    provider.toLowerCase().includes(keyword) ||
+    providerStats.value.get(provider)!.some(m => 
+      m.name.toLowerCase().includes(keyword) || m.id.toLowerCase().includes(keyword)
+    )
+  )
 })
 
-// 关闭抽屉
+// 当前供应商的模型（过滤搜索 + 能力筛选）
+const currentProviderModels = computed(() => {
+  if (!selectedProvider.value) return []
+  
+  let models = providerStats.value.get(selectedProvider.value) || []
+  
+  // 搜索过滤
+  if (searchKeyword.value) {
+    const keyword = searchKeyword.value.toLowerCase()
+    models = models.filter(m => 
+      m.name.toLowerCase().includes(keyword) || m.id.toLowerCase().includes(keyword)
+    )
+  }
+  
+  // 能力筛选
+  if (capabilityFilter.value !== 'all') {
+    switch (capabilityFilter.value) {
+      case 'tool':
+        models = models.filter(m => m.tool_call)
+        break
+      case 'reasoning':
+        models = models.filter(m => m.reasoning)
+        break
+      case 'attachment':
+        models = models.filter(m => m.attachment)
+        break
+    }
+  }
+  
+  return models
+})
+
+// 当前模型 ID（数据源原始格式）
+const currentModelId = computed(() => props.currentModel)
+
+// 关闭弹窗
 function handleClose() {
-  emit('update:visible', false)
+  dialogVisible.value = false
 }
 
 // 选择模型
@@ -99,593 +145,702 @@ function isCurrentModel(modelId: string) {
   return modelId === props.currentModel
 }
 
-// 判断 provider 是否展开
-function isProviderExpanded(provider: string) {
-  return expandedProviders.value.has(provider)
+// 选择供应商
+function selectProvider(provider: string) {
+  selectedProvider.value = provider
 }
-
-// 切换 provider 的展开/折叠状态
-function toggleProvider(provider: string) {
-  if (expandedProviders.value.has(provider)) {
-    expandedProviders.value.delete(provider)
-  } else {
-    expandedProviders.value.add(provider)
-  }
-  // 触发响应式更新
-  expandedProviders.value = new Set(expandedProviders.value)
-}
-
-// 展开/折叠全部
-function toggleAll() {
-  // 如果全部展开则折叠全部，否则展开全部
-  if (expandedProviders.value.size === groupedModels.value.size) {
-    expandedProviders.value = new Set()
-  } else {
-    expandedProviders.value = new Set(groupedModels.value.keys())
-  }
-}
-
-// 是否全部展开
-const isAllExpanded = computed(() => {
-  return groupedModels.value.size > 0 && expandedProviders.value.size === groupedModels.value.size
-})
 </script>
 
 <template>
-  <el-drawer
-    :model-value="visible"
+  <el-dialog
+    v-model="dialogVisible"
     :title="title || '选择模型'"
-    direction="rtl"
-    size="400px"
-    :modal-class="'model-drawer-modal'"
-    :drawer-class="'model-glass-drawer'"
-    append-to-body
-    @update:model-value="emit('update:visible', $event)"
+    width="850px"
+    class="model-select-dialog"
+    destroy-on-close
+    append-to=".app-main"
+    align-center
   >
-    <div class="drawer-content">
-      <!-- 当前选中的模型 -->
-      <div class="current-model">
-        <span class="label">当前模型:</span>
-        <span class="value">{{ currentModelName }}</span>
+    <div class="dialog-content">
+      <!-- 顶部：搜索 + 当前模型 -->
+      <div class="dialog-header">
+        <div class="search-wrapper">
+          <el-input
+            v-model="searchKeyword"
+            placeholder="搜索供应商或模型..."
+            :prefix-icon="Search"
+            clearable
+            class="search-input"
+          />
+        </div>
+        <div class="current-model-display">
+          <span class="label">当前:</span>
+          <span class="model-id-text">{{ currentModelId }}</span>
+        </div>
       </div>
-      
-      <!-- 搜索框 -->
-      <el-input
-        v-model="searchKeyword"
-        placeholder="搜索模型名称或 ID..."
-        :prefix-icon="Search"
-        clearable
-        class="search-input"
-      />
-      
-      <!-- 模型列表 -->
-      <div class="model-list" ref="modelListRef">
-        <template v-if="groupedModels.size > 0">
-          <!-- 全部展开/折叠按钮 -->
-          <div class="list-actions">
-            <el-button link size="small" @click="toggleAll">
-              {{ isAllExpanded ? '全部折叠' : '全部展开' }}
-            </el-button>
+
+      <!-- 加载中 -->
+      <div v-if="loading" class="loading-container">
+        <el-icon class="is-loading" :size="32"><Loading /></el-icon>
+        <span>加载模型列表...</span>
+      </div>
+
+      <!-- 双栏布局 -->
+      <div v-else class="dual-panel">
+        <!-- 左侧：供应商列表 -->
+        <div class="provider-panel">
+          <div class="panel-header">
+            <div class="header-title">
+              <span>供应商</span>
+              <span class="count-badge">{{ filteredProviders.length }}</span>
+            </div>
+          </div>
+          <div class="provider-list">
+            <div
+              v-for="provider in filteredProviders"
+              :key="provider"
+              class="provider-item"
+              :class="{ active: provider === selectedProvider }"
+              @click="selectProvider(provider)"
+            >
+              <span class="provider-name">{{ provider }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧：模型网格 -->
+        <div class="model-panel">
+          <div class="panel-header">
+            <div class="header-left">
+              <div class="header-title">
+                <span>{{ selectedProvider || '选择供应商' }}</span>
+              </div>
+            </div>
+            <!-- 能力筛选 -->
+            <div class="capability-filters">
+              <button
+                class="filter-btn"
+                :class="{ active: capabilityFilter === 'all' }"
+                @click="capabilityFilter = 'all'"
+              >全部</button>
+              <button
+                class="filter-btn tool"
+                :class="{ active: capabilityFilter === 'tool' }"
+                @click="capabilityFilter = 'tool'"
+              >
+                <span class="filter-dot tool" />
+                工具
+              </button>
+              <button
+                class="filter-btn reasoning"
+                :class="{ active: capabilityFilter === 'reasoning' }"
+                @click="capabilityFilter = 'reasoning'"
+              >
+                <span class="filter-dot reasoning" />
+                推理
+              </button>
+              <button
+                class="filter-btn attachment"
+                :class="{ active: capabilityFilter === 'attachment' }"
+                @click="capabilityFilter = 'attachment'"
+              >
+                <span class="filter-dot attachment" />
+                图片
+              </button>
+            </div>
           </div>
           
-          <div
-            v-for="[provider, providerModels] in groupedModels"
-            :key="provider"
-            class="provider-group"
-          >
-            <div 
-              class="provider-header" 
-              :class="{ expanded: isProviderExpanded(provider) }"
-              @click="toggleProvider(provider)"
+          <div class="model-grid">
+            <div
+              v-for="model in currentProviderModels"
+              :key="model.id"
+              class="model-card"
+              :class="{ active: isCurrentModel(model.id) }"
+              @click="handleSelectModel(model.id)"
             >
-              <div class="provider-info">
-                <el-icon class="expand-icon"><ArrowRight /></el-icon>
-                <span class="provider-name">{{ provider }}</span>
-                <span class="provider-count">{{ providerModels.length }}</span>
+              <div class="model-card-header">
+                <span class="model-name">{{ model.name }}</span>
+                <div v-if="isCurrentModel(model.id)" class="current-badge">
+                  <el-icon><Check /></el-icon>
+                </div>
+              </div>
+              <div class="model-card-id">{{ model.id.split('/')[1] }}</div>
+              <div class="model-card-tags">
+                <span v-if="model.tool_call" class="capability-tag tool">
+                  <span class="tag-dot" />
+                  工具
+                </span>
+                <span v-if="model.reasoning" class="capability-tag reasoning">
+                  <span class="tag-dot" />
+                  推理
+                </span>
+                <span v-if="model.attachment" class="capability-tag attachment">
+                  <span class="tag-dot" />
+                  图片
+                </span>
               </div>
             </div>
             
-            <el-collapse-transition>
-              <div v-show="isProviderExpanded(provider)" class="model-items">
-                <div
-                  v-for="model in providerModels"
-                  :key="model.id"
-                  class="model-item"
-                  :class="{ 'is-current': isCurrentModel(model.id) }"
-                  @click="handleSelectModel(model.id)"
-                >
-                  <div class="model-info">
-                    <span class="model-name">{{ model.name }}</span>
-                    <span class="model-id">{{ model.id }}</span>
-                  </div>
-                  <el-icon v-if="isCurrentModel(model.id)" class="check-icon">
-                    <svg viewBox="0 0 1024 1024">
-                      <path fill="currentColor" d="M406.656 706.944L195.84 496.256a32 32 0 10-45.248 45.248l256 256 512-512a32 32 0 00-45.248-45.248L406.592 706.944z"/>
-                    </svg>
-                  </el-icon>
-                </div>
-              </div>
-            </el-collapse-transition>
+            <el-empty
+              v-if="currentProviderModels.length === 0 && selectedProvider"
+              description="没有匹配的模型"
+              :image-size="80"
+            />
           </div>
-        </template>
-        
-        <el-empty
-          v-else
-          description="没有找到匹配的模型"
-          :image-size="80"
-        />
+        </div>
       </div>
     </div>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <style scoped>
-/* 抽屉玻璃效果 - 穿透到外层 */
-:deep(.model-glass-drawer) {
-  background: var(--app-glass-bg) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  border-left: 1px solid var(--app-border-default);
+/* 弹窗样式 */
+:deep(.el-dialog) {
+  background: var(--app-bg-card);
+  border-radius: var(--app-radius-lg);
+  border: 1px solid var(--app-border-default);
 }
 
-:deep(.model-glass-drawer .el-drawer__header) {
-  color: var(--app-text-primary);
+:deep(.el-dialog__header) {
+  padding: 16px 24px;
   border-bottom: 1px solid var(--app-border-default);
-  padding: 16px 20px;
-  margin-bottom: 0;
 }
 
-/* 确保 drawer body 不滚动，滚动只在 .model-list 内 */
-:deep(.model-glass-drawer .el-drawer__body) {
-  overflow: hidden;
+:deep(.el-dialog__title) {
+  color: var(--app-text-primary);
+  font-weight: 600;
+  font-size: 16px;
+}
+
+:deep(.el-dialog__body) {
   padding: 0;
 }
 
-:deep(.model-glass-drawer .el-drawer__title) {
-  color: var(--app-text-primary);
-  font-size: 16px;
-  font-weight: 600;
-}
-
-:deep(.model-glass-drawer .el-drawer__close-btn) {
+:deep(.el-dialog__close) {
   color: var(--app-text-secondary);
-  transition: all 0.3s ease;
 }
 
-:deep(.model-glass-drawer .el-drawer__close-btn:hover) {
+:deep(.el-dialog__close:hover) {
   color: var(--app-color-primary);
-  transform: rotate(90deg);
 }
 
-.drawer-content {
+.dialog-content {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  padding: 16px;
+  height: 520px;
 }
 
-/* 当前选中模型 */
-.current-model {
-  padding: 12px 16px;
-  background: rgba(42, 42, 58, 0.6);
-  border-radius: 8px;
-  margin-bottom: 16px;
-  border: 1px solid var(--app-border-default);
+/* 顶部区域 */
+.dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--app-border-default);
+  background: var(--app-bg-elevated);
 }
 
-.current-model .label {
-  color: var(--app-text-secondary);
-  font-size: 13px;
-}
-
-.current-model .value {
-  color: var(--app-color-primary);
-  font-weight: 500;
-  margin-left: 8px;
-  text-shadow: 0 0 8px rgba(0, 212, 255, 0.4);
-}
-
-/* 搜索框 - 霓虹边框聚焦效果 */
-:deep(.search-input .el-input__wrapper) {
-  background: rgba(42, 42, 58, 0.6);
-  border: 1px solid var(--app-border-default);
-  box-shadow: none;
-  transition: all 0.3s ease;
-}
-
-:deep(.search-input .el-input__inner) {
-  color: var(--app-text-primary);
-  background: transparent;
-}
-
-:deep(.search-input .el-input__inner::placeholder) {
-  color: var(--app-text-secondary);
-}
-
-:deep(.search-input .el-input__icon) {
-  color: var(--app-text-secondary);
-}
-
-:deep(.search-input .el-input__wrapper.is-focus) {
-  border-color: var(--app-color-primary);
-  box-shadow: var(--app-glow-primary), inset 0 0 10px rgba(0, 212, 255, 0.1);
-}
-
-.search-input {
-  margin-bottom: 16px;
-}
-
-/* 模型列表 */
-.model-list {
+.search-wrapper {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  max-width: 280px;
 }
 
-/* 全部展开/折叠按钮 */
-.list-actions {
+.search-input :deep(.el-input__wrapper) {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  border-radius: var(--app-radius-md);
+}
+
+.search-input :deep(.el-input__inner) {
+  color: var(--app-text-primary);
+}
+
+.current-model-display {
   display: flex;
-  gap: var(--app-spacing-3);
-  margin-bottom: var(--app-spacing-4);
-  padding: 0 var(--app-spacing-2);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--app-bg-card);
+  border-radius: var(--app-radius-md);
+  border: 1px solid var(--app-border-default);
 }
 
-.list-actions :deep(.el-button) {
-  font-size: 12px;
+.current-model-display .label {
+  font-size: 13px;
   color: var(--app-text-tertiary);
-  padding: 4px 8px;
-}
-
-.list-actions :deep(.el-button:hover) {
-  color: var(--app-color-primary);
-}
-
-.provider-group {
-  margin-bottom: 12px;
-}
-
-/* 供应商分组标题 - 可点击折叠 */
-.provider-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: linear-gradient(135deg, rgba(0, 212, 255, 0.15) 0%, rgba(0, 212, 255, 0.05) 100%);
-  border-radius: 8px;
-  margin-bottom: 0;
-  border: 1px solid rgba(0, 212, 255, 0.2);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  user-select: none;
-}
-
-.provider-header:hover {
-  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2) 0%, rgba(0, 212, 255, 0.08) 100%);
-  border-color: rgba(0, 212, 255, 0.4);
-}
-
-.provider-info {
-  display: flex;
-  align-items: center;
-  gap: var(--app-spacing-2);
-}
-
-.expand-icon {
-  color: var(--app-color-primary);
-  font-size: 14px;
-  transition: transform 0.3s ease;
   flex-shrink: 0;
 }
 
-.provider-header.expanded .expand-icon {
-  transform: rotate(90deg);
-}
-
-.provider-name {
-  font-weight: 600;
+.current-model-display .model-id-text {
+  font-size: 13px;
+  font-weight: 500;
   color: var(--app-color-primary);
-  font-size: 14px;
-  text-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
+  font-family: 'Cascadia Code', 'SF Mono', monospace;
 }
 
-.provider-count {
-  font-size: 11px;
-  color: var(--app-text-secondary);
-  background: rgba(42, 42, 58, 0.8);
-  padding: 3px 10px;
-  border-radius: 12px;
-  border: 1px solid var(--app-border-default);
-  margin-left: auto;
-}
-
-.model-items {
+/* 加载状态 */
+.loading-container {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px 0 0 0;
-  overflow-x: hidden;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--app-text-secondary);
 }
 
-/* 模型列表项 - 悬停高亮 + 霓虹边框 */
-.model-item {
+.loading-container .is-loading {
+  animation: spin 1s linear infinite;
+  color: var(--app-color-primary);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 双栏布局 */
+.dual-panel {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* 左侧供应商面板 */
+.provider-panel {
+  width: 220px;
+  border-right: 1px solid var(--app-border-default);
+  display: flex;
+  flex-direction: column;
+  background: var(--app-bg-elevated);
+}
+
+.panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 1px solid var(--app-border-default);
-  background: rgba(42, 42, 58, 0.3);
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--app-border-default);
+  background: var(--app-bg-card);
 }
 
-.model-item:hover {
-  background: rgba(0, 212, 255, 0.08);
-  border-color: rgba(0, 212, 255, 0.5);
-  box-shadow: 0 0 15px rgba(0, 212, 255, 0.2), inset 0 0 10px rgba(0, 212, 255, 0.05);
-}
-
-/* 选中状态 - 霓虹边框 + 发光 */
-.model-item.is-current {
-  background: rgba(0, 212, 255, 0.12);
-  border-color: var(--app-color-primary);
-  box-shadow: var(--app-glow-strong), inset 0 0 15px rgba(0, 212, 255, 0.1);
-}
-
-.model-info {
+.header-title {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text-secondary);
 }
 
-.model-name {
+.count-badge {
+  background: var(--app-bg-active);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--app-text-tertiary);
+  font-weight: 500;
+}
+
+.provider-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.provider-item {
+  padding: 10px 16px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: var(--app-radius-md);
+  border: 1px solid transparent;
+}
+
+.provider-item:hover {
+  background: var(--app-bg-hover);
+  border-color: var(--app-border-default);
+}
+
+.provider-item.active {
+  background: var(--app-bg-active);
+  border-color: var(--app-color-primary);
+}
+
+.provider-item .provider-name {
+  font-size: 14px;
   font-weight: 500;
   color: var(--app-text-primary);
+}
+
+.provider-item.active .provider-name {
+  color: var(--app-color-primary);
+  font-weight: 600;
+}
+
+/* 右侧模型面板 */
+.model-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.model-panel .panel-header {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 能力筛选按钮 */
+.capability-filters {
+  display: flex;
+  gap: 6px;
+}
+
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--app-border-default);
+  border-radius: var(--app-radius-md);
+  background: var(--app-bg-card);
+  color: var(--app-text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover {
+  border-color: var(--app-border-hover);
+  color: var(--app-text-primary);
+}
+
+.filter-btn.active {
+  border-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.filter-btn.tool.active {
+  border-color: #10b981;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.filter-btn.reasoning.active {
+  border-color: #a855f7;
+  color: #a855f7;
+  background: rgba(168, 85, 247, 0.1);
+}
+
+.filter-btn.attachment.active {
+  border-color: #f59e0b;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.filter-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.filter-dot.tool {
+  background: #10b981;
+}
+
+.filter-dot.reasoning {
+  background: #a855f7;
+}
+
+.filter-dot.attachment {
+  background: #f59e0b;
+}
+
+/* 模型网格 */
+.model-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+  align-content: start;
+}
+
+/* 模型卡片 */
+.model-card {
+  padding: 14px;
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  border-radius: var(--app-radius-md);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.model-card:hover {
+  border-color: var(--app-color-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.model-card.active {
+  border-color: var(--app-color-primary);
+  background: var(--app-bg-active);
+  box-shadow: 0 4px 16px rgba(0, 212, 255, 0.15);
+}
+
+.model-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.model-card .model-name {
   font-size: 14px;
+  font-weight: 500;
+  color: var(--app-text-primary);
+  line-height: 1.3;
+  word-break: break-word;
 }
 
-.model-id {
+.model-card.active .model-name {
+  color: var(--app-color-primary);
+}
+
+.current-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--app-color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+}
+
+.model-card-id {
   font-size: 11px;
-  color: var(--app-text-secondary);
-  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  color: var(--app-text-tertiary);
+  margin-top: 6px;
+  font-family: 'Cascadia Code', 'SF Mono', monospace;
 }
 
-.model-item:hover .model-name {
-  color: var(--app-color-primary);
+.model-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
 }
 
-.check-icon {
-  color: var(--app-color-primary);
-  font-size: 18px;
-  filter: drop-shadow(0 0 6px rgba(0, 212, 255, 0.6));
+.capability-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: var(--app-radius-sm);
+  font-weight: 500;
 }
 
-/* 空状态 */
-:deep(.el-empty__description) {
-  color: var(--app-text-secondary);
+.capability-tag .tag-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
 }
 
-/* 滚动条样式 - 深色主题 */
-.model-list::-webkit-scrollbar {
+.capability-tag.tool {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.capability-tag.tool .tag-dot {
+  background: #10b981;
+}
+
+.capability-tag.reasoning {
+  background: rgba(168, 85, 247, 0.1);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.capability-tag.reasoning .tag-dot {
+  background: #a855f7;
+}
+
+.capability-tag.attachment {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.capability-tag.attachment .tag-dot {
+  background: #f59e0b;
+}
+
+/* 滚动条 */
+.provider-list::-webkit-scrollbar,
+.model-grid::-webkit-scrollbar {
   width: 6px;
 }
 
-.model-list::-webkit-scrollbar-track {
-  background: rgba(42, 42, 58, 0.3);
+.provider-list::-webkit-scrollbar-track,
+.model-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.provider-list::-webkit-scrollbar-thumb,
+.model-grid::-webkit-scrollbar-thumb {
+  background: var(--app-border-default);
   border-radius: 3px;
 }
 
-.model-list::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.4);
-  border-radius: 3px;
-}
-
-.model-list::-webkit-scrollbar-thumb:hover {
-  background: var(--app-color-primary);
+.provider-list::-webkit-scrollbar-thumb:hover,
+.model-grid::-webkit-scrollbar-thumb:hover {
+  background: var(--app-text-tertiary);
 }
 
 /* ==================== 赛博朋克主题 ==================== */
-html.cyberpunk :deep(.model-glass-drawer) {
-  background: rgba(26, 26, 46, 0.95) !important;
-  border-left: 1px solid rgba(0, 255, 255, 0.3);
-  box-shadow: -10px 0 40px rgba(0, 255, 255, 0.15);
-}
-
-html.cyberpunk :deep(.model-glass-drawer .el-drawer__header) {
-  border-bottom: 1px solid rgba(0, 255, 255, 0.2);
-}
-
-html.cyberpunk :deep(.model-glass-drawer .el-drawer__title) {
-  text-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
-}
-
-html.cyberpunk :deep(.model-glass-drawer .el-drawer__close-btn:hover) {
-  color: var(--app-color-primary);
-  filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.6));
-}
-
-html.cyberpunk .current-model {
-  background: rgba(0, 255, 255, 0.08);
+html.cyberpunk :deep(.el-dialog) {
+  background: rgba(26, 26, 46, 0.98);
   border: 1px solid rgba(0, 255, 255, 0.2);
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
+  box-shadow: 0 0 40px rgba(0, 255, 255, 0.15);
 }
 
-html.cyberpunk .current-model .value {
-  text-shadow: 0 0 12px rgba(0, 255, 255, 0.6);
+html.cyberpunk :deep(.el-dialog__header) {
+  border-bottom: 1px solid rgba(0, 255, 255, 0.15);
 }
 
-html.cyberpunk :deep(.search-input .el-input__wrapper) {
-  background: rgba(26, 26, 46, 0.8);
-  border: 1px solid rgba(0, 255, 255, 0.2);
-}
-
-html.cyberpunk :deep(.search-input .el-input__wrapper.is-focus) {
-  border-color: var(--app-color-primary);
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3), inset 0 0 15px rgba(0, 255, 255, 0.1);
-}
-
-html.cyberpunk .provider-header {
-  background: linear-gradient(135deg, rgba(0, 255, 255, 0.2) 0%, rgba(0, 255, 255, 0.05) 100%);
-  border: 1px solid rgba(0, 255, 255, 0.3);
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.15);
-}
-
-html.cyberpunk .provider-header:hover {
-  background: linear-gradient(135deg, rgba(0, 255, 255, 0.25) 0%, rgba(0, 255, 255, 0.1) 100%);
-  border-color: rgba(0, 255, 255, 0.5);
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.25);
-}
-
-html.cyberpunk .expand-icon {
-  color: var(--app-color-primary);
-  filter: drop-shadow(0 0 6px rgba(0, 255, 255, 0.5));
-}
-
-html.cyberpunk .provider-name {
-  text-shadow: 0 0 12px rgba(0, 255, 255, 0.5);
-}
-
-html.cyberpunk .provider-count {
-  background: rgba(0, 255, 255, 0.1);
-  border: 1px solid rgba(0, 255, 255, 0.25);
-}
-
-html.cyberpunk .model-item {
-  background: rgba(26, 26, 46, 0.5);
-  border: 1px solid rgba(0, 255, 255, 0.15);
-}
-
-html.cyberpunk .model-item:hover {
-  background: rgba(0, 255, 255, 0.1);
-  border-color: rgba(0, 255, 255, 0.5);
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.25), inset 0 0 15px rgba(0, 255, 255, 0.08);
-}
-
-html.cyberpunk .model-item.is-current {
-  background: rgba(0, 255, 255, 0.15);
-  border-color: var(--app-color-primary);
-  box-shadow: 0 0 25px rgba(0, 255, 255, 0.4), inset 0 0 20px rgba(0, 255, 255, 0.1);
-}
-
-html.cyberpunk .model-item:hover .model-name {
+html.cyberpunk :deep(.el-dialog__title) {
   text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
 }
 
-html.cyberpunk .check-icon {
-  filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.8));
+html.cyberpunk .dialog-header {
+  background: rgba(0, 255, 255, 0.03);
+  border-bottom-color: rgba(0, 255, 255, 0.15);
 }
 
-html.cyberpunk .model-list::-webkit-scrollbar-track {
+html.cyberpunk .search-input :deep(.el-input__wrapper) {
   background: rgba(0, 255, 255, 0.05);
+  border-color: rgba(0, 255, 255, 0.2);
 }
 
-html.cyberpunk .model-list::-webkit-scrollbar-thumb {
-  background: rgba(0, 255, 255, 0.3);
+html.cyberpunk .current-model-display {
+  background: rgba(0, 255, 255, 0.08);
+  border-color: rgba(0, 255, 255, 0.2);
 }
 
-html.cyberpunk .model-list::-webkit-scrollbar-thumb:hover {
-  background: var(--app-color-primary);
+html.cyberpunk .current-model-display .model-id-text {
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+html.cyberpunk .provider-panel {
+  border-right-color: rgba(0, 255, 255, 0.15);
+  background: rgba(0, 255, 255, 0.02);
+}
+
+html.cyberpunk .panel-header {
+  background: rgba(0, 255, 255, 0.05);
+  border-bottom-color: rgba(0, 255, 255, 0.15);
+}
+
+html.cyberpunk .provider-item:hover {
+  background: rgba(0, 255, 255, 0.08);
+  border-color: rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .provider-item.active {
+  background: rgba(0, 255, 255, 0.12);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .model-card:hover {
+  border-color: rgba(0, 255, 255, 0.5);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .model-card.active {
+  border-color: #00ffff;
+  background: rgba(0, 255, 255, 0.1);
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.3);
+}
+
+html.cyberpunk .current-badge {
+  background: #00ffff;
   box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
 }
 
-/* ==================== 玻璃拟态主题 ==================== */
-html.glassmorphism :deep(.model-glass-drawer) {
-  background: rgba(255, 255, 255, 0.9) !important;
-  border-left: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.08);
+html.cyberpunk .filter-btn.active {
+  border-color: #00ffff;
+  color: #00ffff;
+  background: rgba(0, 255, 255, 0.15);
 }
 
-html.glassmorphism :deep(.model-glass-drawer .el-drawer__header) {
+/* ==================== 玻璃拟态主题 ==================== */
+html.glassmorphism :deep(.el-dialog) {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+html.glassmorphism :deep(.el-dialog__header) {
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-html.glassmorphism :deep(.model-glass-drawer .el-drawer__title) {
-  text-shadow: none;
+html.glassmorphism .dialog-header {
+  background: rgba(37, 99, 235, 0.03);
+  border-bottom-color: rgba(0, 0, 0, 0.05);
 }
 
-html.glassmorphism :deep(.model-glass-drawer .el-drawer__close-btn:hover) {
-  color: var(--app-color-primary);
-  filter: none;
-}
-
-html.glassmorphism .current-model {
-  background: rgba(37, 99, 235, 0.08);
-  border: 1px solid rgba(37, 99, 235, 0.15);
-  box-shadow: none;
-}
-
-html.glassmorphism .current-model .value {
-  text-shadow: none;
-}
-
-html.glassmorphism :deep(.search-input .el-input__wrapper) {
+html.glassmorphism .search-input :deep(.el-input__wrapper) {
   background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-html.glassmorphism :deep(.search-input .el-input__wrapper.is-focus) {
-  border-color: var(--app-color-primary);
-  box-shadow: 0 0 0 1px var(--app-color-primary);
+html.glassmorphism .current-model-display {
+  background: rgba(37, 99, 235, 0.05);
+  border-color: rgba(37, 99, 235, 0.15);
 }
 
-html.glassmorphism .provider-header {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0.03) 100%);
-  border: 1px solid rgba(37, 99, 235, 0.15);
-  box-shadow: none;
+html.glassmorphism .current-model-display .model-id-text {
+  color: #2563eb;
 }
 
-html.glassmorphism .provider-header:hover {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(37, 99, 235, 0.05) 100%);
-  border-color: rgba(37, 99, 235, 0.25);
+html.glassmorphism .provider-panel {
+  background: rgba(37, 99, 235, 0.02);
 }
 
-html.glassmorphism .expand-icon {
-  color: var(--app-color-primary);
+html.glassmorphism .provider-item:hover {
+  background: rgba(37, 99, 235, 0.05);
 }
 
-html.glassmorphism .provider-name {
-  text-shadow: none;
-}
-
-html.glassmorphism .provider-count {
-  background: rgba(37, 99, 235, 0.08);
-  border: 1px solid rgba(37, 99, 235, 0.15);
-}
-
-html.glassmorphism .model-item {
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-html.glassmorphism .model-item:hover {
-  background: rgba(37, 99, 235, 0.08);
-  border-color: rgba(37, 99, 235, 0.25);
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.1);
-}
-
-html.glassmorphism .model-item.is-current {
+html.glassmorphism .provider-item.active {
   background: rgba(37, 99, 235, 0.1);
-  border-color: var(--app-color-primary);
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15);
 }
 
-html.glassmorphism .model-item:hover .model-name {
-  text-shadow: none;
+html.glassmorphism .model-card:hover {
+  border-color: #2563eb;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
 }
 
-html.glassmorphism .check-icon {
-  filter: none;
+html.glassmorphism .model-card.active {
+  border-color: #2563eb;
+  background: rgba(37, 99, 235, 0.08);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2);
 }
 
-html.glassmorphism .model-list::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.02);
+html.glassmorphism .current-badge {
+  background: #2563eb;
 }
 
-html.glassmorphism .model-list::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
-}
-
-html.glassmorphism .model-list::-webkit-scrollbar-thumb:hover {
-  background: var(--app-color-primary);
+html.glassmorphism .filter-btn.active {
+  border-color: #2563eb;
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.1);
 }
 </style>
