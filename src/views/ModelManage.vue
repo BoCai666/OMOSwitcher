@@ -104,11 +104,17 @@ async function loadData() {
   loading.value = true
   errorMsg.value = ''
   try {
+    console.log('[ModelManage] 开始加载数据...')
     providers.value = await getProvidersWithAvailability()
+    console.log('[ModelManage] 获取到供应商数量:', providers.value.length)
+    console.log('[ModelManage] 自定义供应商:', providers.value.filter(p => p.custom).map(p => ({ id: p.id, custom: p.custom })))
+    console.log('[ModelManage] 可用供应商:', providers.value.filter(p => p.available).map(p => p.id))
+    console.log('[ModelManage] stats:', stats.value)
     if (providers.value.length === 0) {
       errorMsg.value = '未找到模型注册表。请先运行一次 OpenCode 以生成缓存。'
     }
   } catch (e) {
+    console.error('[ModelManage] 加载失败:', e)
     errorMsg.value = '加载失败：' + (e instanceof Error ? e.message : String(e))
     showError(errorMsg.value)
   } finally {

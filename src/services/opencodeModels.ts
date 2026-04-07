@@ -1,9 +1,10 @@
 /**
  * OpenCode 模型注册表服务
  * 从 ~/.cache/opencode/models.json 读取全量供应商和模型信息
+ * 同时合并 opencode.json 中的自定义供应商
  */
 
-import type { RegistryProvider } from '@/types/config'
+import type { RegistryProvider, RegistryModel } from '@/types/config'
 
 async function getTauriInvoke() {
   try {
@@ -18,6 +19,7 @@ async function getTauriInvoke() {
 let registryCache: Record<string, RegistryProvider> | null = null
 let availableIdsCache: string[] | null = null
 let customIdsCache: string[] | null = null
+let customProvidersCache: Map<string, RegistryProvider> | null = null
 
 /**
  * 读取模型注册表（全量）
@@ -76,6 +78,63 @@ export async function getCustomProviderIds(): Promise<string[]> {
   }
 }
 
+/**
+ * 从 opencode.json 读取自定义供应商配置并转换为 RegistryProvider 格式
+ */
+async function readCustomProviders(): Promise<Map<string, RegistryProvider>> {
+  if (customProvidersCache) return customProvidersCache
+
+  const invoke = await getTauriInvoke()
+  if (!invoke) return new Map()
+
+  try {
+    const content = await invoke<string>('read_opencode_config')
+    const config = JSON.parse(content)
+    const providers = new Map<string, RegistryProvider>()
+
+    if (config.provider && typeof config.provider === 'object') {
+      for (const [providerId, providerConfig] of Object.entries(config.provider) as [string, any][]) {
+        // 检查是否有 apiKey（自定义配置的标志）
+        const hasApiKey = providerConfig?.apiKey || providerConfig?.options?.apiKey
+        if (!hasApiKey) continue
+
+        // 将 opencode.json 中的 provider 转换为 RegistryProvider 格式
+        const models: Record<string, RegistryModel> = {}
+        if (providerConfig?.models && typeof providerConfig.models === 'object') {
+          for (const [modelId, modelConfig] of Object.entries(providerConfig.models) as [string, any][]) {
+            models[modelId] = {
+              id: modelId,
+              name: modelConfig?.name || modelId,
+              family: modelConfig?.family,
+              tool_call: modelConfig?.tool_call ?? false,
+              reasoning: modelConfig?.reasoning ?? false,
+              attachment: modelConfig?.attachment ?? false,
+              limit: modelConfig?.limit,
+              modalities: modelConfig?.modalities,
+              release_date: modelConfig?.release_date,
+              open_weights: modelConfig?.open_weights
+            }
+          }
+        }
+
+        providers.set(providerId, {
+          id: providerId,
+          name: providerConfig?.name || providerId,
+          api: providerConfig?.options?.baseURL,
+          npm: providerConfig?.npm,
+          models
+        })
+      }
+    }
+
+    customProvidersCache = providers
+    return providers
+  } catch (error) {
+    console.error('读取自定义供应商配置失败:', error)
+    return new Map()
+  }
+}
+
 /** 带可用标记和自定义标记的供应商信息 */
 export interface ProviderWithAvailability extends RegistryProvider {
   available: boolean
@@ -85,17 +144,41 @@ export interface ProviderWithAvailability extends RegistryProvider {
 
 /**
  * 获取供应商列表（带可用标记和自定义标记）
+ * 合并 models.json 注册表和 opencode.json 中的自定义供应商
  */
 export async function getProvidersWithAvailability(): Promise<ProviderWithAvailability[]> {
-  const [registry, availableIds, customIds] = await Promise.all([
+  const [registry, availableIds, customIds, customProviders] = await Promise.all([
     readModelsRegistry(),
     getAvailableProviderIds(),
-    getCustomProviderIds()
+    getCustomProviderIds(),
+    readCustomProviders()
   ])
+
   const availableSet = new Set(availableIds)
   const customSet = new Set(customIds)
 
-  return Object.values(registry)
+  console.log('[opencodeModels] availableSet:', [...availableSet])
+  console.log('[opencodeModels] customSet:', [...customSet])
+  console.log('[opencodeModels] customProviders:', [...customProviders.keys()])
+
+  // 合并注册表和自定义供应商
+  const allProviders = new Map<string, RegistryProvider>()
+
+  // 1. 添加注册表中的供应商
+  for (const [id, provider] of Object.entries(registry)) {
+    allProviders.set(id, provider)
+  }
+
+  // 2. 添加自定义供应商（如果不在注册表中）
+  for (const [id, provider] of customProviders) {
+    if (!allProviders.has(id)) {
+      allProviders.set(id, provider)
+    }
+  }
+
+  console.log('[opencodeModels] 合并后供应商数量:', allProviders.size)
+
+  return Array.from(allProviders.values())
     .map(p => ({
       ...p,
       name: p.name || p.id,
@@ -115,4 +198,5 @@ export function clearRegistryCache(): void {
   registryCache = null
   availableIdsCache = null
   customIdsCache = null
+  customProvidersCache = null
 }
