@@ -42,6 +42,10 @@ pub fn run() {
             commands::hot_reload_opencode_config,
             commands::request_soft_reload_opencode_config,
             commands::check_pending_soft_reload,
+            // 模型注册表命令
+            commands::read_opencode_models_cache,
+            commands::get_available_provider_ids,
+            commands::get_custom_provider_ids,
         ])
         .on_window_event(|_window, event| {
             // 窗口关闭时确保停止 sidecar（异步执行，不阻塞关闭）

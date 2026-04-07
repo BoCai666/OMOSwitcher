@@ -94,6 +94,28 @@ fn get_monitor_config_path() -> Result<PathBuf, String> {
     Ok(get_omoswitcher_dir()?.join("monitor").join("config.jsonc"))
 }
 
+/// 获取 OpenCode 模型注册表缓存路径
+/// ~/.cache/opencode/models.json (Unix 风格，OpenCode 在所有平台都使用此路径)
+fn get_opencode_models_cache_path() -> Result<PathBuf, String> {
+    dirs::home_dir()
+        .map(|p| p.join(".cache").join("opencode").join("models.json"))
+        .ok_or_else(|| "无法获取用户主目录".to_string())
+}
+
+/// 获取 OpenCode 认证数据路径
+/// ~/.local/share/opencode/auth.json (Unix 风格，OpenCode 在所有平台都使用此路径)
+fn get_opencode_auth_path() -> Result<PathBuf, String> {
+    dirs::home_dir()
+        .map(|p| p.join(".local").join("share").join("opencode").join("auth.json"))
+        .ok_or_else(|| "无法获取用户主目录".to_string())
+}
+
+/// 获取 antigravity 认证数据路径
+/// ~/.config/opencode/antigravity-accounts.json (may not exist)
+fn get_antigravity_accounts_path() -> Result<PathBuf, String> {
+    Ok(get_opencode_dir()?.join("antigravity-accounts.json"))
+}
+
 // Monitor 端口配置结构
 #[derive(Debug, Deserialize, Default)]
 struct MonitorPorts {
@@ -495,6 +517,141 @@ pub async fn read_models_with_fallback() -> Result<String, String> {
     
     // 3. 返回默认模型列表
     Ok(DEFAULT_MODELS_JSON.to_string())
+}
+
+/// 读取 OpenCode 模型注册表缓存
+/// 从 ~/.cache/opencode/models.json 读取全量供应商和模型信息
+#[tauri::command]
+pub async fn read_opencode_models_cache() -> Result<String, String> {
+    let path = get_opencode_models_cache_path()?;
+    if !path.exists() {
+        return Err("模型注册表缓存不存在。请先运行一次 OpenCode 以生成缓存。".to_string());
+    }
+    async_fs::read_to_string(&path)
+        .await
+        .map_err(|e| format!("读取模型注册表缓存失败: {}", e))
+}
+
+/// 获取已配置（可用）的供应商 ID 列表
+/// 交叉比对 opencode.json provider 字段、antigravity-accounts.json
+#[tauri::command]
+pub async fn get_available_provider_ids() -> Result<Vec<String>, String> {
+    let mut available = Vec::new();
+    
+    // 1. 从 opencode.json 的 provider 字段提取有 apiKey 的供应商
+    let opencode_path = get_opencode_config_path()?;
+    if opencode_path.exists() {
+        if let Ok(content) = async_fs::read_to_string(&opencode_path).await {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(provider) = json.get("provider").and_then(|p| p.as_object()) {
+                    for (provider_id, config) in provider {
+                        // 检查是否有 apiKey 或 options.apiKey
+                        let has_api_key = config.get("apiKey").and_then(|v| v.as_str()).is_some()
+                            || config.get("options")
+                                .and_then(|o| o.get("apiKey"))
+                                .and_then(|v| v.as_str()).is_some();
+                        if has_api_key {
+                            available.push(provider_id.clone());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // 2. 从 antigravity-accounts.json 提取 Google/OAuth 连接的供应商
+    let antigravity_path = get_antigravity_accounts_path()?;
+    if antigravity_path.exists() {
+        if let Ok(content) = async_fs::read_to_string(&antigravity_path).await {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                // 如果有 antigravity 账号，说明 google provider 是通过 OAuth 认证的
+                if let Some(accounts) = json.get("accounts").and_then(|a| a.as_array()) {
+                    if !accounts.is_empty() {
+                        // antigravity 使用 google provider
+                        if !available.contains(&"google".to_string()) {
+                            available.push("google".to_string());
+                        }
+                        // antigravity 也可能启用其他 provider（通过 rateLimitResetTimes 字段判断）
+                        if let Some(first_account) = accounts.first() {
+                            if let Some(rate_limits) = first_account.get("rateLimitResetTimes") {
+                                // rateLimitResetTimes 的 key 格式为 "providerId:modelId"
+                                // 提取所有不重复的 providerId
+                                if let Some(limits_obj) = rate_limits.as_object() {
+                                    for key in limits_obj.keys() {
+                                        if let Some(provider_id) = key.split(':').next() {
+                                            let pid = provider_id.to_string();
+                                            if !available.contains(&pid) {
+                                                available.push(pid);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // 3. 从 auth.json 提取（如果存在）
+    let auth_path = get_opencode_auth_path()?;
+    if auth_path.exists() {
+        if let Ok(content) = async_fs::read_to_string(&auth_path).await {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                // auth.json 可能是数组或对象格式
+                if let Some(obj) = json.as_object() {
+                    for key in obj.keys() {
+                        if !available.contains(key) {
+                            available.push(key.clone());
+                        }
+                    }
+                } else if let Some(arr) = json.as_array() {
+                    for item in arr {
+                        if let Some(pid) = item.get("provider").and_then(|v| v.as_str()) {
+                            if !available.contains(&pid.to_string()) {
+                                available.push(pid.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    available.sort();
+    Ok(available)
+}
+
+/// 获取 opencode.json 中手动配置的供应商 ID 列表
+/// 仅检查 opencode.json 的 provider 字段，不包含 auth.json 或 antigravity-accounts.json
+#[tauri::command]
+pub async fn get_custom_provider_ids() -> Result<Vec<String>, String> {
+    let mut custom = Vec::new();
+    
+    // 从 opencode.json 的 provider 字段提取有 apiKey 的供应商
+    let opencode_path = get_opencode_config_path()?;
+    if opencode_path.exists() {
+        if let Ok(content) = async_fs::read_to_string(&opencode_path).await {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(provider) = json.get("provider").and_then(|p| p.as_object()) {
+                    for (provider_id, config) in provider {
+                        // 检查是否有 apiKey 或 options.apiKey
+                        let has_api_key = config.get("apiKey").and_then(|v| v.as_str()).is_some()
+                            || config.get("options")
+                                .and_then(|o| o.get("apiKey"))
+                                .and_then(|v| v.as_str()).is_some();
+                        if has_api_key {
+                            custom.push(provider_id.clone());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    custom.sort();
+    Ok(custom)
 }
 
 /// 读取所有预设（合并命令，避免 N+1 问题）

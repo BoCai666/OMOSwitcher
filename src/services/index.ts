@@ -61,3 +61,17 @@ export {
   type SoftReloadState,
   type SoftReloadResult
 } from './opencodeApi'
+
+// OpenCode 模型注册表服务
+export {
+  readModelsRegistry,
+  getAvailableProviderIds,
+  getProvidersWithAvailability,
+  clearRegistryCache,
+  type ProviderWithAvailability
+} from './opencodeModels'
+
+export type {
+  RegistryProvider,
+  RegistryModel
+} from '@/types/config'

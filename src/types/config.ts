@@ -232,3 +232,40 @@ export interface OpenCodeConfig {
   mcp?: Record<string, unknown>
   provider: Record<string, OpenCodeProvider>
 }
+
+// ============ OpenCode 模型注册表类型 (from ~/.cache/opencode/models.json) ============
+
+/** 注册表中的单个模型元数据 */
+export interface RegistryModel {
+  id: string
+  name: string
+  family?: string
+  attachment?: boolean
+  reasoning?: boolean
+  tool_call?: boolean
+  release_date?: string
+  last_updated?: string
+  modalities?: {
+    input?: string[]
+    output?: string[]
+  }
+  open_weights?: boolean
+  limit?: {
+    context?: number
+    output?: number
+  }
+}
+
+/** 注册表中的单个供应商 */
+export interface RegistryProvider {
+  id: string
+  name?: string
+  api?: string
+  npm?: string
+  env?: string[]
+  doc?: string
+  models: Record<string, RegistryModel>
+}
+
+/** 模型注册表整体数据（顶层 key 为 provider ID) */
+export type ModelsRegistry = Record<string, RegistryProvider>
