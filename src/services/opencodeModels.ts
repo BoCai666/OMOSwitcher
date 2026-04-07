@@ -41,7 +41,7 @@ export async function readModelsRegistry(): Promise<Record<string, RegistryProvi
 }
 
 /**
- * 获取已配置（可用）的供应商 ID 列表
+ * 获取已配置（可用)的供应商 ID 列表
  */
 export async function getAvailableProviderIds(): Promise<string[]> {
   if (availableIdsCache) return availableIdsCache
@@ -199,4 +199,56 @@ export function clearRegistryCache(): void {
   availableIdsCache = null
   customIdsCache = null
   customProvidersCache = null
+}
+
+/** 可用模型类型 */
+export interface AvailableModel {
+  id: string
+  name: string
+  provider: string
+  providerName: string
+  available: boolean
+  custom: boolean
+  tool_call: boolean
+  reasoning: boolean
+  attachment: boolean
+  limit?: { context?: number; output?: number }
+}
+
+/**
+ * 获取所有可用的模型（来自可用的供应商)
+ * 返回带可用性标记的模型列表
+ */
+export async function getAvailableModels(): Promise<AvailableModel[]> {
+  const providers = await getProvidersWithAvailability()
+  
+  const models: AvailableModel[] = []
+  
+  for (const provider of providers) {
+    if (!provider.available) continue
+    
+    const providerModels = Object.values(provider.models || {})
+    for (const model of providerModels) {
+      models.push({
+        id: `${provider.id}/${model.id}`,
+        name: model.name || model.id,
+        provider: provider.id,
+        providerName: provider.name || provider.id,
+        available: true,
+        custom: provider.custom,
+        tool_call: model.tool_call || false,
+        reasoning: model.reasoning || false,
+        attachment: model.attachment || false,
+        limit: model.limit
+      })
+    }
+  }
+  
+  // 按供应商和模型名称排序
+  return models.sort((a, b) => {
+    if (a.provider !== b.provider) {
+      return a.provider.localeCompare(b.provider)
+    }
+    return a.name.localeCompare(b.name)
+  })
 }
