@@ -233,9 +233,6 @@ onMounted(() => {
             }"
             @click="selectProvider(provider)"
           >
-            <!-- 自定义角标 -->
-            <span v-if="provider.custom" class="custom-badge">自定义</span>
-            
             <div class="card-header">
               <span class="provider-name">{{ provider.name || provider.id }}</span>
               <span class="status-dot" :class="provider.available ? 'available' : 'unavailable'" />
@@ -243,6 +240,7 @@ onMounted(() => {
             <div class="card-meta">
               <span class="model-count">{{ provider.modelCount }} 模型</span>
               <span v-if="provider.available" class="available-badge">已配置</span>
+              <span v-if="provider.custom" class="custom-badge">自定义</span>
             </div>
             <div v-if="provider.id !== (provider.name || provider.id)" class="card-id" :class="{ 'is-available': provider.available }">
               {{ provider.id }}
@@ -567,19 +565,14 @@ onMounted(() => {
   opacity: 1;
 }
 
-/* 自定义角标 */
+/* 自定义徽章 */
 .custom-badge {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  padding: 2px 8px;
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 11px;
+  padding: 1px 6px;
   border-radius: var(--app-radius-sm);
   background: rgba(168, 85, 247, 0.15);
   color: #a855f7;
   border: 1px solid rgba(168, 85, 247, 0.3);
-  z-index: 1;
 }
 
 .card-header {
@@ -587,15 +580,6 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--app-spacing-2);
-  padding-right: 0;
-}
-
-.provider-card:not(:has(.custom-badge)) .card-header {
-  padding-right: 0;
-}
-
-.provider-card:has(.custom-badge) .card-header {
-  padding-right: 50px;
 }
 
 .provider-name {
