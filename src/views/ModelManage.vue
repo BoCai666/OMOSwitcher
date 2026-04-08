@@ -5,15 +5,15 @@
  * 数据来源：~/.cache/opencode/models.json + opencode.json + antigravity-accounts.json
  */
 import { ref, computed, onMounted } from 'vue'
-import { Search, Close, InfoFilled, Refresh } from '@element-plus/icons-vue'
+import { Search, Close, InfoFilled, Refresh, Plus } from '@element-plus/icons-vue'
 import type { RegistryProvider, RegistryModel } from '@/types/config'
-import type { ProviderWithAvailability } from '@/services/opencodeModels'
+import type { ProviderWithAvailability, CustomProviderConfig } from '@/services/opencodeModels'
 import {
   getProvidersWithAvailability,
   clearRegistryCache,
-  deleteCustomProvider
+  deleteCustomProvider,
+  addCustomProvider
 } from '@/services/opencodeModels'
-import { listModels } from '@/services/modelStore'
 import { showError, showSuccess, confirm } from '@/utils/errorHandler'
 
 // 加载状态
@@ -29,7 +29,7 @@ const searchKeyword = ref('')
 // 筛选标签：all / available / custom / builtin
 const filterTab = ref<'all' | 'available' | 'custom' | 'builtin'>('all')
 
-// 内置模型对应的供应商 ID 集合（来自 models.json）
+// 内置供应商 ID 集合（来自 OpenCode 内部注册表，非用户自定义）
 const builtinProviderIds = ref<Set<string>>(new Set())
 
 // 选中的供应商（查看模型列表）
@@ -118,17 +118,15 @@ async function loadData() {
     console.log('[ModelManage] 开始加载数据...')
     providers.value = await getProvidersWithAvailability()
 
-    // 加载内置模型列表（来自 models.json），提取供应商 ID
-    try {
-      const builtinModels = await listModels()
-      builtinProviderIds.value = new Set(builtinModels.map(m => m.provider))
-    } catch {
-      builtinProviderIds.value = new Set()
-    }
+    // 提取内置供应商 ID（非自定义供应商 = OpenCode 内部支持的供应商）
+    builtinProviderIds.value = new Set(
+      providers.value.filter(p => !p.custom).map(p => p.id)
+    )
 
     console.log('[ModelManage] 获取到供应商数量:', providers.value.length)
     console.log('[ModelManage] 自定义供应商:', providers.value.filter(p => p.custom).map(p => ({ id: p.id, custom: p.custom })))
     console.log('[ModelManage] 可用供应商:', providers.value.filter(p => p.available).map(p => p.id))
+    console.log('[ModelManage] 内置供应商:', builtinProviderIds.value)
     console.log('[ModelManage] stats:', stats.value)
     if (providers.value.length === 0) {
       errorMsg.value = '未找到模型注册表。请先运行一次 OpenCode 以生成缓存。'
@@ -185,6 +183,184 @@ async function handleDeleteProvider(provider: ProviderWithAvailability) {
   }
 }
 
+// ==================== 添加自定义供应商 ====================
+
+// 对话框状态
+const addProviderVisible = ref(false)
+const addProviderLoading = ref(false)
+
+// 表单数据
+const addForm = ref({
+  providerId: '',
+  name: '',
+  npm: '@ai-sdk/openai-compatible',
+  apiKey: '',
+  baseURL: '',
+  // 模型列表（至少一个模型）
+  models: [
+    {
+      id: '',
+      name: '',
+      reasoning: false,
+      context: 128000,
+      output: 8192,
+      inputText: true,
+      inputImage: false,
+      outputText: true,
+      variants: [] as { name: string; config: string }[]
+    }
+  ]
+})
+
+// 打开添加对话框
+function openAddProvider() {
+  addForm.value = {
+    providerId: '',
+    name: '',
+    npm: '@ai-sdk/openai-compatible',
+    apiKey: '',
+    baseURL: '',
+    models: [
+      {
+        id: '',
+        name: '',
+        reasoning: false,
+        context: 128000,
+        output: 8192,
+        inputText: true,
+        inputImage: false,
+        outputText: true,
+        variants: []
+      }
+    ]
+  }
+  addProviderVisible.value = true
+}
+
+// 添加一行模型配置
+function addModelRow() {
+  addForm.value.models.push({
+    id: '', name: '', reasoning: false,
+    context: 128000, output: 8192, inputText: true, inputImage: false, outputText: true,
+    variants: []
+  })
+}
+
+// 移除指定行的模型配置
+function removeModelRow(index: number) {
+  addForm.value.models.splice(index, 1)
+}
+
+// 表单验证
+function validateAddForm(): string | null {
+  const form = addForm.value
+  if (!form.providerId.trim()) return '请输入供应商 ID'
+  if (!/^[a-zA-Z0-9_-]+$/.test(form.providerId.trim())) {
+    return '供应商 ID 只能包含字母、数字、下划线和连字符'
+  }
+  // 检查是否与已有供应商冲突
+  if (providers.value.some(p => p.id === form.providerId.trim())) {
+    return `供应商 "${form.providerId}" 已存在，请使用其他 ID`
+  }
+  if (!form.apiKey.trim()) return '请输入 API Key'
+
+  // 验证模型列表
+  const validModels = form.models.filter(m => m.id.trim())
+  if (validModels.length === 0) return '请至少添加一个模型'
+  for (const model of validModels) {
+    if (/\s/.test(model.id.trim())) return `模型 ID "${model.id}" 不能包含空格`
+  }
+  return null
+}
+
+// 提交添加
+async function handleAddProvider() {
+  const validationError = validateAddForm()
+  if (validationError) {
+    showError(validationError)
+    return
+  }
+
+  addProviderLoading.value = true
+  try {
+    const form = addForm.value
+    const config: CustomProviderConfig = {
+      npm: form.npm.trim() || undefined,
+      name: form.name.trim() || undefined,
+      options: {}
+    }
+
+    // 设置 options
+    if (form.apiKey.trim()) {
+      config.options!.apiKey = form.apiKey.trim()
+    }
+    if (form.baseURL.trim()) {
+      config.options!.baseURL = form.baseURL.trim()
+    }
+    // 清理空 options
+    if (Object.keys(config.options!).length === 0) {
+      delete config.options
+    }
+
+    // 构建模型配置
+    const models: CustomProviderConfig['models'] = {}
+    for (const model of form.models) {
+      const modelId = model.id.trim()
+      if (!modelId) continue
+
+      const inputModalities: string[] = []
+      if (model.inputText) inputModalities.push('text')
+      if (model.inputImage) inputModalities.push('image')
+
+      models[modelId] = {
+        name: model.name.trim() || modelId,
+        reasoning: model.reasoning || undefined,
+        limit: {
+          context: model.context || 128000,
+          output: model.output || 8192
+        },
+        modalities: {
+          input: inputModalities.length > 0 ? inputModalities : undefined,
+          output: model.outputText ? ['text'] : undefined
+        }
+      }
+
+      // 构建变体配置
+      if (model.variants && model.variants.length > 0) {
+        const variants: Record<string, Record<string, unknown>> = {}
+        for (const v of model.variants) {
+          const vName = v.name.trim()
+          if (!vName) continue
+          try {
+            variants[vName] = JSON.parse(v.config)
+          } catch {
+            // 无效 JSON 跳过
+          }
+        }
+        if (Object.keys(variants).length > 0) {
+          models[modelId]!.variants = variants
+        }
+      }
+
+      // 清理 undefined 值
+      const m = models[modelId] as Record<string, unknown>
+      for (const key of Object.keys(m)) {
+        if (m[key] === undefined) delete m[key]
+      }
+    }
+    config.models = models
+
+    await addCustomProvider(form.providerId.trim(), config)
+    showSuccess(`已添加供应商: ${form.name || form.providerId}`)
+    addProviderVisible.value = false
+    await refreshData()
+  } catch (e) {
+    showError(e)
+  } finally {
+    addProviderLoading.value = false
+  }
+}
+
 onMounted(() => {
   loadData()
 })
@@ -214,6 +390,10 @@ onMounted(() => {
           clearable
           class="search-input"
         />
+        <el-button @click="openAddProvider" type="primary" plain>
+          <el-icon><Plus /></el-icon>
+          <span>添加供应商</span>
+        </el-button>
         <el-button @click="refreshData" :loading="loading">
           <el-icon><Refresh /></el-icon>
         </el-button>
@@ -424,6 +604,200 @@ onMounted(() => {
           <span class="detail-value">{{ modelDetail.open_weights ? '是' : '否' }}</span>
         </div>
       </div>
+    </el-dialog>
+
+    <!-- 添加自定义供应商对话框 -->
+    <el-dialog
+      v-model="addProviderVisible"
+      title="添加自定义供应商"
+      width="620px"
+      append-to=".app-main"
+      align-center
+      :close-on-click-modal="true"
+      class="add-provider-dialog"
+    >
+      <div class="add-form">
+        <!-- 供应商 ID -->
+        <div class="form-section">
+          <div class="form-section-title">基本信息</div>
+          <div class="form-row">
+            <label class="form-label required">供应商 ID</label>
+            <el-input
+              v-model="addForm.providerId"
+              placeholder="例如: my-provider（仅字母数字下划线连字符）"
+              maxlength="50"
+            />
+          </div>
+          <div class="form-row">
+            <label class="form-label">显示名称</label>
+            <el-input
+              v-model="addForm.name"
+              placeholder="例如: My Custom Provider（可选）"
+              maxlength="100"
+            />
+          </div>
+        </div>
+
+        <!-- API 配置 -->
+        <div class="form-section">
+          <div class="form-section-title">API 配置</div>
+          <div class="form-row">
+            <label class="form-label">API 格式</label>
+            <el-select v-model="addForm.npm" placeholder="选择 API 格式">
+              <el-option
+                label="OpenAI"
+                value="@ai-sdk/openai-compatible"
+              />
+              <el-option
+                label="Anthropic"
+                value="@ai-sdk/anthropic"
+              />
+            </el-select>
+          </div>
+          <div class="form-row">
+            <label class="form-label required">API Key</label>
+            <el-input
+              v-model="addForm.apiKey"
+              placeholder="sk-... 或 {env:API_KEY_NAME}"
+              show-password
+            />
+            <div class="form-hint">支持直接填写密钥或使用 {env:环境变量名} 引用</div>
+          </div>
+          <div class="form-row">
+            <label class="form-label">Base URL</label>
+            <el-input
+              v-model="addForm.baseURL"
+              placeholder="https://api.example.com/v1（OpenAI 兼容接口地址）"
+            />
+          </div>
+        </div>
+
+        <!-- 模型配置 -->
+        <div class="form-section">
+          <div class="form-section-header">
+            <div class="form-section-title">模型列表</div>
+            <el-button size="small" @click="addModelRow" plain>
+              <el-icon><Plus /></el-icon>
+              添加模型
+            </el-button>
+          </div>
+
+          <div v-for="(model, index) in addForm.models" :key="index" class="model-form-item">
+            <div class="model-form-header">
+              <span class="model-form-index">模型 {{ index + 1 }}</span>
+              <el-button
+                v-if="addForm.models.length > 1"
+                size="small"
+                text
+                type="danger"
+                @click="removeModelRow(index)"
+              >
+                移除
+              </el-button>
+            </div>
+            <div class="model-form-body">
+              <div class="model-form-row">
+                <div class="model-form-field">
+                  <label class="form-label-sm required">模型 ID</label>
+                  <el-input
+                    v-model="model.id"
+                    placeholder="例如: gpt-4o"
+                    size="small"
+                  />
+                </div>
+                <div class="model-form-field">
+                  <label class="form-label-sm">显示名称</label>
+                  <el-input
+                    v-model="model.name"
+                    placeholder="例如: GPT-4o"
+                    size="small"
+                  />
+                </div>
+              </div>
+              <div class="model-form-row">
+                <div class="model-form-field">
+                  <label class="form-label-sm">上下文长度</label>
+                  <el-input-number
+                    v-model="model.context"
+                    :min="1024"
+                    :step="1024"
+                    size="small"
+                    controls-position="right"
+                  />
+                </div>
+                <div class="model-form-field">
+                  <label class="form-label-sm">最大输出</label>
+                  <el-input-number
+                    v-model="model.output"
+                    :min="256"
+                    :step="1024"
+                    size="small"
+                    controls-position="right"
+                  />
+                </div>
+              </div>
+              <div class="model-form-row">
+                <div class="model-form-field checkbox-field">
+                  <el-checkbox v-model="model.reasoning" label="推理能力" size="small" />
+                </div>
+              </div>
+              <div class="model-form-row">
+                <div class="model-form-field checkbox-field">
+                  <label class="form-label-sm" style="margin-bottom:0">输入模态</label>
+                  <el-checkbox v-model="model.inputText" label="文本" size="small" />
+                  <el-checkbox v-model="model.inputImage" label="图片" size="small" />
+                </div>
+                <div class="model-form-field checkbox-field">
+                  <label class="form-label-sm" style="margin-bottom:0">输出模态</label>
+                  <el-checkbox v-model="model.outputText" label="文本" size="small" />
+                </div>
+              </div>
+              <!-- 变体配置 -->
+              <div class="variant-section">
+                <div class="variant-section-header">
+                  <span class="form-label-sm">变体 (Variants)</span>
+                  <el-button size="small" text @click="model.variants.push({ name: '', config: '' })">
+                    <el-icon><Plus /></el-icon> 添加变体
+                  </el-button>
+                </div>
+                <div v-if="model.variants.length === 0" class="variant-empty">
+                  暂无变体，点击"添加变体"配置
+                </div>
+                <div v-for="(variant, vi) in model.variants" :key="vi" class="variant-row">
+                  <div class="variant-field">
+                    <el-input
+                      v-model="variant.name"
+                      placeholder="变体名称，如 high"
+                      size="small"
+                    />
+                  </div>
+                  <div class="variant-field variant-field-config">
+                    <el-input
+                      v-model="variant.config"
+                      placeholder='JSON 配置，如 {"reasoningEffort":"high"}'
+                      size="small"
+                    />
+                  </div>
+                  <el-button size="small" text type="danger" @click="model.variants.splice(vi, 1)">
+                    移除
+                  </el-button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="addProviderVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          @click="handleAddProvider"
+          :loading="addProviderLoading"
+        >
+          添加供应商
+        </el-button>
+      </template>
     </el-dialog>
   </div>
 </template>
@@ -1306,5 +1680,201 @@ html.glassmorphism .badge-tool {
     flex-direction: column;
     align-items: stretch;
   }
+}
+
+/* ==================== 添加供应商对话框 ==================== */
+.add-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-spacing-5);
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-spacing-3);
+}
+
+.form-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.form-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--app-text-primary);
+  padding-bottom: var(--app-spacing-2);
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--app-text-secondary);
+}
+
+.form-label.required::before {
+  content: '*';
+  color: var(--app-color-danger);
+  margin-right: 2px;
+}
+
+.form-label-sm {
+  font-size: 12px;
+  color: var(--app-text-tertiary);
+  margin-bottom: 2px;
+}
+
+.form-label-sm.required::before {
+  content: '*';
+  color: var(--app-color-danger);
+  margin-right: 2px;
+}
+
+.form-hint {
+  font-size: 11px;
+  color: var(--app-text-disabled);
+  margin-top: 2px;
+}
+
+/* 模型表单条目 */
+.model-form-item {
+  border: 1px solid var(--app-border-default);
+  border-radius: var(--app-radius-md);
+  padding: var(--app-spacing-3);
+  background: var(--app-bg-secondary, rgba(0, 0, 0, 0.02));
+}
+
+.model-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--app-spacing-2);
+}
+
+.model-form-index {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text-secondary);
+}
+
+.model-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-spacing-2);
+}
+
+.model-form-row {
+  display: flex;
+  gap: var(--app-spacing-3);
+}
+
+.model-form-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.model-form-field.checkbox-field {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--app-spacing-3);
+  padding-top: 4px;
+}
+
+/* 变体配置 */
+.variant-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-spacing-2);
+  margin-top: var(--app-spacing-1);
+  padding-top: var(--app-spacing-2);
+  border-top: 1px dashed var(--app-border-default);
+}
+
+.variant-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.variant-empty {
+  font-size: 11px;
+  color: var(--app-text-disabled);
+  text-align: center;
+  padding: var(--app-spacing-2) 0;
+}
+
+.variant-row {
+  display: flex;
+  align-items: center;
+  gap: var(--app-spacing-2);
+}
+
+.variant-field {
+  width: 140px;
+  flex-shrink: 0;
+}
+
+.variant-field-config {
+  flex: 1;
+  width: auto;
+}
+
+/* 暗色主题 - 添加对话框 */
+html.dark .model-form-item {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+html.dark .form-section-title {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 赛博朋克主题 - 添加对话框 */
+html.cyberpunk .model-form-item {
+  background: rgba(0, 255, 255, 0.03);
+  border-color: rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .form-section-title {
+  border-bottom-color: rgba(0, 255, 255, 0.15);
+  color: #00ffff;
+}
+
+/* 玻璃拟态主题 - 添加对话框 */
+html.glassmorphism .model-form-item {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(200, 200, 200, 0.3);
+}
+
+html.glassmorphism .form-section-title {
+  border-bottom-color: rgba(200, 200, 200, 0.3);
+}
+</style>
+
+<!-- 非 scoped 样式：对话框 teleport 到 .app-main 后 scoped 失效，需用全局样式控制 -->
+<style>
+.add-provider-dialog .el-dialog__body {
+  max-height: calc(100vh - 240px);
+  overflow-y: auto;
+}
+
+/* 明色模式 checkbox 选中色柔和处理 */
+html.light .el-checkbox.is-checked .el-checkbox__inner {
+  background-color: #409eff !important;
+  border-color: #409eff !important;
+}
+html.light .el-checkbox.is-checked .el-checkbox__label {
+  color: #409eff !important;
 }
 </style>

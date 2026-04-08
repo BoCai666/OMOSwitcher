@@ -217,6 +217,48 @@ export async function deleteCustomProvider(providerId: string): Promise<void> {
   clearRegistryCache()
 }
 
+/** 自定义 provider 配置参数 */
+export interface CustomProviderConfig {
+  /** npm 包名（如 @ai-sdk/openai-compatible） */
+  npm?: string
+  /** 供应商显示名称 */
+  name?: string
+  /** 通用选项 */
+  options?: {
+    apiKey?: string
+    baseURL?: string
+    timeout?: number
+    headers?: Record<string, string>
+  }
+  /** 模型配置（key 为模型 ID） */
+  models?: Record<string, {
+    name?: string
+    disabled?: boolean
+    reasoning?: boolean | { type: string; budgetTokens?: number }
+    limit?: { context?: number; output?: number }
+    modalities?: { input?: string[]; output?: string[] }
+    variants?: Record<string, Record<string, unknown>>
+  }>
+}
+
+/**
+ * 添加自定义 provider 到 opencode.json
+ * 调用后端 Tauri 命令写入并清除缓存
+ * @param providerId 供应商 ID（kebab-case）
+ * @param config provider 配置
+ */
+export async function addCustomProvider(providerId: string, config: CustomProviderConfig): Promise<void> {
+  const invoke = await getTauriInvoke()
+  if (!invoke) {
+    throw new Error('Tauri API 不可用')
+  }
+
+  const configJson = JSON.stringify(config)
+  await invoke('add_custom_provider', { providerId, configJson })
+  // 清除缓存以便下次加载时获取最新数据
+  clearRegistryCache()
+}
+
 /** 可用模型类型 */
 export interface AvailableModel {
   id: string
