@@ -10,9 +10,11 @@ import type { RegistryProvider, RegistryModel } from '@/types/config'
 import type { ProviderWithAvailability } from '@/services/opencodeModels'
 import {
   getProvidersWithAvailability,
-  clearRegistryCache
+  clearRegistryCache,
+  deleteCustomProvider
 } from '@/services/opencodeModels'
-import { showError } from '@/utils/errorHandler'
+import { listModels } from '@/services/modelStore'
+import { showError, showSuccess, confirm } from '@/utils/errorHandler'
 
 // 加载状态
 const loading = ref(true)
@@ -24,8 +26,11 @@ const providers = ref<ProviderWithAvailability[]>([])
 // 搜索关键词
 const searchKeyword = ref('')
 
-// 筛选标签：all / available / custom
-const filterTab = ref<'all' | 'available' | 'custom'>('all')
+// 筛选标签：all / available / custom / builtin
+const filterTab = ref<'all' | 'available' | 'custom' | 'builtin'>('all')
+
+// 内置模型对应的供应商 ID 集合（来自 models.json）
+const builtinProviderIds = ref<Set<string>>(new Set())
 
 // 选中的供应商（查看模型列表）
 const selectedProvider = ref<ProviderWithAvailability | null>(null)
@@ -42,8 +47,9 @@ const stats = computed(() => {
   const total = providers.value.length
   const available = providers.value.filter(p => p.available).length
   const custom = providers.value.filter(p => p.custom).length
+  const builtin = providers.value.filter(p => builtinProviderIds.value.has(p.id)).length
   const modelCount = providers.value.reduce((sum, p) => sum + p.modelCount, 0)
-  return { total, available, custom, modelCount }
+  return { total, available, custom, builtin, modelCount }
 })
 
 // 筛选后的供应商列表
@@ -58,6 +64,11 @@ const filteredProviders = computed(() => {
   // 按自定义筛选
   if (filterTab.value === 'custom') {
     list = list.filter(p => p.custom)
+  }
+
+  // 按内置筛选（models.json 中包含的供应商）
+  if (filterTab.value === 'builtin') {
+    list = list.filter(p => builtinProviderIds.value.has(p.id))
   }
 
   // 按搜索关键词筛选
@@ -106,6 +117,15 @@ async function loadData() {
   try {
     console.log('[ModelManage] 开始加载数据...')
     providers.value = await getProvidersWithAvailability()
+
+    // 加载内置模型列表（来自 models.json），提取供应商 ID
+    try {
+      const builtinModels = await listModels()
+      builtinProviderIds.value = new Set(builtinModels.map(m => m.provider))
+    } catch {
+      builtinProviderIds.value = new Set()
+    }
+
     console.log('[ModelManage] 获取到供应商数量:', providers.value.length)
     console.log('[ModelManage] 自定义供应商:', providers.value.filter(p => p.custom).map(p => ({ id: p.id, custom: p.custom })))
     console.log('[ModelManage] 可用供应商:', providers.value.filter(p => p.available).map(p => p.id))
@@ -142,6 +162,27 @@ function showModelDetail(model: RegistryModel, providerId: string) {
 async function refreshData() {
   clearRegistryCache()
   await loadData()
+}
+
+// 删除自定义供应商
+async function handleDeleteProvider(provider: ProviderWithAvailability) {
+  const confirmed = await confirm(
+    `确定要删除自定义供应商 "${provider.name || provider.id}" 吗？此操作将从 opencode.json 中移除该供应商配置，不可恢复。`,
+    '删除供应商'
+  )
+  if (!confirmed) return
+
+  try {
+    await deleteCustomProvider(provider.id)
+    // 如果当前选中的就是被删除的供应商，清除选中状态
+    if (selectedProvider.value?.id === provider.id) {
+      selectedProvider.value = null
+    }
+    showSuccess(`已删除供应商: ${provider.name || provider.id}`)
+    await refreshData()
+  } catch (e) {
+    showError(e)
+  }
 }
 
 onMounted(() => {
@@ -204,6 +245,14 @@ onMounted(() => {
         <span class="tab-dot custom" />
         自定义 ({{ stats.custom }})
       </button>
+      <button
+        class="filter-tab"
+        :class="{ active: filterTab === 'builtin' }"
+        @click="filterTab = 'builtin'"
+      >
+        <span class="tab-dot builtin" />
+        内置 ({{ stats.builtin }})
+      </button>
     </div>
 
     <!-- 错误提示 -->
@@ -258,6 +307,17 @@ onMounted(() => {
           <div class="panel-title-row">
             <span class="panel-title">{{ selectedProvider.name }}</span>
             <span class="status-dot" :class="selectedProvider.available ? 'available' : 'unavailable'" />
+            <button
+              v-if="selectedProvider.custom"
+              class="delete-provider-btn"
+              title="删除此自定义供应商"
+              @click="handleDeleteProvider(selectedProvider)"
+            >
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="14" height="14">
+                <path d="M3 6H21M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6M19 6V20C19 20.5523 18.5523 21 18 21H6C5.44772 21 5 20.5523 5 20V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>删除</span>
+            </button>
             <el-button text @click="selectedProvider = null">
               <el-icon><Close /></el-icon>
             </el-button>
@@ -487,6 +547,10 @@ onMounted(() => {
   background: #a855f7;
 }
 
+.tab-dot.builtin {
+  background: #3b82f6;
+}
+
 /* 错误提示 */
 .error-banner {
   display: flex;
@@ -673,6 +737,29 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 600;
   color: var(--app-text-primary);
+}
+
+/* 面板中的删除供应商按钮 */
+.delete-provider-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: var(--app-radius-md);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: transparent;
+  color: var(--app-color-danger);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--app-transition-fast);
+  flex-shrink: 0;
+}
+
+.delete-provider-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: var(--app-color-danger);
 }
 
 .panel-subtitle {
@@ -1043,6 +1130,12 @@ html.cyberpunk .model-id-code {
   color: rgba(0, 255, 255, 0.85);
   border: 1px solid rgba(0, 255, 255, 0.2);
   text-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+html.cyberpunk .delete-provider-btn:hover {
+  background: rgba(255, 51, 102, 0.2);
+  color: #ff3366;
+  box-shadow: 0 0 10px rgba(255, 51, 102, 0.4);
 }
 
 html.cyberpunk .card-id {

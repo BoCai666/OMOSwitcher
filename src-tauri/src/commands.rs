@@ -1078,4 +1078,40 @@ pub fn get_monitor_ports_config() -> Result<(u16, u16), String> {
     Ok((web, proxy))
 }
 
+/// 删除 opencode.json 中指定的自定义 provider
+/// 从 provider 字段中移除指定 ID 的供应商配置，然后写回文件
+#[tauri::command]
+pub async fn delete_custom_provider(provider_id: String) -> Result<(), String> {
+    let path = get_opencode_config_path()?;
+    if !path.exists() {
+        return Err("opencode.json 配置文件不存在".to_string());
+    }
+
+    let content = async_fs::read_to_string(&path)
+        .await
+        .map_err(|e| format!("读取 opencode.json 失败: {}", e))?;
+
+    let mut json = serde_json::from_str::<serde_json::Value>(&content)
+        .map_err(|e| format!("解析 opencode.json 失败: {}", e))?;
+
+    // 从 provider 对象中删除指定的 key
+    if let Some(provider) = json.get_mut("provider").and_then(|p| p.as_object_mut()) {
+        if provider.remove(&provider_id).is_none() {
+            return Err(format!("provider \"{}\" 不存在于 opencode.json 中", provider_id));
+        }
+    } else {
+        return Err("opencode.json 中没有 provider 字段".to_string());
+    }
+
+    // 格式化写回（保持美观缩进）
+    let output = serde_json::to_string_pretty(&json)
+        .map_err(|e| format!("序列化 opencode.json 失败: {}", e))?;
+
+    async_fs::write(&path, output)
+        .await
+        .map_err(|e| format!("写入 opencode.json 失败: {}", e))?;
+
+    Ok(())
+}
+
 

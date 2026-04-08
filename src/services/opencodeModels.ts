@@ -201,6 +201,22 @@ export function clearRegistryCache(): void {
   customProvidersCache = null
 }
 
+/**
+ * 删除 opencode.json 中指定的自定义 provider
+ * 调用后端 Tauri 命令删除并清除缓存
+ * @param providerId 要删除的 provider ID
+ */
+export async function deleteCustomProvider(providerId: string): Promise<void> {
+  const invoke = await getTauriInvoke()
+  if (!invoke) {
+    throw new Error('Tauri API 不可用')
+  }
+
+  await invoke('delete_custom_provider', { providerId })
+  // 清除缓存以便下次加载时获取最新数据
+  clearRegistryCache()
+}
+
 /** 可用模型类型 */
 export interface AvailableModel {
   id: string
