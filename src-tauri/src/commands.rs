@@ -1078,6 +1078,66 @@ pub fn get_monitor_ports_config() -> Result<(u16, u16), String> {
     Ok((web, proxy))
 }
 
+/// 添加自定义 provider 到 opencode.json
+/// 在 provider 字段中添加（或更新）指定 ID 的供应商配置，然后写回文件
+/// config_json: 完整的 provider 配置 JSON 字符串，例如：
+///   {"npm":"@ai-sdk/openai-compatible","name":"My Provider","options":{"apiKey":"sk-xxx","baseURL":"https://..."},"models":{...}}
+#[tauri::command]
+pub async fn add_custom_provider(provider_id: String, config_json: String) -> Result<(), String> {
+    let provider_config: serde_json::Value = serde_json::from_str(&config_json)
+        .map_err(|e| format!("Provider 配置 JSON 格式无效: {}", e))?;
+
+    let path = get_opencode_config_path()?;
+
+    // 如果 opencode.json 不存在，创建一个带 provider 字段的新文件
+    if !path.exists() {
+        if let Some(parent) = path.parent() {
+            async_fs::create_dir_all(parent)
+                .await
+                .map_err(|e| format!("创建配置目录失败: {}", e))?;
+        }
+        let mut json = serde_json::json!({});
+        json["provider"] = serde_json::json!({});
+        if let Some(obj) = json.get_mut("provider").and_then(|p| p.as_object_mut()) {
+            obj.insert(provider_id, provider_config);
+        }
+        let output = serde_json::to_string_pretty(&json)
+            .map_err(|e| format!("序列化 opencode.json 失败: {}", e))?;
+        async_fs::write(&path, output)
+            .await
+            .map_err(|e| format!("写入 opencode.json 失败: {}", e))?;
+        return Ok(());
+    }
+
+    // 读取现有配置
+    let content = async_fs::read_to_string(&path)
+        .await
+        .map_err(|e| format!("读取 opencode.json 失败: {}", e))?;
+
+    let mut json = serde_json::from_str::<serde_json::Value>(&content)
+        .map_err(|e| format!("解析 opencode.json 失败: {}", e))?;
+
+    // 确保 provider 字段存在
+    if json.get("provider").is_none() {
+        json["provider"] = serde_json::json!({});
+    }
+
+    // 添加或更新指定 provider
+    if let Some(provider) = json.get_mut("provider").and_then(|p| p.as_object_mut()) {
+        provider.insert(provider_id, provider_config);
+    }
+
+    // 格式化写回（保持美观缩进）
+    let output = serde_json::to_string_pretty(&json)
+        .map_err(|e| format!("序列化 opencode.json 失败: {}", e))?;
+
+    async_fs::write(&path, output)
+        .await
+        .map_err(|e| format!("写入 opencode.json 失败: {}", e))?;
+
+    Ok(())
+}
+
 /// 删除 opencode.json 中指定的自定义 provider
 /// 从 provider 字段中移除指定 ID 的供应商配置，然后写回文件
 #[tauri::command]

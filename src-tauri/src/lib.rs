@@ -42,6 +42,7 @@ pub fn run() {
             commands::read_opencode_models_cache,
             commands::get_available_provider_ids,
             commands::get_custom_provider_ids,
+            commands::add_custom_provider,
             commands::delete_custom_provider,
         ])
         .on_window_event(|_window, event| {
