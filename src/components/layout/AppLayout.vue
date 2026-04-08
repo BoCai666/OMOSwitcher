@@ -3,7 +3,6 @@
 import { computed } from 'vue'
 import Sidebar from './Sidebar.vue'
 import TitleBar from './TitleBar.vue'
-import SaveIndicator from '@/components/SaveIndicator.vue'
 import ParticleField from '@/components/ParticleField.vue'
 
 // 定义组件属性
@@ -51,7 +50,6 @@ const isDark = computed(() => {
         <!-- 页面标题区 -->
         <el-header class="app-header">
           <h1 class="app-title">{{ props.title || 'OMOSwitcher' }}</h1>
-          <SaveIndicator class="header-save-indicator" />
         </el-header>
         
         <!-- 内容区域 -->
@@ -166,11 +164,6 @@ const isDark = computed(() => {
   font-weight: 600;
   color: var(--app-text-primary);
   transition: color 0.5s var(--app-easing-smooth);
-}
-
-.header-save-indicator {
-  position: absolute;
-  right: 20px;
 }
 
 /* 内容区域样式 - 不滚动，作为遮罩层的定位基准 */

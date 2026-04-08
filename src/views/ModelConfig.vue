@@ -9,6 +9,7 @@ import ConfigDetailDialog from '@/components/ConfigDetailDialog.vue'
 import ModelSelectDrawer from '@/components/ModelSelectDrawer.vue'
 import { listModels } from '@/services/modelStore'
 import { useConfigStore } from '@/stores/config'
+import { showSuccess, showError } from '@/utils/errorHandler'
 import type { Model, AgentName, CategoryName, OhMyOpenCodeConfig } from '@/types'
 import { AGENT_NAMES, AGENT_INFO, CATEGORY_NAMES, CATEGORY_INFO, createDefaultConfig } from '@/types'
 
@@ -17,9 +18,6 @@ const configStore = useConfigStore()
 
 // 模型列表
 const models = ref<Model[]>([])
-
-// 保存消息
-const saveMessage = ref('')
 
 // 当前激活的 Tab
 const activeTab = ref('agents')
@@ -119,16 +117,11 @@ function handleSelectModel(modelId: string) {
 // ========== 保存 ==========
 
 async function handleSave() {
-  saveMessage.value = ''
-  
   try {
     await configStore.saveConfig()
-    saveMessage.value = '保存成功'
-    setTimeout(() => {
-      saveMessage.value = ''
-    }, 3000)
+    showSuccess('保存成功')
   } catch (error) {
-    saveMessage.value = '保存失败: ' + (error as Error).message
+    showError(error)
   }
 }
 
@@ -155,7 +148,7 @@ const modelDrawerCurrentModel = computed(() => {
 // 监听 store 中的错误
 watch(() => configStore.error, (newError) => {
   if (newError) {
-    saveMessage.value = '错误: ' + newError
+    showError(newError)
   }
 })
 </script>
@@ -179,17 +172,6 @@ watch(() => configStore.error, (newError) => {
           </el-button>
         </div>
       </div>
-
-      <!-- 保存状态提示 -->
-      <el-alert
-        v-if="saveMessage"
-        :title="saveMessage"
-        :type="saveMessage.includes('失败') || saveMessage.includes('错误') ? 'error' : 'success'"
-        show-icon
-        class="save-alert"
-        closable
-        @close="saveMessage = ''"
-      />
 
       <!-- Tab 切换 -->
       <el-tabs v-model="activeTab" class="config-tabs">
@@ -373,61 +355,6 @@ html.glassmorphism .page-header :deep(.el-button--primary) {
 html.glassmorphism .page-header :deep(.el-button--primary:hover) {
   box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
   transform: translateY(-1px);
-}
-
-/* ==================== Alert 提示 ==================== */
-.save-alert {
-  margin-bottom: var(--app-spacing-5);
-  border-radius: var(--app-radius-lg);
-  backdrop-filter: blur(12px);
-  transition: all 0.3s ease;
-}
-
-/* 赛博朋克主题 - Alert */
-html.cyberpunk .save-alert {
-  background: rgba(0, 255, 136, 0.1) !important;
-  border: 1px solid rgba(0, 255, 136, 0.3);
-  box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 0 20px rgba(0, 255, 136, 0.1);
-}
-
-html.cyberpunk .save-alert:deep(.el-alert__title) {
-  color: var(--app-color-success);
-  font-weight: 500;
-}
-
-html.cyberpunk .save-alert:deep(.el-alert__icon) {
-  color: var(--app-color-success);
-}
-
-html.cyberpunk .save-alert:deep(.el-alert--error) {
-  background: rgba(255, 51, 102, 0.1) !important;
-  border-color: rgba(255, 51, 102, 0.3);
-  box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.3),
-    0 0 20px rgba(255, 51, 102, 0.1);
-}
-
-html.cyberpunk .save-alert:deep(.el-alert--error .el-alert__title),
-html.cyberpunk .save-alert:deep(.el-alert--error .el-alert__icon) {
-  color: var(--app-color-danger);
-}
-
-/* 玻璃拟态主题 - Alert */
-html.glassmorphism .save-alert {
-  background: rgba(16, 185, 129, 0.08) !important;
-  border: 1px solid rgba(16, 185, 129, 0.25);
-}
-
-html.glassmorphism .save-alert:deep(.el-alert__title) {
-  color: var(--app-color-success);
-}
-
-html.glassmorphism .save-alert:deep(.el-alert--error) {
-  background: rgba(239, 68, 68, 0.08) !important;
-  border-color: rgba(239, 68, 68, 0.25);
 }
 
 /* ==================== Tab 切换 ==================== */
