@@ -54,14 +54,6 @@ export {
   getMonitorProxyPort
 } from './settingsStore'
 
-// OpenCode Server 软重载服务
-export {
-  requestSoftReload,
-  checkPendingSoftReload,
-  type SoftReloadState,
-  type SoftReloadResult
-} from './opencodeApi'
-
 // OpenCode 模型注册表服务
 export {
   readModelsRegistry,

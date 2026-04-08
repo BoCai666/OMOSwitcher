@@ -38,10 +38,6 @@ pub fn run() {
             commands::check_ca_cert_exists,
             // Monitor 端口配置命令
             commands::get_monitor_ports_config,
-            // OpenCode 热重载命令
-            commands::hot_reload_opencode_config,
-            commands::request_soft_reload_opencode_config,
-            commands::check_pending_soft_reload,
             // 模型注册表命令
             commands::read_opencode_models_cache,
             commands::get_available_provider_ids,

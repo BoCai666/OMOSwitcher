@@ -191,23 +191,6 @@ watch(() => configStore.error, (newError) => {
         @close="saveMessage = ''"
       />
 
-      <!-- 热重载状态提示 -->
-      <el-alert
-        v-if="configStore.softReloadStatus"
-        :title="configStore.softReloadStatus.message"
-        :type="configStore.softReloadStatus.state === 'pending_idle'
-          ? 'info'
-          : configStore.softReloadStatus.success
-            ? 'success'
-            : configStore.softReloadStatus.skipped
-              ? 'info'
-              : 'warning'"
-        show-icon
-        class="save-alert"
-        closable
-        @close="configStore.softReloadStatus = null"
-      />
-
       <!-- Tab 切换 -->
       <el-tabs v-model="activeTab" class="config-tabs">
         <!-- Agent 配置 -->
