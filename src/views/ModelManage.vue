@@ -110,9 +110,9 @@ function formatContextSize(limit?: number): string {
   return limit.toString()
 }
 
-// 加载数据
-async function loadData() {
-  loading.value = true
+// 加载数据（silent 为 true 时静默刷新，不显示 loading 遮罩，避免暗色模式白屏闪烁）
+async function loadData(silent = false) {
+  if (!silent) loading.value = true
   errorMsg.value = ''
   try {
     console.log('[ModelManage] 开始加载数据...')
@@ -156,10 +156,10 @@ function showModelDetail(model: RegistryModel, providerId: string) {
   modelDetailVisible.value = true
 }
 
-// 刷新数据
+// 刷新数据（静默刷新，不触发 loading 遮罩）
 async function refreshData() {
   clearRegistryCache()
-  await loadData()
+  await loadData(true)
 }
 
 // 删除自定义供应商
@@ -206,6 +206,7 @@ const addForm = ref({
       output: 8192,
       inputText: true,
       inputImage: false,
+      inputVideo: false,
       outputText: true,
       variants: [] as { name: string; config: string }[]
     }
@@ -229,6 +230,7 @@ function openAddProvider() {
         output: 8192,
         inputText: true,
         inputImage: false,
+        inputVideo: false,
         outputText: true,
         variants: []
       }
@@ -241,7 +243,7 @@ function openAddProvider() {
 function addModelRow() {
   addForm.value.models.push({
     id: '', name: '', reasoning: false,
-    context: 128000, output: 8192, inputText: true, inputImage: false, outputText: true,
+    context: 128000, output: 8192, inputText: true, inputImage: false, inputVideo: false, outputText: true,
     variants: []
   })
 }
@@ -310,11 +312,22 @@ async function handleAddProvider() {
 
       const inputModalities: string[] = []
       if (model.inputText) inputModalities.push('text')
-      if (model.inputImage) inputModalities.push('image')
+      if (model.inputImage) {
+        inputModalities.push('image')
+        inputModalities.push('pdf')
+      }
+      if (model.inputVideo) inputModalities.push('video')
 
       models[modelId] = {
         name: model.name.trim() || modelId,
         reasoning: model.reasoning || undefined,
+        ...(model.reasoning ? {
+          options: {
+            thinking: {
+              type: 'enabled'
+            }
+          }
+        } : {}),
         limit: {
           context: model.context || 128000,
           output: model.output || 8192
@@ -746,6 +759,7 @@ onMounted(() => {
                   <label class="form-label-sm" style="margin-bottom:0">输入模态</label>
                   <el-checkbox v-model="model.inputText" label="文本" size="small" />
                   <el-checkbox v-model="model.inputImage" label="图片" size="small" />
+                  <el-checkbox v-model="model.inputVideo" label="视频" size="small" />
                 </div>
                 <div class="model-form-field checkbox-field">
                   <label class="form-label-sm" style="margin-bottom:0">输出模态</label>
