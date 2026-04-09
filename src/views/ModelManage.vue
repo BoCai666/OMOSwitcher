@@ -565,10 +565,13 @@ function handleNpmChange() {
 // 处理 variant 勾选变更
 function handleVariantChange(model: typeof addForm.value.models[0], variantKey: string, checked: boolean) {
   if (checked) {
-    // 勾选时，用 defaults 初始化字段值
+    // 勾选时，添加到 variants 数组
+    if (!model.variants.includes(variantKey)) {
+      model.variants.push(variantKey)
+    }
+    // 用 defaults 初始化字段值
     const variantOpt = getVariantOptions(addForm.value.npm).find(v => v.key === variantKey)
     if (variantOpt) {
-      // 初始化字段值
       const fieldValues: Record<string, unknown> = {}
       for (const field of variantOpt.fields) {
         fieldValues[field.key] = field.default
@@ -576,7 +579,12 @@ function handleVariantChange(model: typeof addForm.value.models[0], variantKey: 
       model.variantFieldValues[variantKey] = fieldValues
     }
   } else {
-    // 取消勾选时，清理字段值
+    // 取消勾选时，从 variants 数组移除
+    const index = model.variants.indexOf(variantKey)
+    if (index > -1) {
+      model.variants.splice(index, 1)
+    }
+    // 清理字段值
     delete model.variantFieldValues[variantKey]
   }
 }
@@ -1127,7 +1135,7 @@ onMounted(() => {
                     <div class="variant-header">
                       <el-checkbox
                         :model-value="model.variants.includes(opt.key)"
-                        @change="(checked: boolean) => handleVariantChange(model, opt.key, checked)"
+                        @change="(checked) => handleVariantChange(model, opt.key, checked)"
                         size="small"
                       >
                         <span class="variant-label">{{ opt.label }}</span>
