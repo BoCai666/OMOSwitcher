@@ -183,6 +183,298 @@ async function handleDeleteProvider(provider: ProviderWithAvailability) {
   }
 }
 
+// ==================== 变体预设配置 ====================
+// 基于 OpenCode 源码 packages/opencode/src/provider/transform.ts
+
+// Variant 参数字段定义
+interface VariantFieldDef {
+  key: string
+  label: string
+  type: 'select' | 'number'
+  options?: { value: string; label: string }[]
+  min?: number
+  max?: number
+  step?: number
+  default: unknown
+}
+
+// Variant 选项定义
+interface VariantOption {
+  key: string
+  label: string
+  description: string
+  fields: VariantFieldDef[]
+  defaults: Record<string, unknown>
+}
+
+// 根据 API 格式定义可用的 variant 选项及其可配置参数
+// 参考: https://github.com/anomalyco/opencode/blob/dev/packages/opencode/src/provider/transform.ts
+const VARIANT_PRESETS: Record<string, VariantOption[]> = {
+  // OpenAI 兼容格式 (OpenRouter, Venice, DeepInfra, Cerebras, TogetherAI, xAI 等)
+  '@ai-sdk/openai-compatible': [
+    {
+      key: 'low',
+      label: 'Low',
+      description: '低推理努力',
+      fields: [
+        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
+          { value: 'low', label: 'Low' },
+        ], default: 'low' },
+        { key: 'textVerbosity', label: '文本详细度', type: 'select', options: [
+          { value: 'low', label: 'Low (简洁)' },
+          { value: 'medium', label: 'Medium (中等)' },
+          { value: 'high', label: 'High (详细)' },
+        ], default: 'low' },
+      ],
+      defaults: { reasoningEffort: 'low', textVerbosity: 'low' },
+    },
+    {
+      key: 'medium',
+      label: 'Medium',
+      description: '中等推理努力',
+      fields: [
+        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
+          { value: 'medium', label: 'Medium' },
+        ], default: 'medium' },
+        { key: 'textVerbosity', label: '文本详细度', type: 'select', options: [
+          { value: 'low', label: 'Low (简洁)' },
+          { value: 'medium', label: 'Medium (中等)' },
+          { value: 'high', label: 'High (详细)' },
+        ], default: 'low' },
+      ],
+      defaults: { reasoningEffort: 'medium', textVerbosity: 'low' },
+    },
+    {
+      key: 'high',
+      label: 'High',
+      description: '高推理努力',
+      fields: [
+        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
+          { value: 'high', label: 'High' },
+        ], default: 'high' },
+        { key: 'textVerbosity', label: '文本详细度', type: 'select', options: [
+          { value: 'low', label: 'Low (简洁)' },
+          { value: 'medium', label: 'Medium (中等)' },
+          { value: 'high', label: 'High (详细)' },
+        ], default: 'low' },
+      ],
+      defaults: { reasoningEffort: 'high', textVerbosity: 'low' },
+    },
+  ],
+
+  // OpenAI 原生格式 (支持更多 variant 级别)
+  '@ai-sdk/openai': [
+    {
+      key: 'none',
+      label: 'None',
+      description: '无推理（最快）',
+      fields: [
+        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
+          { value: 'none', label: 'None' },
+        ], default: 'none' },
+        { key: 'reasoningSummary', label: '推理摘要', type: 'select', options: [
+          { value: 'auto', label: 'Auto (自动)' },
+          { value: 'concise', label: 'Concise (简洁)' },
+          { value: 'detailed', label: 'Detailed (详细)' },
+        ], default: 'auto' },
+      ],
+      defaults: { reasoningEffort: 'none', reasoningSummary: 'auto' },
+    },
+    {
+      key: 'minimal',
+      label: 'Minimal',
+      description: '最小推理努力',
+      fields: [
+        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
+          { value: 'minimal', label: 'Minimal' },
+        ], default: 'minimal' },
+        { key: 'reasoningSummary', label: '推理摘要', type: 'select', options: [
+          { value: 'auto', label: 'Auto (自动)' },
+          { value: 'concise', label: 'Concise (简洁)' },
+          { value: 'detailed', label: 'Detailed (详细)' },
+        ], default: 'auto' },
+      ],
+      defaults: { reasoningEffort: 'minimal', reasoningSummary: 'auto' },
+    },
+    {
+      key: 'low',
+      label: 'Low',
+      description: '低推理努力',
+      fields: [
+        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
+          { value: 'low', label: 'Low' },
+        ], default: 'low' },
+        { key: 'textVerbosity', label: '文本详细度', type: 'select', options: [
+          { value: 'low', label: 'Low (简洁)' },
+          { value: 'medium', label: 'Medium (中等)' },
+          { value: 'high', label: 'High (详细)' },
+        ], default: 'low' },
+        { key: 'reasoningSummary', label: '推理摘要', type: 'select', options: [
+          { value: 'auto', label: 'Auto (自动)' },
+          { value: 'concise', label: 'Concise (简洁)' },
+          { value: 'detailed', label: 'Detailed (详细)' },
+        ], default: 'auto' },
+      ],
+      defaults: { reasoningEffort: 'low', textVerbosity: 'low', reasoningSummary: 'auto' },
+    },
+    {
+      key: 'medium',
+      label: 'Medium',
+      description: '中等推理努力（默认）',
+      fields: [
+        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
+          { value: 'medium', label: 'Medium' },
+        ], default: 'medium' },
+        { key: 'textVerbosity', label: '文本详细度', type: 'select', options: [
+          { value: 'low', label: 'Low (简洁)' },
+          { value: 'medium', label: 'Medium (中等)' },
+          { value: 'high', label: 'High (详细)' },
+        ], default: 'low' },
+        { key: 'reasoningSummary', label: '推理摘要', type: 'select', options: [
+          { value: 'auto', label: 'Auto (自动)' },
+          { value: 'concise', label: 'Concise (简洁)' },
+          { value: 'detailed', label: 'Detailed (详细)' },
+        ], default: 'auto' },
+      ],
+      defaults: { reasoningEffort: 'medium', textVerbosity: 'low', reasoningSummary: 'auto' },
+    },
+    {
+      key: 'high',
+      label: 'High',
+      description: '高推理努力',
+      fields: [
+        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
+          { value: 'high', label: 'High' },
+        ], default: 'high' },
+        { key: 'textVerbosity', label: '文本详细度', type: 'select', options: [
+          { value: 'low', label: 'Low (简洁)' },
+          { value: 'medium', label: 'Medium (中等)' },
+          { value: 'high', label: 'High (详细)' },
+        ], default: 'low' },
+        { key: 'reasoningSummary', label: '推理摘要', type: 'select', options: [
+          { value: 'auto', label: 'Auto (自动)' },
+          { value: 'concise', label: 'Concise (简洁)' },
+          { value: 'detailed', label: 'Detailed (详细)' },
+        ], default: 'auto' },
+      ],
+      defaults: { reasoningEffort: 'high', textVerbosity: 'low', reasoningSummary: 'auto' },
+    },
+    {
+      key: 'xhigh',
+      label: 'XHigh',
+      description: '极高推理努力',
+      fields: [
+        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
+          { value: 'xhigh', label: 'XHigh' },
+        ], default: 'xhigh' },
+        { key: 'textVerbosity', label: '文本详细度', type: 'select', options: [
+          { value: 'low', label: 'Low (简洁)' },
+          { value: 'medium', label: 'Medium (中等)' },
+          { value: 'high', label: 'High (详细)' },
+        ], default: 'low' },
+        { key: 'reasoningSummary', label: '推理摘要', type: 'select', options: [
+          { value: 'auto', label: 'Auto (自动)' },
+          { value: 'concise', label: 'Concise (简洁)' },
+          { value: 'detailed', label: 'Detailed (详细)' },
+        ], default: 'auto' },
+      ],
+      defaults: { reasoningEffort: 'xhigh', textVerbosity: 'low', reasoningSummary: 'auto' },
+    },
+  ],
+
+  // Anthropic 格式 (Claude 系列模型)
+  '@ai-sdk/anthropic': [
+    {
+      key: 'low',
+      label: 'Low',
+      description: '低思考预算 (8K tokens)',
+      fields: [
+        { key: 'budgetTokens', label: '思考预算 (tokens)', type: 'number', min: 1000, max: 31999, step: 1000, default: 8000 },
+      ],
+      defaults: { thinking: { type: 'enabled', budgetTokens: 8000 } },
+    },
+    {
+      key: 'medium',
+      label: 'Medium',
+      description: '中等思考预算 (12K tokens)',
+      fields: [
+        { key: 'budgetTokens', label: '思考预算 (tokens)', type: 'number', min: 1000, max: 31999, step: 1000, default: 12000 },
+      ],
+      defaults: { thinking: { type: 'enabled', budgetTokens: 12000 } },
+    },
+    {
+      key: 'high',
+      label: 'High',
+      description: '高思考预算 (16K tokens)',
+      fields: [
+        { key: 'budgetTokens', label: '思考预算 (tokens)', type: 'number', min: 1000, max: 31999, step: 1000, default: 16000 },
+      ],
+      defaults: { thinking: { type: 'enabled', budgetTokens: 16000 } },
+    },
+    {
+      key: 'max',
+      label: 'Max',
+      description: '最大思考预算 (32K tokens)',
+      fields: [
+        { key: 'budgetTokens', label: '思考预算 (tokens)', type: 'number', min: 1000, max: 31999, step: 1000, default: 31999 },
+      ],
+      defaults: { thinking: { type: 'enabled', budgetTokens: 31999 } },
+    },
+  ],
+
+  // Google Gemini 格式
+  '@ai-sdk/google': [
+    {
+      key: 'low',
+      label: 'Low',
+      description: '低思考级别',
+      fields: [
+        { key: 'thinkingLevel', label: '思考级别', type: 'select', options: [
+          { value: 'low', label: 'Low' },
+        ], default: 'low' },
+      ],
+      defaults: { thinkingConfig: { includeThoughts: true, thinkingLevel: 'low' } },
+    },
+    {
+      key: 'medium',
+      label: 'Medium',
+      description: '中等思考级别 (Gemini 3.1)',
+      fields: [
+        { key: 'thinkingLevel', label: '思考级别', type: 'select', options: [
+          { value: 'medium', label: 'Medium' },
+        ], default: 'medium' },
+      ],
+      defaults: { thinkingConfig: { includeThoughts: true, thinkingLevel: 'medium' } },
+    },
+    {
+      key: 'high',
+      label: 'High',
+      description: '高思考级别',
+      fields: [
+        { key: 'thinkingLevel', label: '思考级别', type: 'select', options: [
+          { value: 'high', label: 'High' },
+        ], default: 'high' },
+        { key: 'thinkingBudget', label: '思考预算 (tokens)', type: 'number', min: 1000, max: 24576, step: 1000, default: 16000 },
+      ],
+      defaults: { thinkingConfig: { includeThoughts: true, thinkingLevel: 'high', thinkingBudget: 16000 } },
+    },
+    {
+      key: 'max',
+      label: 'Max',
+      description: '最大思考预算 (24K tokens)',
+      fields: [
+        { key: 'thinkingBudget', label: '思考预算 (tokens)', type: 'number', min: 1000, max: 24576, step: 1000, default: 24576 },
+      ],
+      defaults: { thinkingConfig: { includeThoughts: true, thinkingBudget: 24576 } },
+    },
+  ],
+}
+
+// 获取当前 API 格式下的可用变体选项
+function getVariantOptions(npm: string): VariantOption[] {
+  return VARIANT_PRESETS[npm] || []
+}
+
 // ==================== 添加自定义供应商 ====================
 
 // 对话框状态
@@ -208,7 +500,8 @@ const addForm = ref({
       inputImage: false,
       inputVideo: false,
       outputText: true,
-      variants: [] as { name: string; config: string }[]
+      variants: [] as string[],  // 勾选的 variant key 列表
+      variantFieldValues: {} as Record<string, Record<string, unknown>>,  // 每个 variant 的自定义参数值
     }
   ]
 })
@@ -232,7 +525,8 @@ function openAddProvider() {
         inputImage: false,
         inputVideo: false,
         outputText: true,
-        variants: []
+        variants: [],
+        variantFieldValues: {},
       }
     ]
   }
@@ -244,13 +538,47 @@ function addModelRow() {
   addForm.value.models.push({
     id: '', name: '', reasoning: false,
     context: 128000, output: 8192, inputText: true, inputImage: false, inputVideo: false, outputText: true,
-    variants: []
+    variants: [],
+    variantFieldValues: {},
   })
 }
 
 // 移除指定行的模型配置
 function removeModelRow(index: number) {
   addForm.value.models.splice(index, 1)
+}
+
+// API 格式变更时，清理不再可用的变体选项
+function handleNpmChange() {
+  const validKeys = new Set(getVariantOptions(addForm.value.npm).map(v => v.key))
+  for (const model of addForm.value.models) {
+    model.variants = model.variants.filter(k => validKeys.has(k))
+    // 清理无效的 variantFieldValues
+    for (const key of Object.keys(model.variantFieldValues)) {
+      if (!validKeys.has(key)) {
+        delete model.variantFieldValues[key]
+      }
+    }
+  }
+}
+
+// 处理 variant 勾选变更
+function handleVariantChange(model: typeof addForm.value.models[0], variantKey: string, checked: boolean) {
+  if (checked) {
+    // 勾选时，用 defaults 初始化字段值
+    const variantOpt = getVariantOptions(addForm.value.npm).find(v => v.key === variantKey)
+    if (variantOpt) {
+      // 初始化字段值
+      const fieldValues: Record<string, unknown> = {}
+      for (const field of variantOpt.fields) {
+        fieldValues[field.key] = field.default
+      }
+      model.variantFieldValues[variantKey] = fieldValues
+    }
+  } else {
+    // 取消勾选时，清理字段值
+    delete model.variantFieldValues[variantKey]
+  }
 }
 
 // 表单验证
@@ -338,16 +666,36 @@ async function handleAddProvider() {
         }
       }
 
-      // 构建变体配置
+      // 构建变体配置（根据 API 格式和自定义参数值生成）
       if (model.variants && model.variants.length > 0) {
         const variants: Record<string, Record<string, unknown>> = {}
-        for (const v of model.variants) {
-          const vName = v.name.trim()
-          if (!vName) continue
-          try {
-            variants[vName] = JSON.parse(v.config)
-          } catch {
-            // 无效 JSON 跳过
+        for (const vKey of model.variants) {
+          const fieldValues = model.variantFieldValues[vKey]
+          if (!fieldValues) continue
+          
+          // 根据 API 格式构建配置
+          const npm = addForm.value.npm
+          if (npm === '@ai-sdk/openai-compatible' || npm === '@ai-sdk/openai') {
+            // OpenAI 格式：直接使用字段值
+            variants[vKey] = { ...fieldValues }
+          } else if (npm === '@ai-sdk/anthropic') {
+            // Anthropic 格式：构建 thinking 对象
+            variants[vKey] = {
+              thinking: {
+                type: 'enabled',
+                budgetTokens: fieldValues.budgetTokens || 16000
+              }
+            }
+          } else if (npm === '@ai-sdk/google') {
+            // Google 格式：构建 thinkingConfig 对象
+            const thinkingConfig: Record<string, unknown> = { includeThoughts: true }
+            if (fieldValues.thinkingLevel) {
+              thinkingConfig.thinkingLevel = fieldValues.thinkingLevel
+            }
+            if (fieldValues.thinkingBudget) {
+              thinkingConfig.thinkingBudget = fieldValues.thinkingBudget
+            }
+            variants[vKey] = { thinkingConfig }
           }
         }
         if (Object.keys(variants).length > 0) {
@@ -656,7 +1004,7 @@ onMounted(() => {
           <div class="form-section-title">API 配置</div>
           <div class="form-row">
             <label class="form-label">API 格式</label>
-            <el-select v-model="addForm.npm" placeholder="选择 API 格式">
+            <el-select v-model="addForm.npm" placeholder="选择 API 格式" @change="handleNpmChange">
               <el-option
                 label="OpenAI"
                 value="@ai-sdk/openai-compatible"
@@ -767,34 +1115,57 @@ onMounted(() => {
                 </div>
               </div>
               <!-- 变体配置 -->
-              <div class="variant-section">
-                <div class="variant-section-header">
-                  <span class="form-label-sm">变体 (Variants)</span>
-                  <el-button size="small" text @click="model.variants.push({ name: '', config: '' })">
-                    <el-icon><Plus /></el-icon> 添加变体
-                  </el-button>
-                </div>
-                <div v-if="model.variants.length === 0" class="variant-empty">
-                  暂无变体，点击"添加变体"配置
-                </div>
-                <div v-for="(variant, vi) in model.variants" :key="vi" class="variant-row">
-                  <div class="variant-field">
-                    <el-input
-                      v-model="variant.name"
-                      placeholder="变体名称，如 high"
-                      size="small"
-                    />
+              <div v-if="getVariantOptions(addForm.npm).length > 0" class="variant-section">
+                <span class="form-label-sm">变体 (Variants)</span>
+                <div class="variant-list">
+                  <div 
+                    v-for="opt in getVariantOptions(addForm.npm)" 
+                    :key="opt.key" 
+                    class="variant-item"
+                    :class="{ 'is-selected': model.variants.includes(opt.key) }"
+                  >
+                    <div class="variant-header">
+                      <el-checkbox
+                        :model-value="model.variants.includes(opt.key)"
+                        @change="(checked: boolean) => handleVariantChange(model, opt.key, checked)"
+                        size="small"
+                      >
+                        <span class="variant-label">{{ opt.label }}</span>
+                        <span class="variant-desc">{{ opt.description }}</span>
+                      </el-checkbox>
+                    </div>
+                    <!-- 参数编辑区 -->
+                    <div v-if="model.variants.includes(opt.key) && opt.fields.length > 0" class="variant-fields">
+                      <div v-for="field in opt.fields" :key="field.key" class="variant-field-row">
+                        <label class="variant-field-label">{{ field.label }}</label>
+                        <!-- select 类型 -->
+                        <el-select
+                          v-if="field.type === 'select'"
+                          v-model="model.variantFieldValues[opt.key][field.key]"
+                          size="small"
+                          class="variant-field-input"
+                        >
+                          <el-option
+                            v-for="optItem in field.options"
+                            :key="optItem.value"
+                            :label="optItem.label"
+                            :value="optItem.value"
+                          />
+                        </el-select>
+                        <!-- number 类型 -->
+                        <el-input-number
+                          v-if="field.type === 'number'"
+                          v-model="model.variantFieldValues[opt.key][field.key]"
+                          :min="field.min"
+                          :max="field.max"
+                          :step="field.step"
+                          size="small"
+                          controls-position="right"
+                          class="variant-field-input"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div class="variant-field variant-field-config">
-                    <el-input
-                      v-model="variant.config"
-                      placeholder='JSON 配置，如 {"reasoningEffort":"high"}'
-                      size="small"
-                    />
-                  </div>
-                  <el-button size="small" text type="danger" @click="model.variants.splice(vi, 1)">
-                    移除
-                  </el-button>
                 </div>
               </div>
             </div>
@@ -1815,33 +2186,75 @@ html.glassmorphism .badge-tool {
   border-top: 1px dashed var(--app-border-default);
 }
 
-.variant-section-header {
+.variant-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-spacing-2);
+}
+
+.variant-item {
+  padding: var(--app-spacing-2);
+  border: 1px solid var(--app-border-default);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-secondary, rgba(0, 0, 0, 0.02));
+  transition: all var(--app-transition-fast);
+}
+
+.variant-item.is-selected {
+  border-color: var(--app-color-primary);
+  background: rgba(0, 212, 255, 0.05);
+}
+
+.variant-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
 }
 
-.variant-empty {
-  font-size: 11px;
-  color: var(--app-text-disabled);
-  text-align: center;
-  padding: var(--app-spacing-2) 0;
+.variant-label {
+  font-weight: 500;
+  margin-right: var(--app-spacing-2);
 }
 
-.variant-row {
+.variant-desc {
+  font-size: 12px;
+  color: var(--app-text-tertiary);
+}
+
+.variant-fields {
+  margin-top: var(--app-spacing-2);
+  padding-top: var(--app-spacing-2);
+  border-top: 1px dashed var(--app-border-default);
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-spacing-2);
+}
+
+.variant-field-row {
   display: flex;
   align-items: center;
   gap: var(--app-spacing-2);
 }
 
-.variant-field {
-  width: 140px;
-  flex-shrink: 0;
+.variant-field-label {
+  font-size: 12px;
+  color: var(--app-text-secondary);
+  min-width: 100px;
 }
 
-.variant-field-config {
+.variant-field-input {
   flex: 1;
-  width: auto;
+  max-width: 200px;
+}
+
+/* 暗色主题 - 变体配置 */
+html.dark .variant-item {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+html.dark .variant-item.is-selected {
+  background: rgba(0, 212, 255, 0.08);
+  border-color: rgba(0, 212, 255, 0.3);
 }
 
 /* 暗色主题 - 添加对话框 */
