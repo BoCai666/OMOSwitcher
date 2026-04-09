@@ -5,14 +5,16 @@
  * 数据来源：~/.cache/opencode/models.json + opencode.json + antigravity-accounts.json
  */
 import { ref, computed, onMounted } from 'vue'
-import { Search, Close, InfoFilled, Refresh, Plus, ArrowDown, ArrowRight } from '@element-plus/icons-vue'
+import { Search, Close, InfoFilled, Refresh, Plus, ArrowDown, ArrowRight, Edit } from '@element-plus/icons-vue'
 import type { RegistryProvider, RegistryModel } from '@/types/config'
 import type { ProviderWithAvailability, CustomProviderConfig } from '@/services/opencodeModels'
 import {
   getProvidersWithAvailability,
   clearRegistryCache,
   deleteCustomProvider,
-  addCustomProvider
+  addCustomProvider,
+  updateCustomProvider,
+  getCustomProviderFullConfig
 } from '@/services/opencodeModels'
 import { showError, showSuccess, confirm } from '@/utils/errorHandler'
 
@@ -787,6 +789,294 @@ async function handleAddProvider() {
   }
 }
 
+// ==================== 编辑自定义供应商 ====================
+
+// 编辑对话框状态
+const editProviderVisible = ref(false)
+const editProviderLoading = ref(false)
+const editVariantExpanded = ref<boolean[]>([])
+
+// 编辑表单数据
+const editForm = ref({
+  providerId: '',  // 不可修改，仅用于显示
+  name: '',
+  npm: '@ai-sdk/openai-compatible',
+  apiKey: '',
+  baseURL: '',
+  models: [
+    {
+      id: '',
+      name: '',
+      reasoning: false,
+      context: 128000,
+      output: 8192,
+      inputText: true,
+      inputImage: false,
+      inputVideo: false,
+      outputText: true,
+      variants: [] as string[],
+      variantFieldValues: {} as Record<string, Record<string, unknown>>,
+    }
+  ]
+})
+
+/**
+ * 打开编辑对话框
+ * 从选中的供应商加载配置数据到表单
+ */
+async function openEditProvider(provider: ProviderWithAvailability) {
+  // 从 opencode.json 获取完整配置（包含 API Key）
+  const fullConfig = await getCustomProviderFullConfig(provider.id)
+  
+  // 填充基本信息
+  editForm.value.providerId = provider.id
+  editForm.value.name = fullConfig?.name || provider.name || ''
+  editForm.value.npm = fullConfig?.npm || provider.npm || '@ai-sdk/openai-compatible'
+  editForm.value.apiKey = fullConfig?.apiKey || ''
+  editForm.value.baseURL = fullConfig?.baseURL || provider.api || ''
+  
+  // 填充模型列表（优先使用完整配置中的 models）
+  const modelsMap = fullConfig?.models || provider.models
+  const models = Object.entries(modelsMap || {})
+  if (models.length > 0) {
+    editForm.value.models = models.map(([modelId, m]) => {
+      // 解析 variants 配置
+      const variants: string[] = []
+      const variantFieldValues: Record<string, Record<string, unknown>> = {}
+      
+      const modelVariants = (m as any).variants
+      if (modelVariants && typeof modelVariants === 'object') {
+        for (const [vKey, vConfig] of Object.entries(modelVariants as Record<string, unknown>)) {
+          variants.push(vKey)
+          if (vConfig && typeof vConfig === 'object') {
+            variantFieldValues[vKey] = vConfig as Record<string, unknown>
+          }
+        }
+      }
+      
+      const modelData = m as any
+      const modalities = modelData.modalities || (m as any).modalities
+      
+      return {
+        id: modelId,
+        name: modelData.name || modelId,
+        reasoning: modelData.reasoning || false,
+        context: modelData.limit?.context || 128000,
+        output: modelData.limit?.output || 8192,
+        inputText: modalities?.input?.includes('text') ?? true,
+        inputImage: modalities?.input?.includes('image') ?? false,
+        inputVideo: modalities?.input?.includes('video') ?? false,
+        outputText: modalities?.output?.includes('text') ?? true,
+        variants,
+        variantFieldValues,
+      }
+    })
+  } else {
+    editForm.value.models = [{
+      id: '',
+      name: '',
+      reasoning: false,
+      context: 128000,
+      output: 8192,
+      inputText: true,
+      inputImage: false,
+      inputVideo: false,
+      outputText: true,
+      variants: [],
+      variantFieldValues: {},
+    }]
+  }
+  
+  editVariantExpanded.value = editForm.value.models.map(() => false)
+  editProviderVisible.value = true
+}
+
+// 添加模型行（编辑表单）
+function addEditModelRow() {
+  editForm.value.models.push({
+    id: '', name: '', reasoning: false,
+    context: 128000, output: 8192, inputText: true, inputImage: false, inputVideo: false, outputText: true,
+    variants: [],
+    variantFieldValues: {},
+  })
+  editVariantExpanded.value.push(false)
+}
+
+// 移除模型行（编辑表单）
+function removeEditModelRow(index: number) {
+  editForm.value.models.splice(index, 1)
+  editVariantExpanded.value.splice(index, 1)
+}
+
+// 切换变体展开状态（编辑表单）
+function toggleEditVariantExpanded(index: number) {
+  editVariantExpanded.value[index] = !editVariantExpanded.value[index]
+}
+
+// API 格式变更处理（编辑表单）
+function handleEditNpmChange() {
+  const validKeys = new Set(getVariantOptions(editForm.value.npm).map(v => v.key))
+  for (const model of editForm.value.models) {
+    model.variants = model.variants.filter(k => validKeys.has(k))
+    for (const key of Object.keys(model.variantFieldValues)) {
+      if (!validKeys.has(key)) {
+        delete model.variantFieldValues[key]
+      }
+    }
+  }
+}
+
+// 处理 variant 勾选变更（编辑表单）
+function handleEditVariantChange(model: typeof editForm.value.models[0], variantKey: string, checked: boolean) {
+  if (checked) {
+    if (!model.variants.includes(variantKey)) {
+      model.variants.push(variantKey)
+    }
+    const variantOpt = getVariantOptions(editForm.value.npm).find(v => v.key === variantKey)
+    if (variantOpt) {
+      const fieldValues: Record<string, unknown> = {}
+      for (const field of variantOpt.fields) {
+        fieldValues[field.key] = field.default
+      }
+      model.variantFieldValues[variantKey] = fieldValues
+    }
+  } else {
+    const index = model.variants.indexOf(variantKey)
+    if (index > -1) {
+      model.variants.splice(index, 1)
+    }
+    delete model.variantFieldValues[variantKey]
+  }
+}
+
+// 验证编辑表单
+function validateEditForm(): string | null {
+  const form = editForm.value
+  if (!form.apiKey.trim()) return '请输入 API Key'
+  
+  const validModels = form.models.filter(m => m.id.trim())
+  if (validModels.length === 0) return '请至少添加一个模型'
+  for (const model of validModels) {
+    if (/\s/.test(model.id.trim())) return `模型 ID "${model.id}" 不能包含空格`
+  }
+  return null
+}
+
+// 提交编辑
+async function handleEditProvider() {
+  const validationError = validateEditForm()
+  if (validationError) {
+    showError(validationError)
+    return
+  }
+  
+  editProviderLoading.value = true
+  try {
+    const form = editForm.value
+    
+    // 构建供应商配置
+    const config: Record<string, unknown> = {}
+    
+    if (form.name.trim()) {
+      config.name = form.name.trim()
+    }
+    
+    if (form.npm.trim()) {
+      config.npm = form.npm.trim()
+    }
+    
+    const options: Record<string, unknown> = {}
+    if (form.apiKey.trim()) {
+      options.apiKey = form.apiKey.trim()
+    }
+    if (form.baseURL.trim()) {
+      options.baseURL = form.baseURL.trim()
+    }
+    if (Object.keys(options).length > 0) {
+      config.options = options
+    }
+    
+    // 构建模型配置
+    const models: Record<string, Record<string, unknown>> = {}
+    for (const model of form.models) {
+      const modelId = model.id.trim()
+      if (!modelId) continue
+      
+      const modelConfig: Record<string, unknown> = {}
+      modelConfig.name = model.name.trim() || modelId
+      modelConfig.limit = {
+        context: model.context || 128000,
+        output: model.output || 8192
+      }
+      
+      const inputModalities: string[] = []
+      if (model.inputText) inputModalities.push('text')
+      if (model.inputImage) {
+        inputModalities.push('image')
+        inputModalities.push('pdf')
+      }
+      if (model.inputVideo) inputModalities.push('video')
+      
+      const modalitiesConfig: Record<string, unknown> = {}
+      if (inputModalities.length > 0) {
+        modalitiesConfig.input = inputModalities
+      }
+      if (model.outputText) {
+        modalitiesConfig.output = ['text']
+      }
+      if (Object.keys(modalitiesConfig).length > 0) {
+        modelConfig.modalities = modalitiesConfig
+      }
+      
+      // 处理 variants
+      if (model.variants && model.variants.length > 0) {
+        const variants: Record<string, Record<string, unknown>> = {}
+        for (const vKey of model.variants) {
+          const fieldValues = model.variantFieldValues[vKey]
+          if (!fieldValues) continue
+          
+          const npm = editForm.value.npm
+          if (npm === '@ai-sdk/openai-compatible' || npm === '@ai-sdk/openai') {
+            variants[vKey] = { ...fieldValues }
+          } else if (npm === '@ai-sdk/anthropic') {
+            variants[vKey] = {
+              thinking: {
+                type: 'enabled',
+                budgetTokens: fieldValues.budgetTokens || 16000
+              }
+            }
+          } else if (npm === '@ai-sdk/google') {
+            const thinkingConfig: Record<string, unknown> = { includeThoughts: true }
+            if (fieldValues.thinkingLevel) {
+              thinkingConfig.thinkingLevel = fieldValues.thinkingLevel
+            }
+            if (fieldValues.thinkingBudget) {
+              thinkingConfig.thinkingBudget = fieldValues.thinkingBudget
+            }
+            variants[vKey] = { thinkingConfig }
+          }
+        }
+        if (Object.keys(variants).length > 0) {
+          modelConfig.variants = variants
+        }
+      }
+      
+      models[modelId] = modelConfig
+    }
+    
+    config.models = models
+    
+    await updateCustomProvider(form.providerId, config as CustomProviderConfig)
+    showSuccess(`已更新供应商: ${form.name || form.providerId}`)
+    editProviderVisible.value = false
+    await refreshData()
+  } catch (e) {
+    showError(e)
+  } finally {
+    editProviderLoading.value = false
+  }
+}
+
 onMounted(() => {
   loadData()
 })
@@ -913,6 +1203,15 @@ onMounted(() => {
           <div class="panel-title-row">
             <span class="panel-title">{{ selectedProvider.name }}</span>
             <span class="status-dot" :class="selectedProvider.available ? 'available' : 'unavailable'" />
+            <button
+              v-if="selectedProvider.custom"
+              class="edit-provider-btn"
+              title="编辑此自定义供应商配置"
+              @click="openEditProvider(selectedProvider)"
+            >
+              <el-icon><Edit /></el-icon>
+              <span>编辑</span>
+            </button>
             <button
               v-if="selectedProvider.custom"
               class="delete-provider-btn"
@@ -1204,7 +1503,7 @@ onMounted(() => {
                     <div class="variant-header">
                       <el-checkbox
                         :model-value="model.variants.includes(opt.key)"
-                        @change="(checked) => handleVariantChange(model, opt.key, checked)"
+                        @change="(checked: boolean) => handleEditVariantChange(model, opt.key, checked)"
                         size="small"
                       >
                         <span class="variant-label">{{ opt.label }}</span>
@@ -1258,6 +1557,235 @@ onMounted(() => {
           :loading="addProviderLoading"
         >
           添加供应商
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑自定义供应商对话框 -->
+    <el-dialog
+      v-model="editProviderVisible"
+      title="编辑自定义供应商"
+      width="620px"
+      append-to=".app-main"
+      align-center
+      :close-on-click-modal="true"
+      class="add-provider-dialog"
+    >
+      <div class="add-form">
+        <!-- 供应商 ID（只读显示） -->
+        <div class="form-section">
+          <div class="form-section-title">基本信息</div>
+          <div class="form-row">
+            <label class="form-label">供应商 ID</label>
+            <el-input
+              v-model="editForm.providerId"
+              disabled
+              placeholder="供应商 ID 不可修改"
+            />
+          </div>
+          <div class="form-row">
+            <label class="form-label">显示名称</label>
+            <el-input
+              v-model="editForm.name"
+              placeholder="例如: My Custom Provider（可选）"
+              maxlength="100"
+            />
+          </div>
+        </div>
+
+        <!-- API 配置 -->
+        <div class="form-section">
+          <div class="form-section-title">API 配置</div>
+          <div class="form-row">
+            <label class="form-label">API 格式</label>
+            <el-select v-model="editForm.npm" placeholder="选择 API 格式" @change="handleEditNpmChange">
+              <el-option
+                label="OpenAI"
+                value="@ai-sdk/openai-compatible"
+              />
+              <el-option
+                label="Anthropic"
+                value="@ai-sdk/anthropic"
+              />
+            </el-select>
+          </div>
+          <div class="form-row">
+            <label class="form-label required">API Key</label>
+            <el-input
+              v-model="editForm.apiKey"
+              placeholder="sk-... 或 {env:API_KEY_NAME}"
+              show-password
+            />
+          </div>
+          <div class="form-row">
+            <label class="form-label">Base URL</label>
+            <el-input
+              v-model="editForm.baseURL"
+              placeholder="https://api.example.com/v1（OpenAI 兼容接口地址）"
+            />
+          </div>
+        </div>
+
+        <!-- 模型配置 -->
+        <div class="form-section">
+          <div class="form-section-header">
+            <div class="form-section-title">模型列表</div>
+            <el-button size="small" @click="addEditModelRow" plain>
+              <el-icon><Plus /></el-icon>
+              添加模型
+            </el-button>
+          </div>
+
+          <div v-for="(model, index) in editForm.models" :key="index" class="model-form-item">
+            <div class="model-form-header">
+              <span class="model-form-index">模型 {{ index + 1 }}</span>
+              <el-button
+                v-if="editForm.models.length > 1"
+                size="small"
+                text
+                type="danger"
+                @click="removeEditModelRow(index)"
+              >
+                移除
+              </el-button>
+            </div>
+            <div class="model-form-body">
+              <div class="model-form-row">
+                <div class="model-form-field">
+                  <label class="form-label-sm required">模型 ID</label>
+                  <el-input
+                    v-model="model.id"
+                    placeholder="例如: gpt-4o"
+                    size="small"
+                  />
+                </div>
+                <div class="model-form-field">
+                  <label class="form-label-sm">显示名称</label>
+                  <el-input
+                    v-model="model.name"
+                    placeholder="例如: GPT-4o"
+                    size="small"
+                  />
+                </div>
+              </div>
+              <div class="model-form-row">
+                <div class="model-form-field">
+                  <label class="form-label-sm">上下文长度</label>
+                  <el-input-number
+                    v-model="model.context"
+                    :min="1024"
+                    :step="1024"
+                    size="small"
+                    controls-position="right"
+                  />
+                </div>
+                <div class="model-form-field">
+                  <label class="form-label-sm">最大输出</label>
+                  <el-input-number
+                    v-model="model.output"
+                    :min="256"
+                    :step="1024"
+                    size="small"
+                    controls-position="right"
+                  />
+                </div>
+              </div>
+              <div class="model-form-row">
+                <div class="model-form-field checkbox-field">
+                  <el-checkbox v-model="model.reasoning" label="推理能力" size="small" />
+                </div>
+              </div>
+              <div class="model-form-row">
+                <div class="model-form-field checkbox-field">
+                  <label class="form-label-sm" style="margin-bottom:0">输入模态</label>
+                  <el-checkbox v-model="model.inputText" label="文本" size="small" />
+                  <el-checkbox v-model="model.inputImage" label="图片" size="small" />
+                  <el-checkbox v-model="model.inputVideo" label="视频" size="small" />
+                </div>
+                <div class="model-form-field checkbox-field">
+                  <label class="form-label-sm" style="margin-bottom:0">输出模态</label>
+                  <el-checkbox v-model="model.outputText" label="文本" size="small" />
+                </div>
+              </div>
+              <!-- 变体配置（可折叠） -->
+              <div v-if="getVariantOptions(editForm.npm).length > 0" class="variant-section">
+                <div class="variant-section-header" @click="toggleEditVariantExpanded(index)">
+                  <div class="variant-section-title">
+                    <el-icon class="variant-expand-icon">
+                      <ArrowRight v-if="!editVariantExpanded[index]" />
+                      <ArrowDown v-else />
+                    </el-icon>
+                    <span>变体 (Variants)</span>
+                    <span v-if="model.variants.length > 0" class="variant-count">
+                      已选 {{ model.variants.length }} 个
+                    </span>
+                  </div>
+                </div>
+                <!-- 变体列表（折叠内容） -->
+                <div v-show="editVariantExpanded[index]" class="variant-list">
+                  <div 
+                    v-for="opt in getVariantOptions(editForm.npm)" 
+                    :key="opt.key" 
+                    class="variant-item"
+                    :class="{ 'is-selected': model.variants.includes(opt.key) }"
+                  >
+                    <div class="variant-header">
+                      <el-checkbox
+                        :model-value="model.variants.includes(opt.key)"
+                        @change="(checked: boolean) => handleVariantChange(model, opt.key, checked)"
+                        size="small"
+                      >
+                        <span class="variant-label">{{ opt.label }}</span>
+                        <span class="variant-desc">{{ opt.description }}</span>
+                      </el-checkbox>
+                    </div>
+                    <!-- 参数编辑区 -->
+                    <div v-if="model.variants.includes(opt.key) && opt.fields.length > 0" class="variant-fields">
+                      <div v-for="field in opt.fields" :key="field.key" class="variant-field-row">
+                        <label class="variant-field-label">{{ field.label }}</label>
+                        <!-- select 类型 -->
+                        <el-select
+                          v-if="field.type === 'select'"
+                          v-model="model.variantFieldValues[opt.key][field.key]"
+                          size="small"
+                          class="variant-field-input"
+                        >
+                          <el-option
+                            v-for="optItem in field.options"
+                            :key="optItem.value"
+                            :label="optItem.label"
+                            :value="optItem.value"
+                          />
+                        </el-select>
+                        <!-- number 类型 -->
+                        <el-input-number
+                          v-if="field.type === 'number'"
+                          v-model="model.variantFieldValues[opt.key][field.key]"
+                          :min="field.min"
+                          :max="field.max"
+                          :step="field.step"
+                          size="small"
+                          controls-position="right"
+                          class="variant-field-input"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="editProviderVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          @click="handleEditProvider"
+          :loading="editProviderLoading"
+        >
+          保存更改
         </el-button>
       </template>
     </el-dialog>
@@ -1575,12 +2103,34 @@ onMounted(() => {
   color: var(--app-text-primary);
 }
 
+/* 面板中的编辑供应商按钮 */
+.edit-provider-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: var(--app-radius-md);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  background: transparent;
+  color: var(--app-color-primary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--app-transition-fast);
+  flex-shrink: 0;
+}
+
+.edit-provider-btn:hover {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: var(--app-color-primary);
+}
+
 /* 面板中的删除供应商按钮 */
 .delete-provider-btn {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-left: auto;
   padding: 4px 10px;
   border-radius: var(--app-radius-md);
   border: 1px solid rgba(239, 68, 68, 0.3);
@@ -2249,8 +2799,13 @@ html.glassmorphism .badge-tool {
 .model-form-field.checkbox-field {
   flex-direction: row;
   align-items: center;
-  gap: var(--app-spacing-3);
+  gap: 4px;
   padding-top: 4px;
+  white-space: nowrap;
+}
+
+.model-form-field.checkbox-field .form-label-sm {
+  margin-right: 6px;
 }
 
 /* 变体配置 */

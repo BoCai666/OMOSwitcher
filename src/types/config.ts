@@ -254,6 +254,7 @@ export interface RegistryModel {
     context?: number
     output?: number
   }
+  variants?: Record<string, unknown>
 }
 
 /** 注册表中的单个供应商 */

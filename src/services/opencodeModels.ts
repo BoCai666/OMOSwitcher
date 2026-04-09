@@ -310,3 +310,68 @@ export async function getAvailableModels(): Promise<AvailableModel[]> {
     return a.name.localeCompare(b.name)
   })
 }
+
+/**
+ * 更新 opencode.json 中的自定义 provider
+ * 实际上复用 addCustomProvider，因为后端命令是 insert/update 语义
+ * @param providerId 供应商 ID
+ * @param config 更新后的 provider 配置
+ */
+export async function updateCustomProvider(providerId: string, config: CustomProviderConfig): Promise<void> {
+  // 复用 addCustomProvider，后端实现是 insert or update
+  await addCustomProvider(providerId, config)
+}
+
+/** 自定义供应商完整配置（包含敏感信息） */
+export interface CustomProviderFullConfig {
+  providerId: string
+  name?: string
+  npm?: string
+  apiKey?: string
+  baseURL?: string
+  models: Record<string, {
+    name?: string
+    reasoning?: boolean
+    limit?: { context?: number; output?: number }
+    modalities?: { input?: string[]; output?: string[] }
+    variants?: Record<string, Record<string, unknown>>
+  }>
+}
+
+/**
+ * 获取指定自定义供应商的完整配置（包含 API Key）
+ * 用于编辑对话框的数据加载
+ * @param providerId 供应商 ID
+ * @returns 完整配置，如果不存在则返回 null
+ */
+export async function getCustomProviderFullConfig(providerId: string): Promise<CustomProviderFullConfig | null> {
+  const invoke = await getTauriInvoke()
+  if (!invoke) return null
+
+  try {
+    const content = await invoke<string>('read_opencode_config')
+    const config = JSON.parse(content)
+
+    if (config.provider && typeof config.provider === 'object') {
+      const providerConfig = config.provider[providerId]
+      if (!providerConfig) return null
+
+      // 检查是否有 apiKey（自定义配置的标志）
+      const apiKey = providerConfig?.apiKey || providerConfig?.options?.apiKey
+      if (!apiKey) return null
+
+      return {
+        providerId,
+        name: providerConfig?.name,
+        npm: providerConfig?.npm,
+        apiKey,
+        baseURL: providerConfig?.options?.baseURL,
+        models: providerConfig?.models || {}
+      }
+    }
+    return null
+  } catch (error) {
+    console.error('读取自定义供应商配置失败:', error)
+    return null
+  }
+}
