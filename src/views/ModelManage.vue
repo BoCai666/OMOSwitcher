@@ -214,13 +214,13 @@ const VARIANT_PRESETS: Record<string, VariantOption[]> = {
   '@ai-sdk/openai-compatible': [
     {
       key: 'low',
-      label: 'Low',
+      label: 'Low (低)',
       description: '低推理努力',
       fields: [
-        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
-          { value: 'low', label: 'Low' },
+        { key: 'reasoningEffort', label: '推理努力 (Reasoning Effort)', type: 'select', options: [
+          { value: 'low', label: 'Low (低)' },
         ], default: 'low' },
-        { key: 'textVerbosity', label: '文本详细度', type: 'select', options: [
+        { key: 'textVerbosity', label: '文本详细度 (Text Verbosity)', type: 'select', options: [
           { value: 'low', label: 'Low (简洁)' },
           { value: 'medium', label: 'Medium (中等)' },
           { value: 'high', label: 'High (详细)' },
@@ -230,13 +230,13 @@ const VARIANT_PRESETS: Record<string, VariantOption[]> = {
     },
     {
       key: 'medium',
-      label: 'Medium',
+      label: 'Medium (中)',
       description: '中等推理努力',
       fields: [
-        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
-          { value: 'medium', label: 'Medium' },
+        { key: 'reasoningEffort', label: '推理努力 (Reasoning Effort)', type: 'select', options: [
+          { value: 'medium', label: 'Medium (中)' },
         ], default: 'medium' },
-        { key: 'textVerbosity', label: '文本详细度', type: 'select', options: [
+        { key: 'textVerbosity', label: '文本详细度 (Text Verbosity)', type: 'select', options: [
           { value: 'low', label: 'Low (简洁)' },
           { value: 'medium', label: 'Medium (中等)' },
           { value: 'high', label: 'High (详细)' },
@@ -246,13 +246,13 @@ const VARIANT_PRESETS: Record<string, VariantOption[]> = {
     },
     {
       key: 'high',
-      label: 'High',
+      label: 'High (高)',
       description: '高推理努力',
       fields: [
-        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
-          { value: 'high', label: 'High' },
+        { key: 'reasoningEffort', label: '推理努力 (Reasoning Effort)', type: 'select', options: [
+          { value: 'high', label: 'High (高)' },
         ], default: 'high' },
-        { key: 'textVerbosity', label: '文本详细度', type: 'select', options: [
+        { key: 'textVerbosity', label: '文本详细度 (Text Verbosity)', type: 'select', options: [
           { value: 'low', label: 'Low (简洁)' },
           { value: 'medium', label: 'Medium (中等)' },
           { value: 'high', label: 'High (详细)' },
@@ -266,13 +266,13 @@ const VARIANT_PRESETS: Record<string, VariantOption[]> = {
   '@ai-sdk/openai': [
     {
       key: 'none',
-      label: 'None',
+      label: 'None (无)',
       description: '无推理（最快）',
       fields: [
-        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
-          { value: 'none', label: 'None' },
+        { key: 'reasoningEffort', label: '推理努力 (Reasoning Effort)', type: 'select', options: [
+          { value: 'none', label: 'None (无)' },
         ], default: 'none' },
-        { key: 'reasoningSummary', label: '推理摘要', type: 'select', options: [
+        { key: 'reasoningSummary', label: '推理摘要 (Reasoning Summary)', type: 'select', options: [
           { value: 'auto', label: 'Auto (自动)' },
           { value: 'concise', label: 'Concise (简洁)' },
           { value: 'detailed', label: 'Detailed (详细)' },
@@ -282,13 +282,13 @@ const VARIANT_PRESETS: Record<string, VariantOption[]> = {
     },
     {
       key: 'minimal',
-      label: 'Minimal',
+      label: 'Minimal (最小)',
       description: '最小推理努力',
       fields: [
-        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
-          { value: 'minimal', label: 'Minimal' },
+        { key: 'reasoningEffort', label: '推理努力 (Reasoning Effort)', type: 'select', options: [
+          { value: 'minimal', label: 'Minimal (最小)' },
         ], default: 'minimal' },
-        { key: 'reasoningSummary', label: '推理摘要', type: 'select', options: [
+        { key: 'reasoningSummary', label: '推理摘要 (Reasoning Summary)', type: 'select', options: [
           { value: 'auto', label: 'Auto (自动)' },
           { value: 'concise', label: 'Concise (简洁)' },
           { value: 'detailed', label: 'Detailed (详细)' },
@@ -298,18 +298,18 @@ const VARIANT_PRESETS: Record<string, VariantOption[]> = {
     },
     {
       key: 'low',
-      label: 'Low',
+      label: 'Low (低)',
       description: '低推理努力',
       fields: [
-        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
-          { value: 'low', label: 'Low' },
+        { key: 'reasoningEffort', label: '推理努力 (Reasoning Effort)', type: 'select', options: [
+          { value: 'low', label: 'Low (低)' },
         ], default: 'low' },
-        { key: 'textVerbosity', label: '文本详细度', type: 'select', options: [
+        { key: 'textVerbosity', label: '文本详细度 (Text Verbosity)', type: 'select', options: [
           { value: 'low', label: 'Low (简洁)' },
           { value: 'medium', label: 'Medium (中等)' },
           { value: 'high', label: 'High (详细)' },
         ], default: 'low' },
-        { key: 'reasoningSummary', label: '推理摘要', type: 'select', options: [
+        { key: 'reasoningSummary', label: '推理摘要 (Reasoning Summary)', type: 'select', options: [
           { value: 'auto', label: 'Auto (自动)' },
           { value: 'concise', label: 'Concise (简洁)' },
           { value: 'detailed', label: 'Detailed (详细)' },
@@ -319,18 +319,18 @@ const VARIANT_PRESETS: Record<string, VariantOption[]> = {
     },
     {
       key: 'medium',
-      label: 'Medium',
+      label: 'Medium (中)',
       description: '中等推理努力（默认）',
       fields: [
-        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
-          { value: 'medium', label: 'Medium' },
+        { key: 'reasoningEffort', label: '推理努力 (Reasoning Effort)', type: 'select', options: [
+          { value: 'medium', label: 'Medium (中)' },
         ], default: 'medium' },
-        { key: 'textVerbosity', label: '文本详细度', type: 'select', options: [
+        { key: 'textVerbosity', label: '文本详细度 (Text Verbosity)', type: 'select', options: [
           { value: 'low', label: 'Low (简洁)' },
           { value: 'medium', label: 'Medium (中等)' },
           { value: 'high', label: 'High (详细)' },
         ], default: 'low' },
-        { key: 'reasoningSummary', label: '推理摘要', type: 'select', options: [
+        { key: 'reasoningSummary', label: '推理摘要 (Reasoning Summary)', type: 'select', options: [
           { value: 'auto', label: 'Auto (自动)' },
           { value: 'concise', label: 'Concise (简洁)' },
           { value: 'detailed', label: 'Detailed (详细)' },
@@ -340,18 +340,18 @@ const VARIANT_PRESETS: Record<string, VariantOption[]> = {
     },
     {
       key: 'high',
-      label: 'High',
+      label: 'High (高)',
       description: '高推理努力',
       fields: [
-        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
-          { value: 'high', label: 'High' },
+        { key: 'reasoningEffort', label: '推理努力 (Reasoning Effort)', type: 'select', options: [
+          { value: 'high', label: 'High (高)' },
         ], default: 'high' },
-        { key: 'textVerbosity', label: '文本详细度', type: 'select', options: [
+        { key: 'textVerbosity', label: '文本详细度 (Text Verbosity)', type: 'select', options: [
           { value: 'low', label: 'Low (简洁)' },
           { value: 'medium', label: 'Medium (中等)' },
           { value: 'high', label: 'High (详细)' },
         ], default: 'low' },
-        { key: 'reasoningSummary', label: '推理摘要', type: 'select', options: [
+        { key: 'reasoningSummary', label: '推理摘要 (Reasoning Summary)', type: 'select', options: [
           { value: 'auto', label: 'Auto (自动)' },
           { value: 'concise', label: 'Concise (简洁)' },
           { value: 'detailed', label: 'Detailed (详细)' },
@@ -361,18 +361,18 @@ const VARIANT_PRESETS: Record<string, VariantOption[]> = {
     },
     {
       key: 'xhigh',
-      label: 'XHigh',
+      label: 'XHigh (极高)',
       description: '极高推理努力',
       fields: [
-        { key: 'reasoningEffort', label: '推理努力', type: 'select', options: [
-          { value: 'xhigh', label: 'XHigh' },
+        { key: 'reasoningEffort', label: '推理努力 (Reasoning Effort)', type: 'select', options: [
+          { value: 'xhigh', label: 'XHigh (极高)' },
         ], default: 'xhigh' },
-        { key: 'textVerbosity', label: '文本详细度', type: 'select', options: [
+        { key: 'textVerbosity', label: '文本详细度 (Text Verbosity)', type: 'select', options: [
           { value: 'low', label: 'Low (简洁)' },
           { value: 'medium', label: 'Medium (中等)' },
           { value: 'high', label: 'High (详细)' },
         ], default: 'low' },
-        { key: 'reasoningSummary', label: '推理摘要', type: 'select', options: [
+        { key: 'reasoningSummary', label: '推理摘要 (Reasoning Summary)', type: 'select', options: [
           { value: 'auto', label: 'Auto (自动)' },
           { value: 'concise', label: 'Concise (简洁)' },
           { value: 'detailed', label: 'Detailed (详细)' },
@@ -386,37 +386,37 @@ const VARIANT_PRESETS: Record<string, VariantOption[]> = {
   '@ai-sdk/anthropic': [
     {
       key: 'low',
-      label: 'Low',
+      label: 'Low (低)',
       description: '低思考预算 (8K tokens)',
       fields: [
-        { key: 'budgetTokens', label: '思考预算 (tokens)', type: 'number', min: 1000, max: 31999, step: 1000, default: 8000 },
+        { key: 'budgetTokens', label: '思考预算 (Budget Tokens)', type: 'number', min: 1000, max: 31999, step: 1000, default: 8000 },
       ],
       defaults: { thinking: { type: 'enabled', budgetTokens: 8000 } },
     },
     {
       key: 'medium',
-      label: 'Medium',
+      label: 'Medium (中)',
       description: '中等思考预算 (12K tokens)',
       fields: [
-        { key: 'budgetTokens', label: '思考预算 (tokens)', type: 'number', min: 1000, max: 31999, step: 1000, default: 12000 },
+        { key: 'budgetTokens', label: '思考预算 (Budget Tokens)', type: 'number', min: 1000, max: 31999, step: 1000, default: 12000 },
       ],
       defaults: { thinking: { type: 'enabled', budgetTokens: 12000 } },
     },
     {
       key: 'high',
-      label: 'High',
+      label: 'High (高)',
       description: '高思考预算 (16K tokens)',
       fields: [
-        { key: 'budgetTokens', label: '思考预算 (tokens)', type: 'number', min: 1000, max: 31999, step: 1000, default: 16000 },
+        { key: 'budgetTokens', label: '思考预算 (Budget Tokens)', type: 'number', min: 1000, max: 31999, step: 1000, default: 16000 },
       ],
       defaults: { thinking: { type: 'enabled', budgetTokens: 16000 } },
     },
     {
       key: 'max',
-      label: 'Max',
+      label: 'Max (最大)',
       description: '最大思考预算 (32K tokens)',
       fields: [
-        { key: 'budgetTokens', label: '思考预算 (tokens)', type: 'number', min: 1000, max: 31999, step: 1000, default: 31999 },
+        { key: 'budgetTokens', label: '思考预算 (Budget Tokens)', type: 'number', min: 1000, max: 31999, step: 1000, default: 31999 },
       ],
       defaults: { thinking: { type: 'enabled', budgetTokens: 31999 } },
     },
@@ -426,44 +426,44 @@ const VARIANT_PRESETS: Record<string, VariantOption[]> = {
   '@ai-sdk/google': [
     {
       key: 'low',
-      label: 'Low',
+      label: 'Low (低)',
       description: '低思考级别',
       fields: [
-        { key: 'thinkingLevel', label: '思考级别', type: 'select', options: [
-          { value: 'low', label: 'Low' },
+        { key: 'thinkingLevel', label: '思考级别 (Thinking Level)', type: 'select', options: [
+          { value: 'low', label: 'Low (低)' },
         ], default: 'low' },
       ],
       defaults: { thinkingConfig: { includeThoughts: true, thinkingLevel: 'low' } },
     },
     {
       key: 'medium',
-      label: 'Medium',
+      label: 'Medium (中)',
       description: '中等思考级别 (Gemini 3.1)',
       fields: [
-        { key: 'thinkingLevel', label: '思考级别', type: 'select', options: [
-          { value: 'medium', label: 'Medium' },
+        { key: 'thinkingLevel', label: '思考级别 (Thinking Level)', type: 'select', options: [
+          { value: 'medium', label: 'Medium (中)' },
         ], default: 'medium' },
       ],
       defaults: { thinkingConfig: { includeThoughts: true, thinkingLevel: 'medium' } },
     },
     {
       key: 'high',
-      label: 'High',
+      label: 'High (高)',
       description: '高思考级别',
       fields: [
-        { key: 'thinkingLevel', label: '思考级别', type: 'select', options: [
-          { value: 'high', label: 'High' },
+        { key: 'thinkingLevel', label: '思考级别 (Thinking Level)', type: 'select', options: [
+          { value: 'high', label: 'High (高)' },
         ], default: 'high' },
-        { key: 'thinkingBudget', label: '思考预算 (tokens)', type: 'number', min: 1000, max: 24576, step: 1000, default: 16000 },
+        { key: 'thinkingBudget', label: '思考预算 (Thinking Budget)', type: 'number', min: 1000, max: 24576, step: 1000, default: 16000 },
       ],
       defaults: { thinkingConfig: { includeThoughts: true, thinkingLevel: 'high', thinkingBudget: 16000 } },
     },
     {
       key: 'max',
-      label: 'Max',
+      label: 'Max (最大)',
       description: '最大思考预算 (24K tokens)',
       fields: [
-        { key: 'thinkingBudget', label: '思考预算 (tokens)', type: 'number', min: 1000, max: 24576, step: 1000, default: 24576 },
+        { key: 'thinkingBudget', label: '思考预算 (Thinking Budget)', type: 'number', min: 1000, max: 24576, step: 1000, default: 24576 },
       ],
       defaults: { thinkingConfig: { includeThoughts: true, thinkingBudget: 24576 } },
     },
