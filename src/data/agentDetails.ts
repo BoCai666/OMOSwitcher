@@ -93,10 +93,9 @@ export const AGENT_DETAILS: Record<AgentName, AgentDetail> = {
     name: 'hephaestus',
     displayName: 'Hephaestus',
     description: '自主深度工作者。给它目标而非步骤，它将自主探索代码库、研究模式并端到端执行。',
-    recommendedModel: 'openai/gpt-5.3-codex',
+    recommendedModel: 'openai/gpt-5.4',
     fallbackChain: [
-      { providers: ['openai', 'venice', 'opencode'], model: 'gpt-5.3-codex', variant: 'medium' },
-      { providers: ['github-copilot'], model: 'gpt-5.4', variant: 'medium' }
+      { providers: ['openai', 'github-copilot', 'venice', 'opencode'], model: 'gpt-5.4', variant: 'medium' }
     ],
     triggers: [
       '复杂实现任务需要自主深度工作',
@@ -239,11 +238,11 @@ export const AGENT_DETAILS: Record<AgentName, AgentDetail> = {
   librarian: {
     name: 'librarian',
     displayName: 'Librarian',
-    description: '专业的代码库理解代理，用于多仓库分析、搜索远程代码库、获取官方文档和查找实现示例。',
+    description: '专业的代码库理解代理，用于多仓库分析、搜索远程代码库、获取官方文档和查找实现示例。当用户询问远程仓库代码、解释库内部原理或查找开源示例时必须使用。',
     recommendedModel: 'opencode-go/minimax-m2.7',
     fallbackChain: [
       { providers: ['opencode-go'], model: 'minimax-m2.7' },
-      { providers: ['opencode'], model: 'minimax-m2.5' },
+      { providers: ['opencode'], model: 'minimax-m2.7-highspeed' },
       { providers: ['anthropic', 'opencode'], model: 'claude-haiku-4-5' },
       { providers: ['opencode'], model: 'gpt-5-nano' }
     ],
@@ -322,8 +321,8 @@ https://github.com/<owner>/<repo>/blob/<commit-sha>/<filepath>#L<start>-L<end>
     recommendedModel: 'github-copilot/grok-code-fast-1',
     fallbackChain: [
       { providers: ['github-copilot', 'xai'], model: 'grok-code-fast-1' },
-      { providers: ['opencode-go'], model: 'minimax-m2.7' },
-      { providers: ['opencode'], model: 'minimax-m2.5' },
+      { providers: ['opencode-go'], model: 'minimax-m2.7-highspeed' },
+      { providers: ['opencode'], model: 'minimax-m2.7' },
       { providers: ['anthropic', 'opencode'], model: 'claude-haiku-4-5' },
       { providers: ['opencode'], model: 'gpt-5-nano' }
     ],
@@ -410,7 +409,7 @@ Answer questions like:
   'multimodal-looker': {
     name: 'multimodal-looker',
     displayName: 'Multimodal Looker',
-    description: '视觉内容专家。分析 PDF、图像、图表以提取信息，节省主代理上下文。',
+    description: '分析需要超越原始文本解读的媒体文件（PDF、图像、图表）。从文档中提取特定信息或摘要，描述视觉内容。当需要分析/提取数据而非原始文件内容时使用。',
     recommendedModel: 'openai/gpt-5.4',
     fallbackChain: [
       { providers: ['openai', 'opencode'], model: 'gpt-5.4', variant: 'medium' },

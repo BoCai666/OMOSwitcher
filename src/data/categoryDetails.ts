@@ -187,9 +187,9 @@ Response format:
     name: 'deep',
     displayName: 'Deep',
     description: '目标导向的自主问题解决，行动前深入研究。用于需要深度理解的复杂问题。',
-    recommendedModel: 'openai/gpt-5.3-codex',
+    recommendedModel: 'openai/gpt-5.4',
     fallbackChain: [
-      { providers: ['openai', 'opencode'], model: 'gpt-5.3-codex', variant: 'medium' },
+      { providers: ['openai', 'opencode'], model: 'gpt-5.4', variant: 'medium' },
       { providers: ['anthropic', 'github-copilot', 'opencode'], model: 'claude-opus-4-6', variant: 'max' },
       { providers: ['google', 'github-copilot', 'opencode'], model: 'gemini-3.1-pro', variant: 'high' }
     ],
@@ -469,10 +469,11 @@ If task is unclassifiable but moderate-effort, use unspecified-low instead.
     name: 'writing',
     displayName: 'Writing',
     description: '文档、散文、技术写作。',
-    recommendedModel: 'google/gemini-3-flash',
+    recommendedModel: 'kimi-for-coding/k2p5',
     fallbackChain: [
-      { providers: ['google', 'github-copilot', 'opencode'], model: 'gemini-3-flash' },
+      { providers: ['kimi-for-coding'], model: 'k2p5' },
       { providers: ['opencode-go'], model: 'kimi-k2.5' },
+      { providers: ['google', 'github-copilot', 'opencode'], model: 'gemini-3-flash' },
       { providers: ['anthropic', 'github-copilot', 'opencode'], model: 'claude-sonnet-4-6' },
       { providers: ['opencode-go'], model: 'minimax-m2.7' }
     ],

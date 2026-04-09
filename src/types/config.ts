@@ -101,7 +101,7 @@ export const AGENT_INFO: Record<AgentName, { displayName: string; description: s
   },
   librarian: {
     displayName: 'Librarian',
-    description: '多仓库分析、文档查找、开源实现示例。深度代码库理解，提供基于证据的答案。'
+    description: '多仓库分析、文档查找、开源实现示例。当用户询问远程仓库代码、解释库内部原理或查找开源示例时必须使用。'
   },
   explore: {
     displayName: 'Explore',
@@ -109,7 +109,7 @@ export const AGENT_INFO: Record<AgentName, { displayName: string; description: s
   },
   'multimodal-looker': {
     displayName: 'Multimodal Looker',
-    description: '视觉内容专家。分析 PDF、图像、图表以提取信息，节省主代理上下文。'
+    description: '分析需要超越原始文本解读的媒体文件（PDF、图像、图表）。当需要分析/提取数据而非原始文件内容时使用。'
   },
   prometheus: {
     displayName: 'Prometheus',
