@@ -318,7 +318,7 @@ https://github.com/<owner>/<repo>/blob/<commit-sha>/<filepath>#L<start>-L<end>
   explore: {
     name: 'explore',
     displayName: 'Explore',
-    description: '代码库搜索专家。回答"X 在哪里？"、"哪个文件包含 Y？"、"找到执行 Z 的代码"等问题。',
+    description: '快速代码库探索和上下文 grep。回答"X 在哪里？"、"哪个文件包含 Y？"、"找到执行 Z 的代码"等问题。',
     recommendedModel: 'github-copilot/grok-code-fast-1',
     fallbackChain: [
       { providers: ['github-copilot', 'xai'], model: 'grok-code-fast-1' },

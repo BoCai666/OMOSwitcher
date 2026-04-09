@@ -105,7 +105,7 @@ export const AGENT_INFO: Record<AgentName, { displayName: string; description: s
   },
   explore: {
     displayName: 'Explore',
-    description: '快速代码库探索和上下文 grep。'
+    description: '快速代码库探索和上下文 grep。回答"X 在哪里？"、"哪个文件包含 Y？"等问题。'
   },
   'multimodal-looker': {
     displayName: 'Multimodal Looker',
@@ -137,7 +137,7 @@ export const CATEGORY_INFO: Record<CategoryName, { displayName: string; descript
   },
   ultrabrain: {
     displayName: 'Ultra Brain',
-    description: '深度逻辑推理、复杂架构决策。'
+    description: '深度逻辑推理、复杂架构决策，需要大量分析。'
   },
   deep: {
     displayName: 'Deep',

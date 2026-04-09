@@ -129,7 +129,7 @@ AVOID: Generic fonts, purple gradients on white, predictable layouts, cookie-cut
   ultrabrain: {
     name: 'ultrabrain',
     displayName: 'Ultra Brain',
-    description: '仅用于真正困难、逻辑繁重的任务。只给明确目标，不给逐步指令。',
+    description: '仅用于真正困难、逻辑繁重的任务。深度逻辑推理、复杂架构决策，需要大量分析。',
     recommendedModel: 'openai/gpt-5.4',
     fallbackChain: [
       { providers: ['openai', 'opencode'], model: 'gpt-5.4', variant: 'xhigh' },
