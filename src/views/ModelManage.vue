@@ -671,30 +671,51 @@ async function handleAddProvider() {
   addProviderLoading.value = true
   try {
     const form = addForm.value
-    const config: CustomProviderConfig = {
-      npm: form.npm.trim() || undefined,
-      name: form.name.trim() || undefined,
-      options: {}
+
+    // 构建供应商配置，按指定顺序：name → npm → options → models
+    const config: Record<string, unknown> = {}
+
+    // 1. name（可选）
+    if (form.name.trim()) {
+      config.name = form.name.trim()
     }
 
-    // 设置 options
+    // 2. npm（可选）
+    if (form.npm.trim()) {
+      config.npm = form.npm.trim()
+    }
+
+    // 3. options（可选）
+    const options: Record<string, unknown> = {}
     if (form.apiKey.trim()) {
-      config.options!.apiKey = form.apiKey.trim()
+      options.apiKey = form.apiKey.trim()
     }
     if (form.baseURL.trim()) {
-      config.options!.baseURL = form.baseURL.trim()
+      options.baseURL = form.baseURL.trim()
     }
-    // 清理空 options
-    if (Object.keys(config.options!).length === 0) {
-      delete config.options
+    if (Object.keys(options).length > 0) {
+      config.options = options
     }
 
-    // 构建模型配置
-    const models: CustomProviderConfig['models'] = {}
+    // 4. models
+    const models: Record<string, Record<string, unknown>> = {}
     for (const model of form.models) {
       const modelId = model.id.trim()
       if (!modelId) continue
 
+      // 按指定顺序构建模型配置：name → limit → modalities → variants
+      const modelConfig: Record<string, unknown> = {}
+
+      // 1. name
+      modelConfig.name = model.name.trim() || modelId
+
+      // 2. limit
+      modelConfig.limit = {
+        context: model.context || 128000,
+        output: model.output || 8192
+      }
+
+      // 3. modalities
       const inputModalities: string[] = []
       if (model.inputText) inputModalities.push('text')
       if (model.inputImage) {
@@ -703,34 +724,24 @@ async function handleAddProvider() {
       }
       if (model.inputVideo) inputModalities.push('video')
 
-      models[modelId] = {
-        name: model.name.trim() || modelId,
-        reasoning: model.reasoning || undefined,
-        ...(model.reasoning ? {
-          options: {
-            thinking: {
-              type: 'enabled'
-            }
-          }
-        } : {}),
-        limit: {
-          context: model.context || 128000,
-          output: model.output || 8192
-        },
-        modalities: {
-          input: inputModalities.length > 0 ? inputModalities : undefined,
-          output: model.outputText ? ['text'] : undefined
-        }
+      const modalitiesConfig: Record<string, unknown> = {}
+      if (inputModalities.length > 0) {
+        modalitiesConfig.input = inputModalities
+      }
+      if (model.outputText) {
+        modalitiesConfig.output = ['text']
+      }
+      if (Object.keys(modalitiesConfig).length > 0) {
+        modelConfig.modalities = modalitiesConfig
       }
 
-      // 构建变体配置（根据 API 格式和自定义参数值生成）
+      // 4. variants（根据 API 格式和自定义参数值生成）
       if (model.variants && model.variants.length > 0) {
         const variants: Record<string, Record<string, unknown>> = {}
         for (const vKey of model.variants) {
           const fieldValues = model.variantFieldValues[vKey]
           if (!fieldValues) continue
-          
-          // 根据 API 格式构建配置
+
           const npm = addForm.value.npm
           if (npm === '@ai-sdk/openai-compatible' || npm === '@ai-sdk/openai') {
             // OpenAI 格式：直接使用字段值
@@ -756,19 +767,16 @@ async function handleAddProvider() {
           }
         }
         if (Object.keys(variants).length > 0) {
-          models[modelId]!.variants = variants
+          modelConfig.variants = variants
         }
       }
 
-      // 清理 undefined 值
-      const m = models[modelId] as Record<string, unknown>
-      for (const key of Object.keys(m)) {
-        if (m[key] === undefined) delete m[key]
-      }
+      models[modelId] = modelConfig
     }
+
     config.models = models
 
-    await addCustomProvider(form.providerId.trim(), config)
+    await addCustomProvider(form.providerId.trim(), config as CustomProviderConfig)
     showSuccess(`已添加供应商: ${form.name || form.providerId}`)
     addProviderVisible.value = false
     await refreshData()
