@@ -2421,4 +2421,13 @@ html.light .el-checkbox.is-checked .el-checkbox__inner {
 html.light .el-checkbox.is-checked .el-checkbox__label {
   color: #409eff !important;
 }
+
+/* 暗色主题 - loading 遮罩 */
+html.dark .el-loading-mask {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+}
+
+html.dark .el-loading-text {
+  color: #a0a0a0 !important;
+}
 </style>
