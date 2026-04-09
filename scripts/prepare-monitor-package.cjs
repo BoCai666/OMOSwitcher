@@ -61,43 +61,61 @@ fs.copyFileSync(
   path.join(binariesDir, 'package.json')
 );
 
-// 5. 复制 node_modules（从根目录提取）
-console.log('\n📦 复制依赖...');
+// 5. 复制 node_modules（从根目录提取，含所有传递依赖）
+console.log('\n📦 收集并复制依赖...');
 const nodeModulesDest = path.join(binariesDir, 'node_modules');
 fs.mkdirSync(nodeModulesDest, { recursive: true });
 
-let copiedCount = 0;
+// 递归收集所有传递依赖
+const allDeps = new Set();
+function collectTransitiveDeps(name) {
+  if (allDeps.has(name)) return;
+  allDeps.add(name);
+
+  const pkgPath = path.join(rootNodeModules, name, 'package.json');
+  if (!fs.existsSync(pkgPath)) return;
+
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    const deps = { ...(pkg.dependencies || {}), ...(pkg.optionalDependencies || {}) };
+    for (const dep of Object.keys(deps)) {
+      collectTransitiveDeps(dep);
+    }
+  } catch (_e) {
+    // 忽略无法解析的包
+  }
+}
+
 for (const dep of monitorDeps) {
+  collectTransitiveDeps(dep);
+}
+
+console.log(`  共收集 ${allDeps.size} 个传递依赖`);
+
+let copiedCount = 0;
+let missingCount = 0;
+for (const dep of allDeps) {
   const depSrc = path.join(rootNodeModules, dep);
   const depDest = path.join(nodeModulesDest, dep);
-  
+
   if (fs.existsSync(depSrc)) {
     // 创建父目录（处理 @scope/package 格式）
     const parentDir = path.dirname(depDest);
     if (!fs.existsSync(parentDir)) {
       fs.mkdirSync(parentDir, { recursive: true });
     }
-    
+
     fs.cpSync(depSrc, depDest, { recursive: true });
-    console.log(`  ✓ ${dep}`);
     copiedCount++;
-    
-    // 复制该依赖的嵌套 node_modules
-    copyNestedDeps(depSrc, nodeModulesDest);
   } else {
-    console.warn(`  ⚠ ${dep} 不存在`);
+    console.warn(`  ⚠ 依赖缺失: ${dep}`);
+    missingCount++;
   }
 }
 
-// 补充：复制 better-sqlite3 需要的 build 目录（包含 .node 文件）
-const betterSqliteBuild = path.join(rootNodeModules, 'better-sqlite3', 'build');
-if (fs.existsSync(betterSqliteBuild)) {
-  const buildDest = path.join(nodeModulesDest, 'better-sqlite3', 'build');
-  if (!fs.existsSync(buildDest)) {
-    fs.mkdirSync(buildDest, { recursive: true });
-  }
-  fs.cpSync(betterSqliteBuild, buildDest, { recursive: true });
-  console.log('  ✓ better-sqlite3/build (原生模块)');
+console.log(`  ✓ 已复制 ${copiedCount} 个依赖`);
+if (missingCount > 0) {
+  console.warn(`  ⚠ ${missingCount} 个依赖在根 node_modules 中未找到`);
 }
 
 // 6. 清理不需要的文件
@@ -136,37 +154,6 @@ verifyRequiredArtifacts();
 console.log('✅ monitor-package 关键资源校验通过');
 
 // ============ 辅助函数 ============
-
-/**
- * 递归复制依赖的依赖
- */
-function copyNestedDeps(depSrc, nodeModulesDest) {
-  const nestedNodeModules = path.join(depSrc, 'node_modules');
-  if (!fs.existsSync(nestedNodeModules)) return;
-  
-  const nestedDeps = fs.readdirSync(nestedNodeModules);
-  for (const nestedDep of nestedDeps) {
-    // 跳过 .bin 等特殊目录
-    if (nestedDep.startsWith('.')) continue;
-    
-    const nestedSrc = path.join(nestedNodeModules, nestedDep);
-    const nestedDest = path.join(nodeModulesDest, nestedDep);
-    
-    // 如果目标不存在，则复制
-    if (!fs.existsSync(nestedDest)) {
-      // 创建父目录（处理 @scope/package 格式）
-      const parentDir = path.dirname(nestedDest);
-      if (!fs.existsSync(parentDir)) {
-        fs.mkdirSync(parentDir, { recursive: true });
-      }
-      
-      fs.cpSync(nestedSrc, nestedDest, { recursive: true });
-      
-      // 递归处理
-      copyNestedDeps(nestedSrc, nodeModulesDest);
-    }
-  }
-}
 
 /**
  * 递归删除 .d.ts 和 .map 文件

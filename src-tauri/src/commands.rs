@@ -872,8 +872,19 @@ async fn wait_for_monitor_ready(port: u16) -> Result<(), String> {
 
             match child.try_wait() {
                 Ok(Some(status)) => {
+                    // 读取 stderr 获取具体错误信息
+                    let mut stderr_msg = String::new();
+                    if let Some(stderr) = child.stderr.take() {
+                        use std::io::Read;
+                        let _ = stderr.take(8192).read_to_string(&mut stderr_msg);
+                    }
                     *process = None;
-                    return Err(format!("Monitor 进程启动后立即退出: {}", status));
+                    let err_detail = if stderr_msg.is_empty() {
+                        String::new()
+                    } else {
+                        format!("\n错误输出:\n{}", stderr_msg.trim())
+                    };
+                    return Err(format!("Monitor 进程启动后立即退出: {}{}", status, err_detail));
                 }
                 Ok(None) => {}
                 Err(e) => {
@@ -970,6 +981,7 @@ pub async fn start_monitor_service(
     }
 
     // 创建进程
+    // 捕获 stderr 以便在进程意外退出时获取错误信息
     let mut cmd = Command::new(&node_exe);
     cmd.arg(&monitor_entry)
         .current_dir(&monitor_dir)
@@ -981,7 +993,8 @@ pub async fn start_monitor_service(
         .env("https_proxy", "")
         .env("ALL_PROXY", "")
         .env("all_proxy", "")
-        .env("NO_PROXY", "*");
+        .env("NO_PROXY", "*")
+        .stderr(std::process::Stdio::piped());
 
     #[cfg(target_os = "windows")]
     {
