@@ -5,7 +5,7 @@
  * 数据来源：~/.cache/opencode/models.json + opencode.json + antigravity-accounts.json
  */
 import { ref, computed, onMounted } from 'vue'
-import { Search, Close, InfoFilled, Refresh, Plus } from '@element-plus/icons-vue'
+import { Search, Close, InfoFilled, Refresh, Plus, ArrowDown, ArrowRight } from '@element-plus/icons-vue'
 import type { RegistryProvider, RegistryModel } from '@/types/config'
 import type { ProviderWithAvailability, CustomProviderConfig } from '@/services/opencodeModels'
 import {
@@ -519,6 +519,14 @@ function getVariantOptions(npm: string): VariantOption[] {
 const addProviderVisible = ref(false)
 const addProviderLoading = ref(false)
 
+// 变体区域展开状态（每个模型一个）
+const variantExpanded = ref<boolean[]>([])
+
+// 切换变体区域展开状态
+function toggleVariantExpanded(index: number) {
+  variantExpanded.value[index] = !variantExpanded.value[index]
+}
+
 // 表单数据
 const addForm = ref({
   providerId: '',
@@ -568,6 +576,7 @@ function openAddProvider() {
       }
     ]
   }
+  variantExpanded.value = [false]  // 默认折叠
   addProviderVisible.value = true
 }
 
@@ -579,11 +588,13 @@ function addModelRow() {
     variants: [],
     variantFieldValues: {},
   })
+  variantExpanded.value.push(false)  // 新增模型默认折叠
 }
 
 // 移除指定行的模型配置
 function removeModelRow(index: number) {
   addForm.value.models.splice(index, 1)
+  variantExpanded.value.splice(index, 1)  // 同步移除展开状态
 }
 
 // API 格式变更时，清理不再可用的变体选项
@@ -1160,10 +1171,22 @@ onMounted(() => {
                   <el-checkbox v-model="model.outputText" label="文本" size="small" />
                 </div>
               </div>
-              <!-- 变体配置 -->
+              <!-- 变体配置（可折叠） -->
               <div v-if="getVariantOptions(addForm.npm).length > 0" class="variant-section">
-                <span class="form-label-sm">变体 (Variants)</span>
-                <div class="variant-list">
+                <div class="variant-section-header" @click="toggleVariantExpanded(index)">
+                  <div class="variant-section-title">
+                    <el-icon class="variant-expand-icon">
+                      <ArrowRight v-if="!variantExpanded[index]" />
+                      <ArrowDown v-else />
+                    </el-icon>
+                    <span>变体 (Variants)</span>
+                    <span v-if="model.variants.length > 0" class="variant-count">
+                      已选 {{ model.variants.length }} 个
+                    </span>
+                  </div>
+                </div>
+                <!-- 变体列表（折叠内容） -->
+                <div v-show="variantExpanded[index]" class="variant-list">
                   <div 
                     v-for="opt in getVariantOptions(addForm.npm)" 
                     :key="opt.key" 
@@ -2224,18 +2247,54 @@ html.glassmorphism .badge-tool {
 
 /* 变体配置 */
 .variant-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--app-spacing-2);
   margin-top: var(--app-spacing-1);
   padding-top: var(--app-spacing-2);
   border-top: 1px dashed var(--app-border-default);
+}
+
+.variant-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--app-spacing-1) var(--app-spacing-2);
+  border-radius: var(--app-radius-sm);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--app-transition-fast);
+}
+
+.variant-section-header:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.variant-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--app-spacing-2);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--app-text-primary);
+}
+
+.variant-expand-icon {
+  font-size: 12px;
+  color: var(--app-text-tertiary);
+  transition: transform var(--app-transition-fast);
+}
+
+.variant-count {
+  font-size: 11px;
+  color: var(--app-color-primary);
+  background: rgba(0, 212, 255, 0.1);
+  padding: 1px 6px;
+  border-radius: var(--app-radius-sm);
 }
 
 .variant-list {
   display: flex;
   flex-direction: column;
   gap: var(--app-spacing-2);
+  padding-top: var(--app-spacing-2);
 }
 
 .variant-item {
@@ -2293,6 +2352,10 @@ html.glassmorphism .badge-tool {
 }
 
 /* 暗色主题 - 变体配置 */
+html.dark .variant-section-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
 html.dark .variant-item {
   background: rgba(255, 255, 255, 0.02);
   border-color: rgba(255, 255, 255, 0.08);
