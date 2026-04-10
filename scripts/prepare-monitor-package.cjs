@@ -17,7 +17,6 @@ const embeddedNodeExe = path.join(rootDir, 'src-tauri', 'binaries', 'node', 'nod
 
 // Monitor 的直接依赖（从 package.json 读取）
 const monitorDeps = [
-  '@mswjs/interceptors',
   'better-sqlite3',
   'cors',
   'express',
@@ -142,16 +141,32 @@ if (fs.existsSync(wasmDir)) {
 // 删除 node_modules 中的 .d.ts 文件
 cleanTypeFilesInNodeModules(nodeModulesDest);
 
-// 7. 统计大小
-const totalSize = getDirSize(binariesDir);
-console.log(`\n✅ 准备完成！总大小: ${(totalSize / 1024 / 1024).toFixed(2)} MB`);
+// 删除 dist 中的 monitor.exe（旧 SEA/打包残留，运行时使用内嵌 node.exe + index.js）
+const monitorExe = path.join(distDest, 'monitor.exe');
+if (fs.existsSync(monitorExe)) {
+  fs.rmSync(monitorExe, { force: true });
+  console.log('  - dist/monitor.exe (旧打包残留)');
+}
+
+// 7. 统计大小（rebuild 前）
+const sizeBeforeRebuild = getDirSize(binariesDir);
+console.log(`\n📊 rebuild 前大小: ${(sizeBeforeRebuild / 1024 / 1024).toFixed(2)} MB`);
 
 // 8. 使用内嵌 Node 目标版本重建 better-sqlite3 原生模块
 rebuildBetterSqliteForEmbeddedNode();
 
-// 9. 校验关键运行时资源
+// 9. 精简 better-sqlite3 原生模块：删除编译中间产物，只保留运行时必需的 .node 文件
+// 必须在 rebuild 之后执行，否则 rebuild 会重新生成中间产物
+cleanBetterSqlite3BuildArtifacts(nodeModulesDest);
+
+// 10. 校验关键运行时资源
 verifyRequiredArtifacts();
 console.log('✅ monitor-package 关键资源校验通过');
+
+// 11. 最终统计
+const totalSize = getDirSize(binariesDir);
+const saved = sizeBeforeRebuild > 0 ? ((sizeBeforeRebuild - totalSize) / 1024 / 1024).toFixed(2) : '?';
+console.log(`\n✅ 准备完成！最终大小: ${(totalSize / 1024 / 1024).toFixed(2)} MB（精简 ${saved} MB）`);
 
 // ============ 辅助函数 ============
 
@@ -311,5 +326,73 @@ function rebuildBetterSqliteForEmbeddedNode() {
       console.error(rebuildResult.error);
     }
     process.exit(rebuildResult.status || 1);
+  }
+}
+
+/**
+ * 精简 better-sqlite3 原生模块：删除编译中间产物，只保留运行时必需的 .node 文件
+ * 运行时只需 build/Release/better_sqlite3.node，其余都是编译/调试产物
+ */
+function cleanBetterSqlite3BuildArtifacts(nodeModulesDir) {
+  const bs3Dir = path.join(nodeModulesDir, 'better-sqlite3');
+  if (!fs.existsSync(bs3Dir)) return;
+
+  console.log('\n🧹 精简 better-sqlite3 编译产物...');
+
+  // 删除 deps/ 目录（SQLite 源码，编译完成不再需要）
+  const depsDir = path.join(bs3Dir, 'deps');
+  if (fs.existsSync(depsDir)) {
+    fs.rmSync(depsDir, { recursive: true, force: true });
+    console.log('  - better-sqlite3/deps/ (SQLite 源码)');
+  }
+
+  // 删除 src/ 目录（C++ 源码，编译完成不再需要）
+  const srcDir = path.join(bs3Dir, 'src');
+  if (fs.existsSync(srcDir)) {
+    fs.rmSync(srcDir, { recursive: true, force: true });
+    console.log('  - better-sqlite3/src/ (C++ 源码)');
+  }
+
+  // 精简 build/ 目录：删除编译中间产物，只保留 Release/better_sqlite3.node
+  const buildDir = path.join(bs3Dir, 'build');
+  if (fs.existsSync(buildDir)) {
+    // 删除 build/deps/（编译中间产物）
+    const buildDeps = path.join(buildDir, 'deps');
+    if (fs.existsSync(buildDeps)) {
+      fs.rmSync(buildDeps, { recursive: true, force: true });
+      console.log('  - better-sqlite3/build/deps/ (编译中间产物)');
+    }
+
+    // 精简 build/Release/：只保留 .node 文件
+    const releaseDir = path.join(buildDir, 'Release');
+    if (fs.existsSync(releaseDir)) {
+      const releaseItems = fs.readdirSync(releaseDir);
+      for (const item of releaseItems) {
+        const itemPath = path.join(releaseDir, item);
+        const stat = fs.statSync(itemPath);
+
+        if (stat.isDirectory()) {
+          // 删除子目录（如 obj/）
+          fs.rmSync(itemPath, { recursive: true, force: true });
+          console.log(`  - better-sqlite3/build/Release/${item}/ (编译中间产物)`);
+        } else if (!item.endsWith('.node')) {
+          // 删除非 .node 文件（.pdb, .ilk, .lib, .exp 等）
+          fs.rmSync(itemPath, { force: true });
+          console.log(`  - better-sqlite3/build/Release/${item} (调试/链接产物)`);
+        }
+      }
+    }
+
+    // 删除 build 根目录下的非必要文件（.vcxproj, .sln 等）
+    const buildItems = fs.readdirSync(buildDir);
+    for (const item of buildItems) {
+      if (item === 'Release') continue; // 保留 Release 目录
+      const itemPath = path.join(buildDir, item);
+      const stat = fs.statSync(itemPath);
+      if (!stat.isDirectory()) {
+        fs.rmSync(itemPath, { force: true });
+        console.log(`  - better-sqlite3/build/${item} (构建配置文件)`);
+      }
+    }
   }
 }
