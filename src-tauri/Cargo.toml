@@ -13,9 +13,24 @@ tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 dirs = "5"
-tokio = { version = "1", features = ["fs", "io-util"] }
-tokio-tungstenite = "0.21"
+tokio = { version = "1", features = ["fs", "io-util", "rt-multi-thread", "macros"] }
 reqwest = { version = "0.12", features = ["json"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+uuid = { version = "1", features = ["v4"] }
+time = { version = "0.3" }
+notify = "8"
+notify-debouncer-full = "0.5"
+hudsucker = { version = "0.24", features = ["rcgen-ca", "rustls-client"] }
+rcgen = { version = "0.14", features = ["x509-parser"] }
+rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+hyper = { version = "1", features = ["client", "http1", "http2", "server"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+http-body-util = "0.1"
+rand = "0.8"
+regex = "1"
 
 [features]
 default = ["custom-protocol"]

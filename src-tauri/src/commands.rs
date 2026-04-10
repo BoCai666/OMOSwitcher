@@ -2,15 +2,16 @@
 // 提供前端与后端配置文件交互的命令
 
 use std::fs;
-use std::net::TcpStream;
+use std::net::{SocketAddr, TcpStream};
 use std::path::PathBuf;
 use std::process::{Child, Command};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use tauri::{path::BaseDirectory, Manager};
+use tauri::Manager;
 use tokio::fs as async_fs;
+use tokio::sync::Mutex as AsyncMutex;
 use tokio::time::sleep;
 
 #[cfg(target_os = "windows")]
@@ -21,6 +22,9 @@ use std::os::windows::process::CommandExt;
 // 父进程关闭时子进程不受影响
 #[cfg(target_os = "windows")]
 const CREATE_NEW_CONSOLE: u32 = 0x00000010;
+
+// 导入 Monitor 模块
+use crate::monitor::proxy::ProxyServer;
 
 /// 清理 Windows 扩展长度路径前缀 (\\?\)
 /// Tauri 的 path.resolve() 在 Windows 上会返回带 \\?\ 前缀的路径，
@@ -815,7 +819,42 @@ fn cleanup_monitor_ports() -> Result<(), String> {
 
 // ============== Sidecar 监控服务管理 ==============
 
-/// 全局状态存储 Monitor Sidecar 进程句柄
+/// Monitor 服务状态管理
+/// 使用 Tauri state 管理 Rust ProxyServer 实例
+#[derive(Clone)]
+pub struct MonitorCommandState {
+    /// Rust 代理服务器实例（使用 Arc 包装以便 Clone）
+    proxy: Arc<AsyncMutex<Option<ProxyServer>>>,
+}
+
+impl Default for MonitorCommandState {
+    fn default() -> Self {
+        Self {
+            proxy: Arc::new(AsyncMutex::new(None)),
+        }
+    }
+}
+
+impl MonitorCommandState {
+    /// 创建新的状态实例
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// 停止代理服务器（用于窗口关闭时调用）
+    pub async fn stop_proxy(&self) {
+        let mut proxy = self.proxy.lock().await;
+        if let Some(p) = proxy.take() {
+            if p.is_running() {
+                let _ = p.stop().await;
+                println!("[App] 代理服务器已停止");
+            }
+        }
+    }
+}
+
+/// 全局状态存储 Monitor Sidecar 进程句柄（已废弃，保留用于兼容）
+/// 注意：此全局状态仅用于旧的 Node.js 进程管理，新的 Rust 代理使用 Tauri state
 static MONITOR_PROCESS: Mutex<Option<Child>> = Mutex::new(None);
 
 /// 检查 Monitor Web API 是否已就绪
@@ -913,175 +952,99 @@ pub struct MonitorStatus {
     pub port: u16,
 }
 
-/// 启动 Monitor Sidecar 服务（使用内嵌的 Node.js 运行时）
+/// 启动 Monitor 服务（使用 Rust 代理服务器）
+/// 不再启动 Node.js 进程，改为启动 Rust HTTP/HTTPS 代理
 #[tauri::command]
 pub async fn start_monitor_service(
-    app: tauri::AppHandle,
+    state: tauri::State<'_, MonitorCommandState>,
 ) -> Result<String, String> {
     // 检查是否已经在运行
     {
-        let process_running = cleanup_exited_monitor_process()?;
-        if process_running {
-            return Ok("Monitor service already running".to_string());
+        let proxy = state.proxy.lock().await;
+        if let Some(ref p) = *proxy {
+            if p.is_running() {
+                return Ok("Monitor service already running".to_string());
+            }
         }
     }
 
     // 获取端口配置
-    let (web_port, proxy_port) = get_monitor_ports();
+    let (_, proxy_port) = get_monitor_ports();
+    let addr: SocketAddr = format!("127.0.0.1:{}", proxy_port)
+        .parse()
+        .map_err(|e| format!("解析代理地址失败: {}", e))?;
 
-    // ★ 启动前清理端口（解决残留进程问题）
-    println!("[Monitor] 检查端口 {} 和 {}...", web_port, proxy_port);
-    if let Err(e) = cleanup_monitor_ports() {
-        println!("[Monitor] 警告: 端口清理失败: {}", e);
+    // 启动前清理端口（解决残留进程问题）
+    println!("[Monitor] 检查端口 {}...", proxy_port);
+    if is_port_in_use(proxy_port) {
+        if let Err(e) = kill_port_process(proxy_port) {
+            println!("[Monitor] 警告: 端口清理失败: {}", e);
+        }
     }
 
-    // ★ 使用 Tauri 2 推荐的 resolve 方法解析资源路径
-    // 这在开发模式和生产模式下都能正确工作
-    let node_exe_raw = app
-        .path()
-        .resolve("binaries/node/node.exe", BaseDirectory::Resource)
-        .map_err(|e| format!("解析 Node.js 路径失败: {}", e))?;
+    // 创建并启动 Rust 代理服务器
+    println!("[Monitor] 启动 Rust 代理服务器 (端口 {})...", proxy_port);
+    let proxy_server = ProxyServer::with_addr(addr)
+        .map_err(|e| format!("创建代理服务器失败: {}", e))?;
     
-    let monitor_dir_raw = app
-        .path()
-        .resolve("binaries/monitor-package", BaseDirectory::Resource)
-        .map_err(|e| format!("解析 Monitor 目录路径失败: {}", e))?;
+    proxy_server.start().await
+        .map_err(|e| format!("启动代理服务器失败: {}", e))?;
 
-    // ★ 清理 Windows 扩展长度路径前缀 (\\?\)
-    // Tauri 的 resolve() 在 Windows 上返回带 \\?\ 前缀的路径，
-    // 但 Command::new() 和 current_dir() 不支持此前缀，会导致 ERROR_BAD_PATHNAME (267)
-    let node_exe = normalize_path(node_exe_raw);
-    let monitor_dir = normalize_path(monitor_dir_raw);
-
-    println!("[Monitor] 使用内嵌 Node.js: {:?}", node_exe);
-    println!("[Monitor] Monitor 目录: {:?}", monitor_dir);
-    
-    // 检查路径是否存在
-    if !node_exe.exists() {
-        return Err(format!("Node.js 可执行文件不存在: {:?}", node_exe));
-    }
-    if !monitor_dir.exists() {
-        return Err(format!("Monitor 目录不存在: {:?}", monitor_dir));
-    }
-
-    let monitor_entry = monitor_dir.join("dist").join("index.js");
-    if !monitor_entry.exists() {
-        return Err(format!(
-            "内嵌 Monitor 包不完整：缺少入口文件 {:?}。请先执行 monitor build/prepare 流程后重新打包。",
-            monitor_entry
-        ));
-    }
-
-    let monitor_node_modules = monitor_dir.join("node_modules");
-    if !monitor_node_modules.exists() {
-        return Err(format!(
-            "内嵌 Monitor 包不完整：缺少依赖目录 {:?}。请先执行 monitor build/prepare 流程后重新打包。",
-            monitor_node_modules
-        ));
-    }
-
-    // 创建进程
-    // 捕获 stderr 以便在进程意外退出时获取错误信息
-    let mut cmd = Command::new(&node_exe);
-    cmd.arg(&monitor_entry)
-        .current_dir(&monitor_dir)
-        .env("PORT", web_port.to_string())
-        .env("PROXY_PORT", proxy_port.to_string())
-        .env("HTTP_PROXY", "")
-        .env("HTTPS_PROXY", "")
-        .env("http_proxy", "")
-        .env("https_proxy", "")
-        .env("ALL_PROXY", "")
-        .env("all_proxy", "")
-        .env("NO_PROXY", "*")
-        .stderr(std::process::Stdio::piped());
-
-    #[cfg(target_os = "windows")]
+    // 保存到 state
     {
-        use std::os::windows::process::CommandExt;
-        cmd.creation_flags(CREATE_NEW_CONSOLE);
+        let mut proxy = state.proxy.lock().await;
+        *proxy = Some(proxy_server);
     }
 
-    // 启动进程
-    let child = cmd
-        .spawn()
-        .map_err(|e| format!("启动 monitor 失败: {} (Node.js: {:?})", e, node_exe))?;
+    println!("[Monitor] Rust 代理服务器已启动: http://localhost:{}", proxy_port);
 
-    let pid = child.id();
-    println!("[Monitor] 已启动 (PID: {})", pid);
-
-    // 存储进程句柄
-    {
-        let mut process = MONITOR_PROCESS.lock().unwrap();
-        *process = Some(child);
-    }
-
-    println!("[Monitor] 等待 Web API 端口 {} 就绪...", web_port);
-    if let Err(e) = wait_for_monitor_ready(web_port).await {
-        let _ = stop_monitor_service();
-        return Err(format!("启动 monitor 失败: {}", e));
-    }
-
-    println!("[Monitor] Web API 已就绪: http://localhost:{}", web_port);
-
-    Ok(format!("Monitor service started (PID: {}, Port: {})", pid, web_port))
+    Ok(format!("Monitor service started (Rust Proxy, Port: {})", proxy_port))
 }
 
-/// 停止 Monitor Sidecar 服务
+/// 停止 Monitor 服务（使用 CancellationToken 优雅停止 Rust 代理）
 #[tauri::command]
-pub fn stop_monitor_service() -> Result<(), String> {
-    let mut process = MONITOR_PROCESS.lock().unwrap();
-    if let Some(mut child) = process.take() {
-        child
-            .kill()
-            .map_err(|e| format!("停止 sidecar 失败: {}", e))?;
+pub async fn stop_monitor_service(
+    state: tauri::State<'_, MonitorCommandState>,
+) -> Result<(), String> {
+    let mut proxy = state.proxy.lock().await;
+    
+    if let Some(p) = proxy.take() {
+        if p.is_running() {
+            p.stop().await
+                .map_err(|e| format!("停止代理服务器失败: {}", e))?;
+            println!("[Monitor] 代理服务器已停止");
+        }
     }
+    
     Ok(())
 }
 
 /// 获取 Monitor 服务运行状态
 #[tauri::command]
-pub fn get_monitor_status() -> Result<MonitorStatus, String> {
-    // 获取端口（使用缓存，很快）
-    let (web_port, _) = get_monitor_ports();
-    let process_running = cleanup_exited_monitor_process()?;
-    let is_running = process_running && is_port_in_use(web_port);
+pub async fn get_monitor_status(
+    state: tauri::State<'_, MonitorCommandState>,
+) -> Result<MonitorStatus, String> {
+    // 获取端口（使用缓存）
+    let (_, proxy_port) = get_monitor_ports();
+    
+    let proxy = state.proxy.lock().await;
+    let is_running = proxy.as_ref().map(|p| p.is_running()).unwrap_or(false);
     
     Ok(MonitorStatus {
         is_running,
-        port: web_port,
+        port: proxy_port,
     })
 }
 
-/// 检查 CA 证书是否存在（通过调用 Monitor API）
+/// 检查 CA 证书是否存在（直接检查文件系统）
 #[tauri::command]
 pub async fn check_ca_cert_exists() -> Result<bool, String> {
-    let (web_port, _) = get_monitor_ports();
-    let url = format!("http://localhost:{}/api/cert-status", web_port);
+    // 获取 CA 证书路径
+    let ca_cert_path = get_omoswitcher_dir()
+        .map(|p| p.join("monitor").join("certs").join("ca.crt"))?;
     
-    // 使用 reqwest 调用 Monitor API
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(5))
-        .build()
-        .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
-    
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| format!("请求 Monitor API 失败: {}", e))?;
-    
-    if !response.status().is_success() {
-        return Err(format!("Monitor API 返回错误: {}", response.status()));
-    }
-    
-    let json: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| format!("解析响应失败: {}", e))?;
-    
-    let exists = json["exists"].as_bool().unwrap_or(false);
-    Ok(exists)
+    // 直接检查文件是否存在
+    Ok(ca_cert_path.exists())
 }
 
 /// 获取 Monitor 端口配置

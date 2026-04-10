@@ -1,9 +1,10 @@
 /**
  * 监控服务 API 封装
- * 与 Sidecar 监控服务通信
+ * 通过 Tauri invoke 与 Rust 后端监控模块通信
  */
 
-import { getMonitorWebPort } from './settingsStore'
+import { invoke } from '@tauri-apps/api/core'
+import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import type {
   RequestListItem,
   StatsSummary,
@@ -14,56 +15,19 @@ import type {
   SSEEventCallbacks
 } from '@/types/monitor'
 
-// 端口缓存
-let cachedPort: number | null = null
-// baseUrl 缓存（避免每次都异步获取）
-let cachedBaseUrl: string | null = null
-
-/**
- * 获取 Monitor Web API 端口
- */
-async function getMonitorPort(): Promise<number> {
-  if (cachedPort !== null) {
-    return cachedPort
-  }
-  
-  try {
-    cachedPort = await getMonitorWebPort()
-    return cachedPort
-  } catch {
-    // 默认端口
-    return 7100
-  }
-}
-
-/**
- * 获取 API 基础 URL（带缓存）
- */
-async function getBaseUrl(): Promise<string> {
-  if (cachedBaseUrl !== null) {
-    return cachedBaseUrl
-  }
-  
-  const port = await getMonitorPort()
-  cachedBaseUrl = `http://localhost:${port}/api`
-  return cachedBaseUrl
-}
-
 /**
  * 监控服务 API
+ * 所有方法通过 Tauri invoke 调用 Rust 后端
  */
 export const monitorApi = {
+  // ========== 数据查询 API ==========
+
   /**
    * 获取请求列表
    * @param limit 返回数量限制
    */
   async getRequests(limit = 100): Promise<RequestListItem[]> {
-    const baseUrl = await getBaseUrl()
-    const response = await fetch(`${baseUrl}/requests?limit=${limit}`)
-    if (!response.ok) {
-      throw new Error(`获取请求列表失败: ${response.statusText}`)
-    }
-    return response.json()
+    return invoke<RequestListItem[]>('monitor_get_requests', { limit })
   },
 
   /**
@@ -71,12 +35,7 @@ export const monitorApi = {
    * @param id 请求 ID
    */
   async getRequest(id: string): Promise<LLMRequest> {
-    const baseUrl = await getBaseUrl()
-    const response = await fetch(`${baseUrl}/requests/${id}`)
-    if (!response.ok) {
-      throw new Error(`获取请求详情失败: ${response.statusText}`)
-    }
-    return response.json()
+    return invoke<LLMRequest>('monitor_get_request', { id })
   },
 
   /**
@@ -84,15 +43,7 @@ export const monitorApi = {
    * @param requestId 请求 ID
    */
   async getResponse(requestId: string): Promise<LLMResponse | null> {
-    const baseUrl = await getBaseUrl()
-    const response = await fetch(`${baseUrl}/requests/${requestId}/response`)
-    if (!response.ok) {
-      if (response.status === 404) {
-        return null
-      }
-      throw new Error(`获取响应详情失败: ${response.statusText}`)
-    }
-    return response.json()
+    return invoke<LLMResponse | null>('monitor_get_response', { requestId })
   },
 
   /**
@@ -100,16 +51,7 @@ export const monitorApi = {
    * @param requestId 请求 ID
    */
   async getMcpCalls(requestId: string): Promise<MCPCall[]> {
-    const baseUrl = await getBaseUrl()
-    const response = await fetch(`${baseUrl}/requests/${requestId}/mcp-calls`)
-    if (!response.ok) {
-      if (response.status === 404) {
-        return []
-      }
-      throw new Error(`获取 MCP 调用失败: ${response.statusText}`)
-    }
-    const data = await response.json()
-    return data.calls || []
+    return invoke<MCPCall[]>('monitor_get_mcp_calls', { requestId })
   },
 
   /**
@@ -117,27 +59,14 @@ export const monitorApi = {
    * @param requestId 请求 ID
    */
   async getMetrics(requestId: string): Promise<LLMMetrics | null> {
-    const baseUrl = await getBaseUrl()
-    const response = await fetch(`${baseUrl}/requests/${requestId}/metrics`)
-    if (!response.ok) {
-      if (response.status === 404) {
-        return null
-      }
-      throw new Error(`获取指标失败: ${response.statusText}`)
-    }
-    return response.json()
+    return invoke<LLMMetrics | null>('monitor_get_metrics', { requestId })
   },
 
   /**
    * 获取统计汇总
    */
   async getStatsSummary(): Promise<StatsSummary> {
-    const baseUrl = await getBaseUrl()
-    const response = await fetch(`${baseUrl}/stats/summary`)
-    if (!response.ok) {
-      throw new Error(`获取统计汇总失败: ${response.statusText}`)
-    }
-    return response.json()
+    return invoke<StatsSummary>('monitor_get_stats_summary')
   },
 
   /**
@@ -146,12 +75,7 @@ export const monitorApi = {
    */
   async healthCheck(): Promise<boolean> {
     try {
-      const baseUrl = await getBaseUrl()
-      const response = await fetch(`${baseUrl}/health`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(1000) // 1秒超时（优化延迟）
-      })
-      return response.ok
+      return await invoke<boolean>('monitor_health')
     } catch {
       return false
     }
@@ -161,114 +85,67 @@ export const monitorApi = {
    * 清空监控数据
    */
   async clearData(): Promise<void> {
-    const baseUrl = await getBaseUrl()
-    const response = await fetch(`${baseUrl}/clear`, {
-      method: 'POST'
-    })
-    if (!response.ok) {
-      throw new Error(`清空数据失败: ${response.statusText}`)
-    }
-  },
-  
-  /**
-   * 清除端口缓存（当端口配置变更时调用）
-   */
-  clearPortCache(): void {
-    cachedPort = null
-    cachedBaseUrl = null
+    await invoke('monitor_clear_data')
   },
 
   // ========== SSE 实时推送 ==========
 
-  // SSE 连接实例
-  _eventSource: null as EventSource | null,
+  // 存储已注册的事件取消监听函数
+  _unlistenFns: [] as UnlistenFn[],
 
   /**
    * 连接 SSE 实时推送
+   * 通过 Tauri event 系统监听后端事件
    * @param callbacks 事件回调函数
    * @returns 断开连接函数
    */
-  connectSSE(callbacks: SSEEventCallbacks): () => void {
+  async connectSSE(callbacks: SSEEventCallbacks): Promise<() => void> {
     // 如果已有连接，先断开
-    if (this._eventSource) {
-      this._eventSource.close()
-      this._eventSource = null
-    }
+    await this.disconnectSSE()
 
-    // 创建 EventSource 连接
-    getBaseUrl().then(baseUrl => {
-      const sseUrl = baseUrl.replace('/api', '') + '/api/events'
-      console.log('[Monitor] Connecting to SSE:', sseUrl)
+    console.log('[Monitor] Registering Tauri event listeners')
 
-      const eventSource = new EventSource(sseUrl)
-      this._eventSource = eventSource
-
-      // 连接成功
-      eventSource.onopen = () => {
-        console.log('[Monitor] SSE connected')
-      }
-
-      // 接收消息
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-
-          switch (data.type) {
-            case 'connected':
-              callbacks.onConnected?.(data.timestamp as number)
-              break
-
-            case 'new-request':
-              callbacks.onNewRequest?.(data.request as LLMRequest)
-              break
-
-            case 'response':
-              callbacks.onResponse?.(data.response as LLMResponse)
-              break
-
-            case 'metrics':
-              callbacks.onMetrics?.(data.metrics as LLMMetrics)
-              break
-
-            default:
-              console.warn('[Monitor] Unknown SSE event type:', data.type)
-          }
-        } catch (err) {
-          console.error('[Monitor] Failed to parse SSE message:', err)
-        }
-      }
-
-      // 连接错误
-      eventSource.onerror = (err) => {
-        console.error('[Monitor] SSE connection error:', err)
-        callbacks.onError?.(new Error('SSE connection error'))
-
-        // 自动重连逻辑由 EventSource 内置处理
-        // 如果连接彻底失败，EventSource 会自动尝试重连
-      }
-    }).catch(err => {
-      console.error('[Monitor] Failed to get monitor port:', err)
-      callbacks.onError?.(err)
+    // 注册新请求事件
+    const unlistenNewRequest = await listen<LLMRequest>('monitor:new-request', (event) => {
+      callbacks.onNewRequest?.(event.payload)
     })
+    this._unlistenFns.push(unlistenNewRequest)
+
+    // 注册响应事件
+    const unlistenResponse = await listen<LLMResponse>('monitor:response', (event) => {
+      callbacks.onResponse?.(event.payload)
+    })
+    this._unlistenFns.push(unlistenResponse)
+
+    // 注册指标事件
+    const unlistenMetrics = await listen<LLMMetrics>('monitor:metrics', (event) => {
+      callbacks.onMetrics?.(event.payload)
+    })
+    this._unlistenFns.push(unlistenMetrics)
+
+    console.log('[Monitor] Event listeners registered')
+
+    // 连接成功回调
+    callbacks.onConnected?.(Date.now())
 
     // 返回断开连接函数
     return () => {
-      if (this._eventSource) {
-        console.log('[Monitor] Disconnecting SSE')
-        this._eventSource.close()
-        this._eventSource = null
-      }
+      this.disconnectSSE()
     }
   },
 
   /**
    * 断开 SSE 连接
+   * 取消所有已注册的事件监听
    */
-  disconnectSSE(): void {
-    if (this._eventSource) {
-      this._eventSource.close()
-      this._eventSource = null
-      console.log('[Monitor] SSE disconnected')
+  async disconnectSSE(): Promise<void> {
+    if (this._unlistenFns.length > 0) {
+      console.log('[Monitor] Unregistering event listeners')
+      for (const unlisten of this._unlistenFns) {
+        unlisten()
+      }
+      this._unlistenFns = []
+      console.log('[Monitor] Event listeners unregistered')
     }
   },
 
@@ -276,6 +153,6 @@ export const monitorApi = {
    * 检查 SSE 是否已连接
    */
   isSSEConnected(): boolean {
-    return this._eventSource !== null && this._eventSource.readyState === EventSource.OPEN
+    return this._unlistenFns.length > 0
   }
 }

@@ -374,15 +374,15 @@ export const useMonitorStore = defineStore('monitor', () => {
    * 启动 SSE 实时推送
    * 替代轮询机制，实现服务端主动推送数据更新
    */
-  function startSSE(): void {
+  async function startSSE(): Promise<void> {
     // 如果已连接，先断开
-    stopSSE()
+    await stopSSE()
 
     console.log('[Monitor] Starting SSE connection')
     sseConnected.value = false
 
     // 连接 SSE（数据由 Monitor.vue 的 refresh() 已获取，无需重复）
-    sseDisconnect = monitorApi.connectSSE({
+    sseDisconnect = await monitorApi.connectSSE({
       onConnected: (timestamp) => {
         console.log('[Monitor] SSE connected at', new Date(timestamp).toISOString())
         sseConnected.value = true
@@ -452,22 +452,22 @@ export const useMonitorStore = defineStore('monitor', () => {
   /**
    * 停止 SSE 实时推送
    */
-  function stopSSE(): void {
+  async function stopSSE(): Promise<void> {
     if (sseDisconnect) {
       sseDisconnect()
       sseDisconnect = null
     }
     sseConnected.value = false
-    monitorApi.disconnectSSE()
+    await monitorApi.disconnectSSE()
     console.log('[Monitor] SSE stopped')
   }
 
   /**
    * 重置状态
    */
-  function reset(): void {
+  async function reset(): Promise<void> {
     stopAutoRefresh()
-    stopSSE()
+    await stopSSE()
     requests.value = []
     stats.value = null
     status.value = { is_running: false, port: 7100 }

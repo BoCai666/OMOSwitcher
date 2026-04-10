@@ -4,9 +4,6 @@
   "private": true,
   "type": "module",
   "description": "OhMyOpenCode 模型配置管理工具",
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
@@ -15,13 +12,9 @@
     "tauri": "tauri",
     "kill-port": "node scripts/kill-port.js 7200",
     "pretauri:dev": "npm run kill-port",
-    "pretauri:build": "npm run build:monitor:prod && npm run prepare:monitor && npm run verify:monitor-package",
+    "pretauri:build": "npm run build",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "build:monitor": "npm run build -w @omoswitcher/monitor",
-    "build:monitor:prod": "npm run build:prod -w @omoswitcher/monitor",
-    "prepare:monitor": "node scripts/prepare-monitor-package.cjs",
-    "verify:monitor-package": "node scripts/verify-monitor-package.cjs",
     "build:all": "npm run tauri:build"
   },
   "dependencies": {
