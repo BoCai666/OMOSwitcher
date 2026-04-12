@@ -1,6 +1,9 @@
 // 成本计算器
 // 移植自 packages/monitor/src/parsers/cost-calculator.ts
 // 定价单位：美元/1M tokens
+// 注意：尚未被 handler 集成调用，保留供后续集成使用
+
+#![allow(dead_code)]
 
 use crate::monitor::types::{ModelPricingConfig, PricingConfig};
 

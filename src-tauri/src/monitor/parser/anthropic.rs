@@ -1,5 +1,8 @@
 // Anthropic 格式请求/响应解析器
 // 移植自 packages/monitor/src/parsers/anthropic-parser.ts
+// 注意：尚未被 handler 集成调用，保留供后续集成使用
+
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 

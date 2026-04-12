@@ -1,6 +1,9 @@
 // Monitor 模块 - 请求/响应捕获管道
 // 提供请求捕获、响应捕获、Provider 检测、域名匹配等功能
 // 移植自 packages/monitor/src/proxy/request-capture.ts 和 response-capture.ts
+// 注意：部分函数尚未被 handler 集成调用，保留供后续集成使用
+
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};

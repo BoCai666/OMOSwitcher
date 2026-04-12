@@ -1,6 +1,9 @@
 // Monitor 模块 - SQLite 存储层
 // 使用 rusqlite 实现完整的 StorageInterface
 // 所有公开方法通过 spawn_blocking 异步执行，内部使用 Arc<Mutex<Connection>> 保证线程安全
+// 注意：部分方法尚未被主流程集成调用，保留供后续集成使用
+
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 use std::path::Path;

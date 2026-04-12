@@ -1,6 +1,9 @@
 // Monitor 模块 - CA 证书管理
 // 使用 rcgen crate 生成自签名 CA 证书、为拦截域名生成终端证书
 // 支持证书缓存和持久化
+// 注意：部分功能（域名证书缓存、企业 CA、root cert store）尚未被主流程集成调用
+
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -279,6 +282,7 @@ impl CertManager {
 
         // 使用 x509-parser 解析证书检查有效期
         #[cfg(feature = "x509-parser")]
+        #[allow(unexpected_cfgs)]
         {
             use x509_parser::prelude::*;
             let cert_der = pem_parser::parse_pem(&cert_pem)

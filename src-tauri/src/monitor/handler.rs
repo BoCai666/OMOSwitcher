@@ -1,6 +1,9 @@
 // Monitor 模块 - HTTP 请求/响应处理器
 // 实现 hudsucker 的 HttpHandler trait
 // 完整 MITM 拦截实现：域名过滤、请求/响应捕获、错误隔离
+// 注意：部分方法（emit_response/emit_metrics、from_storage_and_config 等）尚未被集成调用
+
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -13,13 +16,10 @@ use hudsucker::{
 use http_body_util::{BodyExt, Full};
 use tokio::sync::RwLock;
 
-use crate::monitor::capture::{
-    capture_non_stream_response, capture_request, match_domain, RequestContext,
-};
+use crate::monitor::capture::{capture_request, match_domain, RequestContext};
 use crate::monitor::config::ConfigManager;
-use crate::monitor::parser::cost::calculate_cost;
 use crate::monitor::storage::MonitorStorage;
-use crate::monitor::types::{LLMMetrics, MonitorConfig, Provider};
+use crate::monitor::types::{MonitorConfig, Provider};
 use crate::monitor::{
     MetricsEventPayload, RequestEventPayload, ResponseEventPayload, EVENT_METRICS,
     EVENT_NEW_REQUEST, EVENT_RESPONSE,

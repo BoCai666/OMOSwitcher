@@ -1,5 +1,8 @@
 // MCP (Model Context Protocol) 调用检测器
 // 移植自 packages/monitor/src/parsers/mcp-detector.ts
+// 注意：尚未被 handler 集成调用，保留供后续集成使用
+
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 

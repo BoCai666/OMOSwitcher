@@ -1,5 +1,8 @@
 // Monitor 模块 - 配置管理
 // 支持 JSONC 解析（去除注释）、文件监听热更新、默认配置
+// 注意：文件监听功能尚未被主流程集成调用，保留供后续集成使用
+
+#![allow(dead_code)]
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};

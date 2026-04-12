@@ -1,6 +1,9 @@
 // SSE 流式响应解析器
 // 增量累积流式响应的 content、thinking 和 usage
 // 移植自 packages/monitor/src/proxy/response-capture.ts 中的流式解析逻辑
+// 注意：尚未被 handler 集成调用，保留供后续集成使用
+
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 

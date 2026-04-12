@@ -1,5 +1,8 @@
 // Monitor 模块 - 后台数据清理任务
 // 提供数据清理、数据库备份和数据导出功能
+// 注意：部分函数尚未被主流程集成调用，保留供后续集成使用
+
+#![allow(dead_code)]
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
