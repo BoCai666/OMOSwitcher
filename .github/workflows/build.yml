@@ -29,12 +29,6 @@ jobs:
       - name: Install frontend dependencies
         run: npm install
 
-      - name: Build monitor sidecar
-        run: |
-          npm run build:monitor:prod
-          npm run prepare:monitor
-          npm run verify:monitor-package
-
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
