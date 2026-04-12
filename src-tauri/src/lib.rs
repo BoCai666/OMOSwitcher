@@ -9,11 +9,15 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // 初始化 Monitor 状态（存储、配置、证书）
+    let monitor_state = monitor::command::MonitorCommandState::new()
+        .expect("Monitor 初始化失败");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         // 注册 Monitor 状态管理
-        .manage(commands::MonitorCommandState::new())
+        .manage(monitor_state)
         .invoke_handler(tauri::generate_handler![
             // 配置管理命令
             commands::read_config,
@@ -36,7 +40,7 @@ pub fn run() {
             commands::launch_opencode,
             // 端口管理命令
             commands::kill_port_process,
-            // Sidecar 监控服务命令（重构后使用 Rust 代理）
+            // Monitor 代理服务命令
             commands::start_monitor_service,
             commands::stop_monitor_service,
             commands::get_monitor_status,
@@ -81,9 +85,9 @@ pub fn run() {
         .on_window_event(|window, event| {
             // 窗口关闭时确保停止代理
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                println!("[App] 窗口关闭，停止 Monitor 服务...");
+                tracing::info!("[App] 窗口关闭，停止 Monitor 服务...");
                 // 异步停止代理服务
-                if let Some(state) = window.try_state::<commands::MonitorCommandState>() {
+                if let Some(state) = window.try_state::<monitor::command::MonitorCommandState>() {
                     // 使用 tokio 运行时异步停止代理
                     let state_clone = state.inner().clone();
                     tokio::task::block_in_place(|| {

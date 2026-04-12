@@ -1,6 +1,9 @@
 // Monitor 模块 - HTTP/HTTPS 代理服务器
 // 使用 hudsucker 构建的代理服务器，支持 HTTP 透传和 HTTPS CONNECT 隧道
-// 当前阶段：隧道模式（不拦截 HTTPS），HTTP 请求透传
+// 支持完整 MITM 拦截模式
+// 注意：部分功能（临时 CA、透传模式、默认构造）保留供测试使用
+
+#![allow(dead_code)]
 
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -61,11 +64,9 @@ impl std::fmt::Display for ProxyError {
 
 impl std::error::Error for ProxyError {}
 
-/// 生成自签名 CA 的参数和密钥
+/// 生成临时自签名 CA 的参数和密钥（用于测试）
 ///
-/// 用于 hudsucker 的 RcgenAuthority，即使此阶段不拦截 HTTPS，
-/// hudsucker 仍需要 CA 配置才能构建 Proxy。
-/// Issuer::new 需要 CertificateParams + KeyPair，而非已签名的 Certificate。
+/// 生产环境应使用 CertManager 提供的持久化 CA
 fn generate_ca_params() -> Result<(KeyPair, CertificateParams), ProxyError> {
     // 生成 CA 密钥对
     let key_pair = KeyPair::generate().map_err(|e| {
@@ -97,16 +98,13 @@ fn generate_ca_params() -> Result<(KeyPair, CertificateParams), ProxyError> {
     Ok((key_pair, params))
 }
 
-/// 创建 RcgenAuthority
+/// 创建临时 RcgenAuthority（用于测试）
 ///
-/// 从自签名 CA 证书参数生成 RcgenAuthority，供 hudsucker 使用
-fn create_ca_authority() -> Result<RcgenAuthority, ProxyError> {
+/// 生产环境应使用 CertManager::create_rcgen_authority()
+pub fn create_temp_ca_authority() -> Result<RcgenAuthority, ProxyError> {
     let (key_pair, params) = generate_ca_params()?;
 
-    // Issuer::new 接受 CertificateParams + KeyPair
-    // RcgenAuthority 会用这些参数为每个被拦截的域名动态生成证书
     let issuer = Issuer::new(params, key_pair);
-
     let ca = RcgenAuthority::new(issuer, CERT_CACHE_SIZE, aws_lc_rs::default_provider());
 
     Ok(ca)
@@ -115,8 +113,8 @@ fn create_ca_authority() -> Result<RcgenAuthority, ProxyError> {
 /// 代理服务器
 ///
 /// 基于 hudsucker 构建的 HTTP/HTTPS 代理服务器
-/// - HTTP 请求：透传到目标服务器
-/// - HTTPS CONNECT：隧道模式（不拦截）
+/// - HTTP 请求：根据 handler 决定是否拦截
+/// - HTTPS CONNECT：隧道模式
 /// - 支持 CancellationToken 优雅停止
 pub struct ProxyServer {
     /// 监听地址
@@ -161,27 +159,23 @@ impl ProxyServer {
         self.running.load(Ordering::SeqCst)
     }
 
-    /// 启动代理服务器
+    /// 启动代理服务器（完整模式）
     ///
-    /// 使用 tokio::spawn 在后台启动代理
-    /// 成功启动后代理将开始接受连接
-    pub async fn start(&self) -> Result<(), ProxyError> {
+    /// 使用外部提供的 handler 和 CA，支持请求捕获
+    pub async fn start(
+        &self,
+        handler: MonitorHandler,
+        ca: RcgenAuthority,
+    ) -> Result<(), ProxyError> {
         // 检查是否已在运行
         if self.is_running() {
             return Err(ProxyError::AlreadyRunning);
         }
 
         // 安装 aws_lc_rs crypto provider（如果尚未安装）
-        // 这对于 rustls 0.23 是必需的
         let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
 
-        // 创建 CA Authority
-        let ca = create_ca_authority()?;
-
-        // 创建处理器（透传模式，不捕获请求）
-        let handler = MonitorHandler::new_passthrough();
-
-        // 获取 shutdown signal — 需要 'static future
+        // 获取 shutdown signal
         let cancel_token = self.cancel_token.clone();
 
         // 构建代理
@@ -204,7 +198,7 @@ impl ProxyServer {
 
         // 启动代理任务
         let handle = tokio::spawn(async move {
-            tracing::info!("代理服务器启动，监听 {}", addr);
+            tracing::info!("代理服务器启动（完整模式），监听 {}", addr);
             match proxy.start().await {
                 Ok(()) => {
                     tracing::info!("代理服务器正常停止");
@@ -219,14 +213,12 @@ impl ProxyServer {
         // 保存任务句柄
         *self.task_handle.lock().await = Some(handle);
 
-        // 短暂等待确认代理成功启动（检查端口是否可连接）
-        // 给代理 500ms 启动时间
+        // 等待确认代理成功启动
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
-        // 尝试连接代理端口以验证启动成功
+        // 验证端口
         let check_result = tokio::net::TcpStream::connect(self.addr).await;
         if check_result.is_err() {
-            // 端口不可达，可能启动失败
             let running_state = self.running.load(Ordering::SeqCst);
             if !running_state {
                 return Err(ProxyError::StartFailed(format!(
@@ -234,11 +226,84 @@ impl ProxyServer {
                     self.addr
                 )));
             }
-            // 如果 running 仍为 true，可能是启动较慢，不报错
             tracing::warn!("代理服务器启动后端口验证失败，但状态仍为运行中，可能启动较慢");
         }
 
-        tracing::info!("代理服务器已在 {} 上启动", self.addr);
+        tracing::info!("代理服务器已在 {} 上启动（完整模式）", self.addr);
+        Ok(())
+    }
+
+    /// 启动代理服务器（透传模式，用于测试）
+    ///
+    /// 不捕获任何请求，所有流量直接转发
+    pub async fn start_passthrough(&self) -> Result<(), ProxyError> {
+        // 检查是否已在运行
+        if self.is_running() {
+            return Err(ProxyError::AlreadyRunning);
+        }
+
+        // 安装 aws_lc_rs crypto provider
+        let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+
+        // 创建临时 CA 和透传 handler
+        let ca = create_temp_ca_authority()?;
+        let handler = MonitorHandler::new_passthrough();
+
+        // 获取 shutdown signal
+        let cancel_token = self.cancel_token.clone();
+
+        // 构建代理
+        let proxy = Proxy::builder()
+            .with_addr(self.addr)
+            .with_ca(ca)
+            .with_rustls_connector(aws_lc_rs::default_provider())
+            .with_http_handler(handler)
+            .with_graceful_shutdown(async move {
+                cancel_token.cancelled().await;
+            })
+            .build()
+            .map_err(|e| ProxyError::BuildFailed(format!("{}", e)))?;
+
+        // 标记为运行中
+        self.running.store(true, Ordering::SeqCst);
+
+        let running = Arc::clone(&self.running);
+        let addr = self.addr;
+
+        // 启动代理任务
+        let handle = tokio::spawn(async move {
+            tracing::info!("代理服务器启动（透传模式），监听 {}", addr);
+            match proxy.start().await {
+                Ok(()) => {
+                    tracing::info!("代理服务器正常停止");
+                }
+                Err(e) => {
+                    tracing::error!("代理服务器运行错误: {}", e);
+                }
+            }
+            running.store(false, Ordering::SeqCst);
+        });
+
+        // 保存任务句柄
+        *self.task_handle.lock().await = Some(handle);
+
+        // 等待确认代理成功启动
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+        // 验证端口
+        let check_result = tokio::net::TcpStream::connect(self.addr).await;
+        if check_result.is_err() {
+            let running_state = self.running.load(Ordering::SeqCst);
+            if !running_state {
+                return Err(ProxyError::StartFailed(format!(
+                    "代理服务器启动后端口 {} 不可达",
+                    self.addr
+                )));
+            }
+            tracing::warn!("代理服务器启动后端口验证失败，但状态仍为运行中，可能启动较慢");
+        }
+
+        tracing::info!("代理服务器已在 {} 上启动（透传模式）", self.addr);
         Ok(())
     }
 
@@ -327,8 +392,8 @@ mod tests {
 
         let server = ProxyServer::with_addr(addr).expect("创建失败");
 
-        // 启动
-        let start_result = server.start().await;
+        // 启动（透传模式）
+        let start_result = server.start_passthrough().await;
         if let Err(ProxyError::StartFailed(_)) = start_result {
             // 端口可能被占用，跳过测试
             eprintln!("跳过测试：端口 {} 不可用", addr);
@@ -355,7 +420,7 @@ mod tests {
         let server = ProxyServer::with_addr(addr).expect("创建失败");
 
         // 第一次启动
-        let start_result = server.start().await;
+        let start_result = server.start_passthrough().await;
         if start_result.is_err() {
             eprintln!("跳过测试：端口 {} 不可用", addr);
             return;
@@ -364,7 +429,7 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
 
         // 第二次启动应失败
-        let second_start = server.start().await;
+        let second_start = server.start_passthrough().await;
         assert!(
             matches!(second_start, Err(ProxyError::AlreadyRunning)),
             "重复启动应返回 AlreadyRunning 错误"
@@ -415,7 +480,7 @@ mod tests {
         let proxy_addr: SocketAddr = "127.0.0.1:17894".parse().expect("解析地址失败");
         let server = ProxyServer::with_addr(proxy_addr).expect("创建失败");
 
-        let start_result = server.start().await;
+        let start_result = server.start_passthrough().await;
         if start_result.is_err() {
             eprintln!("跳过测试：代理端口 {} 不可用", proxy_addr);
             mock_handle.abort();
@@ -472,8 +537,8 @@ mod tests {
     }
 
     #[test]
-    fn test_create_ca_authority() {
-        let result = create_ca_authority();
+    fn test_create_temp_ca_authority() {
+        let result = create_temp_ca_authority();
         assert!(result.is_ok(), "CA Authority 创建应成功: {:?}", result.err());
     }
 

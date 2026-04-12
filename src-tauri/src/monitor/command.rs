@@ -7,14 +7,16 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use tauri::State;
+use tokio::sync::Mutex as AsyncMutex;
 
 use crate::monitor::cert::CertManager;
 use crate::monitor::config::ConfigManager;
+use crate::monitor::proxy::ProxyServer;
 use crate::monitor::storage::MonitorStorage;
 use crate::monitor::tasks::{BackupInfo, DataExporter, DatabaseBackup, ExportFormat};
 use crate::monitor::types::{
     DailyRecord, DeltaResult, DomainConfig, DomainStatsResult, LLMMetrics, LLMRequest,
-    LLMResponse, MCPCall, MetricsStats, ModelPricingConfig, MonitorConfig, PricingConfig,
+    LLMResponse, MCPCall, ModelPricingConfig, MonitorConfig, PricingConfig,
     RequestListItem,
 };
 
@@ -23,7 +25,8 @@ use crate::monitor::types::{
 // ============================================================================
 
 /// Monitor 命令层共享状态
-/// 用于 Tauri State 管理
+/// 用于 Tauri State 管理，整合代理服务、存储、配置、证书
+#[derive(Clone)]
 pub struct MonitorCommandState {
     /// 存储层
     pub storage: Arc<MonitorStorage>,
@@ -35,23 +38,45 @@ pub struct MonitorCommandState {
     pub data_dir: PathBuf,
     /// 数据库路径
     pub db_path: PathBuf,
+    /// 代理服务器实例（惰性启动）
+    pub proxy: Arc<AsyncMutex<Option<ProxyServer>>>,
 }
 
 impl MonitorCommandState {
-    /// 创建新的命令状态
-    pub fn new(
-        storage: MonitorStorage,
-        config_manager: ConfigManager,
-        cert_manager: CertManager,
-        data_dir: PathBuf,
-        db_path: PathBuf,
-    ) -> Self {
-        Self {
+    /// 创建新的命令状态（自动初始化存储、配置、证书）
+    pub fn new() -> Result<Self, String> {
+        // 确定路径
+        let home = dirs::home_dir().ok_or("无法获取用户主目录")?;
+        let omoswitcher_dir = home.join(".config").join("omoswitcher");
+        let data_dir = omoswitcher_dir.join("monitor");
+        let db_path = omoswitcher_dir.join("monitor.db");
+        let config_path = data_dir.join("config.jsonc");
+        let certs_dir = data_dir.join("certs");
+
+        // 初始化各组件
+        let storage = MonitorStorage::new(&db_path)?;
+        let config_manager = ConfigManager::new(&config_path)?;
+        let cert_manager = CertManager::with_certs_dir(certs_dir)
+            .map_err(|e| e.to_string())?;
+
+        Ok(Self {
             storage: Arc::new(storage),
             config_manager: Arc::new(std::sync::Mutex::new(config_manager)),
             cert_manager: Arc::new(std::sync::Mutex::new(cert_manager)),
             data_dir,
             db_path,
+            proxy: Arc::new(AsyncMutex::new(None)),
+        })
+    }
+
+    /// 停止代理服务器（用于窗口关闭时调用）
+    pub async fn stop_proxy(&self) {
+        let mut proxy = self.proxy.lock().await;
+        if let Some(p) = proxy.take() {
+            if p.is_running() {
+                let _ = p.stop().await;
+                tracing::info!("[Monitor] 代理服务器已停止");
+            }
         }
     }
 }
@@ -519,7 +544,7 @@ pub async fn monitor_health(
     state: State<'_, MonitorCommandState>,
 ) -> Result<bool, String> {
     // 检查存储是否可用
-    let has_data = state.storage.has_data().await?;
+    let _has_data = state.storage.has_data().await?;
 
     // 检查配置是否可读
     let config_ok = {
