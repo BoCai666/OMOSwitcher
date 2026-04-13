@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { computed, ref, onMounted } from 'vue'
 import { Sunny, Moon } from '@element-plus/icons-vue'
 import { useTheme } from '@/composables/useTheme'
+import SyncStatusIndicator from '@/components/SyncStatusIndicator.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -73,8 +74,9 @@ const handleSelect = (index: string) => {
       </ul>
     </nav>
 
-    <!-- 底部主题切换区域 -->
+    <!-- 底部状态区域 -->
     <div class="sidebar-footer">
+      <SyncStatusIndicator />
       <div class="theme-toggle-placeholder" @click="toggleTheme">
         <el-icon :size="16">
           <Sunny v-if="isDark" />
@@ -196,10 +198,11 @@ const handleSelect = (index: string) => {
 
 /* ==================== 底部区域 ==================== */
 .sidebar-footer {
-  height: 30px;
   padding: var(--app-spacing-2) var(--app-spacing-4);
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: var(--app-spacing-2);
+  border-top: 1px solid var(--app-border-default);
 }
 
 .theme-toggle-placeholder {

@@ -7,6 +7,7 @@ import { listPresets } from '@/services/presetStore'
 import { ElMessage } from 'element-plus'
 import { invoke } from '@tauri-apps/api/core'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import SyncConflictDialog from '@/components/SyncConflictDialog.vue'
 
 const route = useRoute()
 const monitorStore = useMonitorStore()
@@ -70,6 +71,9 @@ onUnmounted(async () => {
       </transition>
     </router-view>
   </AppLayout>
+
+  <!-- 全局同步冲突对话框 -->
+  <SyncConflictDialog />
 </template>
 
 <style>
