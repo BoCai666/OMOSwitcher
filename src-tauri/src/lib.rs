@@ -42,6 +42,9 @@ pub fn run() {
             commands::write_settings,
             // 启动命令
             commands::launch_opencode,
+            // 热重载命令
+            commands::detect_opencode_server,
+            commands::hot_reload_config,
             // 端口管理命令
             commands::kill_port_process,
             // Monitor 代理服务命令

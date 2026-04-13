@@ -27,6 +27,13 @@ export interface AppSettings {
     // 代理服务端口（拦截 LLM API）
     proxy: number
   }
+  // 热重载配置
+  hotReload: {
+    // 是否启用热重载
+    enabled: boolean
+    // OpenCode Server 端口
+    port: number
+  }
 }
 
 // 默认设置
@@ -37,6 +44,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   monitorPorts: {
     web: 7100,
     proxy: 7101
+  },
+  hotReload: {
+    enabled: false,
+    port: 4096
   }
 }
 
@@ -172,14 +183,15 @@ export async function initSettings(): Promise<void> {
     if (content) {
       // 文件存在，解析并缓存
       const parsed = JSON.parse(content) as Partial<AppSettings>
-      // 合并默认值，确保 monitorPorts 存在
+      // 合并默认值，确保 monitorPorts 和 hotReload 存在
       settingsCache = {
         ...DEFAULT_SETTINGS,
         ...parsed,
-        monitorPorts: parsed.monitorPorts || DEFAULT_SETTINGS.monitorPorts
+        monitorPorts: parsed.monitorPorts || DEFAULT_SETTINGS.monitorPorts,
+        hotReload: parsed.hotReload || DEFAULT_SETTINGS.hotReload
       }
-      // 如果原来没有 monitorPorts，写入更新后的设置
-      if (!parsed.monitorPorts) {
+      // 如果原来没有 monitorPorts 或 hotReload，写入更新后的设置
+      if (!parsed.monitorPorts || !parsed.hotReload) {
         await invoke('write_settings', { content: JSON.stringify(settingsCache, null, 2) })
       }
     } else {
@@ -286,4 +298,23 @@ export async function checkCaCertExists(): Promise<boolean> {
     console.error('检查证书存在失败:', error)
     return false
   }
+}
+
+// ==================== 热重载配置相关函数 ====================
+
+/**
+ * 获取热重载配置
+ */
+export async function getHotReloadConfig(): Promise<{ enabled: boolean; port: number }> {
+  const settings = await readSettings()
+  return settings.hotReload ?? { enabled: false, port: 4096 }
+}
+
+/**
+ * 设置热重载配置
+ */
+export async function setHotReloadConfig(config: { enabled: boolean; port: number }): Promise<void> {
+  const settings = await readSettings()
+  settings.hotReload = config
+  await writeSettings(settings)
 }

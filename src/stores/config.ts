@@ -6,7 +6,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import type { OhMyOpenCodeConfig, AgentName, CategoryName } from '@/types'
-import { readConfig, writeConfig, savePreset, getCurrentPreset } from '@/services'
+import { readConfig, writeConfig, savePreset, getCurrentPreset, detectOpenCodeServer, hotReloadConfig } from '@/services'
 
 // 保存状态类型
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -98,6 +98,28 @@ export const useConfigStore = defineStore('config', () => {
     }, STATUS_CLEAR_DELAY)
   }
 
+  /** 异步触发热重载（fire-and-forget，不阻塞保存流程） */
+  async function triggerHotReload(): Promise<void> {
+    try {
+      const { getHotReloadConfig } = await import('@/services/settingsStore')
+      const hotReloadSettings = await getHotReloadConfig()
+      
+      if (!hotReloadSettings.enabled || !config.value) return
+      
+      const serverRunning = await detectOpenCodeServer(hotReloadSettings.port)
+      if (!serverRunning) {
+        const { showWarning } = await import('@/utils/errorHandler')
+        showWarning('OpenCode Server 未运行，热重载未执行。请确认 OpenCode 已启用 Server 模式。')
+        return
+      }
+      
+      await hotReloadConfig(hotReloadSettings.port, config.value)
+    } catch (e) {
+      const { showWarning } = await import('@/utils/errorHandler')
+      showWarning(`热重载失败: ${(e as Error).message}`)
+    }
+  }
+
   // 实际保存配置
   async function performSave(): Promise<void> {
     if (!config.value) return
@@ -121,6 +143,9 @@ export const useConfigStore = defineStore('config', () => {
       originalConfig.value = JSON.parse(JSON.stringify(config.value))
 
       scheduleStatusCleanup()
+
+      // 热重载：保存成功后异步推送（fire-and-forget）
+      triggerHotReload()
 
       // 触发保存后回调（如同步上传）
       afterSaveCallback?.()

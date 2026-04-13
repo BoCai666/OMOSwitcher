@@ -4,7 +4,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useConfigStore } from '@/stores/config'
 import { listPresets, loadPreset } from '@/services/presetStore'
-import { getWorkingPath, setWorkingPath, getProxyConfig, setProxyConfig, checkCaCertExists, getMonitorPorts } from '@/services/settingsStore'
+import { getWorkingPath, setWorkingPath, getProxyConfig, setProxyConfig, checkCaCertExists, getMonitorPorts, getHotReloadConfig, setHotReloadConfig } from '@/services/settingsStore'
 import { AGENT_NAMES, CATEGORY_NAMES, type OhMyOpenCodeConfig } from '@/types'
 import { showSuccess, showError } from '@/utils/errorHandler'
 import { useOpenCode } from '@/composables/useOpenCode'
@@ -27,6 +27,10 @@ const certExists = ref<boolean | null>(null) // null 表示未检查
 
 // 代理端口
 const proxyPort = ref(7101) // 默认端口
+
+// 热重载配置
+const hotReloadEnabled = ref(false)
+const hotReloadPort = ref(4096)
 
 // 证书检查定时器
 let certCheckTimer: ReturnType<typeof setInterval> | null = null
@@ -93,12 +97,30 @@ async function loadProxyConfig() {
   if (proxyEnabled.value && certExists.value === false) {
     startCertPolling()
   }
+  
+  // 加载热重载配置
+  await loadHotReloadConfig()
 }
 
 // 保存代理配置
 async function saveProxyConfig() {
   await setProxyConfig({
     enabled: proxyEnabled.value
+  })
+}
+
+// 加载热重载配置
+async function loadHotReloadConfig() {
+  const config = await getHotReloadConfig()
+  hotReloadEnabled.value = config.enabled
+  hotReloadPort.value = config.port
+}
+
+// 保存热重载配置
+async function saveHotReloadConfig() {
+  await setHotReloadConfig({
+    enabled: hotReloadEnabled.value,
+    port: hotReloadPort.value
   })
 }
 
@@ -122,6 +144,7 @@ async function browseFolder() {
 async function handleLaunchOpenCode() {
   await savePath()
   await saveProxyConfig()
+  await saveHotReloadConfig()
   launchOpenCode(workingPath.value, proxyEnabled.value)
   
   // 如果启用了代理，启动证书状态轮询
@@ -238,6 +261,11 @@ watch(proxyEnabled, (enabled) => {
     // 关闭代理时，停止轮询
     stopCertPolling()
   }
+})
+
+// 监听热重载开关变化
+watch(hotReloadEnabled, () => {
+  saveHotReloadConfig()
 })
 
 onMounted(() => {
@@ -380,14 +408,49 @@ onUnmounted(() => {
                       </div>
                     </div>
                   </el-collapse-transition>
+                 </div>
+                
+                <!-- 热重载配置区域 -->
+                <div class="hot-reload-config-wrapper glass-card-overlay">
+                  <div class="hot-reload-switch-row">
+                    <el-switch
+                      v-model="hotReloadEnabled"
+                      active-text="模型热重载"
+                      inactive-text="手动重启"
+                      class="glass-switch"
+                    />
+                    <el-tag v-if="hotReloadEnabled" type="info" size="small" effect="dark">
+                      端口: {{ hotReloadPort }}
+                    </el-tag>
+                  </div>
+                  
+                  <el-collapse-transition>
+                    <div v-if="hotReloadEnabled" class="hot-reload-port-config">
+                      <div class="hot-reload-info">
+                        <el-icon><InfoFilled /></el-icon>
+                        <span>保存模型配置时自动推送到 OpenCode Server，无需重启。需 OpenCode 启用 Server 模式。</span>
+                      </div>
+                      <div class="port-input-row">
+                        <span class="port-label">Server 端口</span>
+                        <el-input-number
+                          v-model="hotReloadPort"
+                          :min="1024"
+                          :max="65535"
+                          :step="1"
+                          size="small"
+                          controls-position="right"
+                        />
+                      </div>
+                    </div>
+                  </el-collapse-transition>
                 </div>
                
-               <el-button 
-                 class="action-btn neon-btn-primary" 
-                 size="large" 
-                 :loading="isLaunching"
-                 @click="handleLaunchOpenCode"
-               >
+                <el-button 
+                  class="action-btn neon-btn-primary" 
+                  size="large" 
+                  :loading="isLaunching"
+                  @click="handleLaunchOpenCode"
+                >
                  <el-icon><VideoPlay /></el-icon>
                  启动 OpenCode
                </el-button>
@@ -808,6 +871,84 @@ html.glassmorphism .proxy-info {
 .proxy-info .el-icon {
   margin-top: 2px;
   flex-shrink: 0;
+}
+
+/* ==================== 热重载配置区域 ==================== */
+.hot-reload-config-wrapper {
+  width: 100%;
+  margin-bottom: var(--app-spacing-3);
+  padding: var(--app-spacing-3);
+  background-color: var(--app-bg-hover);
+  border-radius: var(--app-radius-md);
+  transition: all 0.3s ease;
+}
+
+/* 赛博朋克主题 - 热重载配置区域 */
+html.cyberpunk .hot-reload-config-wrapper {
+  background: rgba(0, 255, 255, 0.05);
+  border: 1px solid rgba(0, 255, 255, 0.15);
+}
+
+/* 玻璃拟态主题 - 热重载配置区域 */
+html.glassmorphism .hot-reload-config-wrapper {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  backdrop-filter: blur(8px);
+}
+
+.hot-reload-switch-row {
+  display: flex;
+  align-items: center;
+  gap: var(--app-spacing-3);
+  margin-bottom: var(--app-spacing-2);
+}
+
+.hot-reload-port-config {
+  margin-top: var(--app-spacing-3);
+}
+
+.hot-reload-info {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--app-spacing-2);
+  margin-top: var(--app-spacing-2);
+  padding: var(--app-spacing-2) var(--app-spacing-3);
+  background-color: color-mix(in srgb, var(--app-color-primary) 10%, transparent);
+  border-radius: var(--app-radius-sm);
+  font-size: 12px;
+  color: var(--app-color-primary);
+  line-height: 1.5;
+  transition: all 0.3s ease;
+}
+
+/* 赛博朋克主题 - 热重载信息 */
+html.cyberpunk .hot-reload-info {
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+/* 玻璃拟态主题 - 热重载信息 */
+html.glassmorphism .hot-reload-info {
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.hot-reload-info .el-icon {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.port-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--app-spacing-3);
+  margin-top: var(--app-spacing-2);
+}
+
+.port-label {
+  font-size: 13px;
+  color: var(--app-text-tertiary);
+  white-space: nowrap;
 }
 
 /* ==================== 霓虹按钮样式 ==================== */

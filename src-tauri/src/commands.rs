@@ -1081,4 +1081,54 @@ pub async fn delete_custom_provider(provider_id: String) -> Result<(), String> {
     Ok(())
 }
 
+/// 检测 OpenCode Server 是否在指定端口运行
+/// 通过 TCP 连接检测，2 秒超时
+#[tauri::command]
+pub async fn detect_opencode_server(port: u16) -> Result<bool, String> {
+    let addr = format!("127.0.0.1:{}", port);
+    let timeout = std::time::Duration::from_secs(2);
+    
+    tokio::time::timeout(
+        timeout,
+        tokio::net::TcpStream::connect(&addr)
+    )
+    .await
+    .map(|result| result.is_ok())
+    .map_err(|e| format!("检测 OpenCode Server 超时: {}", e))
+}
+
+/// 向 OpenCode Server 发送 PATCH /config/ 请求以触发热重载
+/// config: 仅包含 { "agent": { [agentName]: { "model": "..." } } } 的 JSON
+#[tauri::command]
+pub async fn hot_reload_config(
+    port: u16,
+    config: serde_json::Value,
+) -> Result<(), String> {
+    // 验证 config body 仅包含 "agent" 顶层 key
+    if config.as_object().map_or(true, |o| !o.contains_key("agent")) {
+        return Err("热重载配置必须包含 \"agent\" 字段".to_string());
+    }
+
+    let url = format!("http://127.0.0.1:{}/config/", port);
+    
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
+    
+    let response = client
+        .patch(&url)
+        .json(&config)
+        .send()
+        .await
+        .map_err(|e| format!("热重载请求失败: {}", e))?;
+    
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        return Err(format!("热重载失败 (HTTP {}): {}", status, body));
+    }
+    
+    Ok(())
+}
 

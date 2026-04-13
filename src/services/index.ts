@@ -67,3 +67,10 @@ export type {
   RegistryProvider,
   RegistryModel
 } from '@/types/config'
+
+// OpenCode 热重载服务
+export {
+  detectOpenCodeServer,
+  buildOpenCodeAgentConfig,
+  hotReloadConfig
+} from './opencodeApi'
