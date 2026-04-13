@@ -33,6 +33,7 @@ http-body-util = "0.1"
 rand = "0.8"
 regex = "1"
 
+
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]

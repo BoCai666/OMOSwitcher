@@ -706,17 +706,31 @@ mod tests {
 
     #[test]
     fn test_stats_summary_serialization() {
+        let empty_period = PeriodStats {
+            count: 0,
+            total_tokens: 0,
+            total_cost: 0.0,
+            model_stats: HashMap::new(),
+        };
         let summary = StatsSummary {
-            total_requests: 100,
-            total_tokens: 10000,
-            total_cost: 5.0,
-            today_requests: 10,
-            today_tokens: 1000,
-            today_cost: 0.5,
+            today: PeriodStats {
+                count: 10,
+                total_tokens: 1000,
+                total_cost: 0.5,
+                model_stats: HashMap::new(),
+            },
+            this_week: empty_period.clone(),
+            this_month: empty_period.clone(),
+            all_time: PeriodStats {
+                count: 100,
+                total_tokens: 10000,
+                total_cost: 5.0,
+                model_stats: HashMap::new(),
+            },
         };
 
         let json = serde_json::to_string(&summary).unwrap();
-        assert!(json.contains("\"totalRequests\":100"));
+        assert!(json.contains("\"allTime\""));
         assert!(json.contains("\"todayCost\":0.5"));
     }
 
