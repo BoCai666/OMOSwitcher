@@ -4,9 +4,6 @@
 mod commands;
 mod monitor;
 
-// 导入 Manager trait 用于 try_state 方法
-use tauri::Manager;
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // 初始化 Monitor 状态（存储、配置、证书）
@@ -83,19 +80,12 @@ pub fn run() {
             monitor::command::monitor_health,
         ])
         .on_window_event(|window, event| {
-            // 窗口关闭时确保停止代理
+            // 窗口关闭时的处理
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                tracing::info!("[App] 窗口关闭，停止 Monitor 服务...");
-                // 异步停止代理服务
-                if let Some(state) = window.try_state::<monitor::command::MonitorCommandState>() {
-                    // 使用 tokio 运行时异步停止代理
-                    let state_clone = state.inner().clone();
-                    tokio::task::block_in_place(|| {
-                        tokio::runtime::Handle::current().block_on(async {
-                            state_clone.stop_proxy().await;
-                        });
-                    });
-                }
+                println!("[App] 窗口关闭...");
+                // Monitor 服务会在应用退出时自动清理
+                // 不再尝试在窗口关闭时执行异步操作，避免 runtime 已停止的问题
+                let _ = window;
             }
         })
         .run(tauri::generate_context!())

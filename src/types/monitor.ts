@@ -42,9 +42,9 @@ export interface LLMResponse {
     thinking?: string
     choices?: unknown[]
     usage?: {
-      prompt_tokens: number
-      completion_tokens: number
-      total_tokens: number
+      promptTokens: number
+      completionTokens: number
+      totalTokens: number
     }
     [key: string]: unknown
   }

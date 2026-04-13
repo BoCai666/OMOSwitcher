@@ -1,8 +1,5 @@
 // Monitor 模块 - Rust 版本的 LLM API 监控服务
 // 提供类型定义、迁移框架、存储层、解析器和代理服务器
-// 注意：部分事件类型和常量尚未被主流程使用，保留供后续集成使用
-
-#![allow(dead_code)]
 
 pub mod capture;
 pub mod cert;

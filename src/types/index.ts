@@ -18,5 +18,6 @@ export {
   AGENT_INFO,
   CATEGORY_INFO,
   createDefaultConfig,
-  defaultConfig
+  defaultConfig,
+  sortConfigKeys
 } from './config'

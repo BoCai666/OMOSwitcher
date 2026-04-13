@@ -4,7 +4,7 @@
  */
 
 import type { OhMyOpenCodeConfig } from '@/types'
-import { createDefaultConfig } from '@/types'
+import { createDefaultConfig, sortConfigKeys, AGENT_NAMES, CATEGORY_NAMES } from '@/types'
 
 /**
  * 读取配置
@@ -63,11 +63,15 @@ export async function writeConfig(config: OhMyOpenCodeConfig): Promise<void> {
     }
     
     // 只更新 agents 和 categories，保留其他字段
+    // 按固定顺序重排 agents 和 categories 内部键，防止预设切换打乱字段顺序
+    const sortedAgents = sortConfigKeys(config.agents, AGENT_NAMES)
+    const sortedCategories = sortConfigKeys(config.categories, CATEGORY_NAMES)
+    
     fullConfig = {
       ...fullConfig,
       $schema: config.$schema,
-      agents: config.agents,
-      categories: config.categories
+      agents: sortedAgents,
+      categories: sortedCategories
     }
     
     // 序列化为 JSON 字符串
@@ -99,11 +103,14 @@ export async function deleteConfig(): Promise<void> {
     
     // 重置 agents 和 categories 为默认值
     const defaultConf = createDefaultConfig()
+    const sortedAgents = sortConfigKeys(defaultConf.agents, AGENT_NAMES)
+    const sortedCategories = sortConfigKeys(defaultConf.categories, CATEGORY_NAMES)
+    
     fullConfig = {
       ...fullConfig,
       $schema: defaultConf.$schema,
-      agents: defaultConf.agents,
-      categories: defaultConf.categories
+      agents: sortedAgents,
+      categories: sortedCategories
     }
     
     const content = JSON.stringify(fullConfig, null, 2)

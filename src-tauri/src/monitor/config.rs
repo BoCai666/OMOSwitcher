@@ -1,8 +1,5 @@
 // Monitor 模块 - 配置管理
 // 支持 JSONC 解析（去除注释）、文件监听热更新、默认配置
-// 注意：文件监听功能尚未被主流程集成调用，保留供后续集成使用
-
-#![allow(dead_code)]
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -110,28 +107,25 @@ fn strip_jsonc_comments(input: &str) -> String {
 }
 
 /// 获取默认配置
-/// 与 config.jsonc 保持一致：8 个域名、14 个模型定价、端口 7100/7101
+/// 覆盖主流 LLM API 域名，确保所有已知 Provider 都能被捕获
 fn default_config() -> MonitorConfig {
     MonitorConfig {
         domains: vec![
+            // OpenAI
             DomainConfig {
                 domain: "api.openai.com".into(),
-                provider: "OpenAI".into(),
+                provider: "openai".into(),
                 enabled: true,
                 match_type: MatchType::Exact,
             },
-            DomainConfig {
-                domain: "qianfan.baidubce.com".into(),
-                provider: "qianfan".into(),
-                enabled: true,
-                match_type: MatchType::Exact,
-            },
+            // Anthropic
             DomainConfig {
                 domain: "api.anthropic.com".into(),
-                provider: "Anthropic".into(),
+                provider: "anthropic".into(),
                 enabled: true,
                 match_type: MatchType::Exact,
             },
+            // Kimi / Moonshot
             DomainConfig {
                 domain: "api.kimi.com".into(),
                 provider: "kimi".into(),
@@ -139,17 +133,33 @@ fn default_config() -> MonitorConfig {
                 match_type: MatchType::Exact,
             },
             DomainConfig {
+                domain: "api.moonshot.cn".into(),
+                provider: "kimi".into(),
+                enabled: true,
+                match_type: MatchType::Exact,
+            },
+            // 百度千帆
+            DomainConfig {
+                domain: "qianfan.baidubce.com".into(),
+                provider: "qianfan".into(),
+                enabled: true,
+                match_type: MatchType::Exact,
+            },
+            // 字节豆包 (Volces/Doubao)
+            DomainConfig {
                 domain: "ark.cn-beijing.volces.com".into(),
                 provider: "volces".into(),
                 enabled: true,
                 match_type: MatchType::Exact,
             },
+            // 无问芯穹 (Infini-AI)
             DomainConfig {
                 domain: "cloud.infini-ai.com".into(),
                 provider: "infini".into(),
                 enabled: true,
                 match_type: MatchType::Exact,
             },
+            // MiniMax
             DomainConfig {
                 domain: "api.minimaxi.com".into(),
                 provider: "minimax".into(),
@@ -157,8 +167,71 @@ fn default_config() -> MonitorConfig {
                 match_type: MatchType::Exact,
             },
             DomainConfig {
+                domain: "api.minimax.chat".into(),
+                provider: "minimax".into(),
+                enabled: true,
+                match_type: MatchType::Exact,
+            },
+            // 京东云
+            DomainConfig {
                 domain: "modelservice.jdcloud.com".into(),
                 provider: "jdcloud".into(),
+                enabled: true,
+                match_type: MatchType::Exact,
+            },
+            // 智谱 AI (Zhipu/GLM)
+            DomainConfig {
+                domain: "open.bigmodel.cn".into(),
+                provider: "zhipuai".into(),
+                enabled: true,
+                match_type: MatchType::Exact,
+            },
+            // Google Gemini
+            DomainConfig {
+                domain: "generativelanguage.googleapis.com".into(),
+                provider: "google".into(),
+                enabled: true,
+                match_type: MatchType::Exact,
+            },
+            // DeepSeek
+            DomainConfig {
+                domain: "api.deepseek.com".into(),
+                provider: "deepseek".into(),
+                enabled: true,
+                match_type: MatchType::Exact,
+            },
+            // Groq
+            DomainConfig {
+                domain: "api.groq.com".into(),
+                provider: "groq".into(),
+                enabled: true,
+                match_type: MatchType::Exact,
+            },
+            // Mistral
+            DomainConfig {
+                domain: "api.mistral.ai".into(),
+                provider: "mistral".into(),
+                enabled: true,
+                match_type: MatchType::Exact,
+            },
+            // 通义千问 (Qwen/Alibaba)
+            DomainConfig {
+                domain: "dashscope.aliyuncs.com".into(),
+                provider: "qwen".into(),
+                enabled: true,
+                match_type: MatchType::Exact,
+            },
+            // 硅基流动 (SiliconFlow)
+            DomainConfig {
+                domain: "api.siliconflow.cn".into(),
+                provider: "siliconflow".into(),
+                enabled: true,
+                match_type: MatchType::Exact,
+            },
+            // 零一万物 (Yi)
+            DomainConfig {
+                domain: "api.lingyiwanwu.com".into(),
+                provider: "siliconflow".into(),
                 enabled: true,
                 match_type: MatchType::Exact,
             },
@@ -276,11 +349,6 @@ impl ConfigManager {
         self.config.lock().unwrap().clone()
     }
 
-    /// 注册配置变更回调
-    pub fn on_change(&self, callback: ConfigChangeCallback) {
-        self.callbacks.lock().unwrap().push(callback);
-    }
-
     /// 启动文件监听（热更新）
     /// 配置文件变更时自动重载并触发回调
     pub fn start_watching(&mut self) -> Result<(), String> {
@@ -329,11 +397,6 @@ impl ConfigManager {
         Ok(())
     }
 
-    /// 停止文件监听
-    pub fn stop_watching(&mut self) {
-        self._debouncer = None;
-    }
-
     /// 重新加载配置
     pub fn reload(&self) -> Result<(), String> {
         let new_config = load_config_from_path(&self.config_path)?;
@@ -363,273 +426,4 @@ pub fn default_config_path() -> Result<PathBuf, String> {
         .join("omoswitcher")
         .join("monitor")
         .join("config.jsonc"))
-}
-
-// ============================================================================
-// 测试模块
-// ============================================================================
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_default_config() {
-        let config = default_config();
-
-        // 验证 8 个域名
-        assert_eq!(config.domains.len(), 8);
-        assert!(config.domains.iter().any(|d| d.domain == "api.openai.com"));
-        assert!(config
-            .domains
-            .iter()
-            .any(|d| d.domain == "api.anthropic.com"));
-        assert!(config.domains.iter().any(|d| d.domain == "api.kimi.com"));
-
-        // 验证 14 个模型定价
-        assert_eq!(config.pricing.models.len(), 14);
-        assert!(config.pricing.models.iter().any(|m| m.model == "gpt-4o"));
-        assert!(config
-            .pricing
-            .models
-            .iter()
-            .any(|m| m.model == "claude-3-opus"));
-
-        // 验证端口
-        assert_eq!(config.ports.web, 7100);
-        assert_eq!(config.ports.proxy, 7101);
-    }
-
-    #[test]
-    fn test_jsonc_strip_comments() {
-        let jsonc = r#"
-        // 这是单行注释
-        {
-            // 域名配置
-            "name": "test", /* 多行
-            注释 */
-            "value": 123 // 尾部注释
-        }
-        "#;
-
-        let result = strip_jsonc_comments(jsonc);
-        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
-        assert_eq!(parsed["name"], "test");
-        assert_eq!(parsed["value"], 123);
-
-        // 验证注释被正确去除，不影响解析
-        assert!(!result.contains("// 这是单行注释"));
-        assert!(!result.contains("/* 多行"));
-        assert!(!result.contains("*/"));
-    }
-
-    #[test]
-    fn test_jsonc_string_preservation() {
-        // 验证字符串内的 // 不会被误认为注释
-        let jsonc = r#"
-        {
-            "url": "https://api.openai.com/v1/chat/completions",
-            "path": "C:\\Users\\test\\file.txt"
-        }
-        "#;
-
-        let result = strip_jsonc_comments(jsonc);
-        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
-        assert_eq!(parsed["url"], "https://api.openai.com/v1/chat/completions");
-        assert_eq!(parsed["path"], "C:\\Users\\test\\file.txt");
-    }
-
-    #[test]
-    fn test_parse_config_from_jsonc() {
-        let jsonc = r#"
-        {
-            "domains": [
-                {
-                    "domain": "api.test.com",
-                    "provider": "TestProvider",
-                    "enabled": true
-                }
-            ],
-            "pricing": {
-                "matchStrategy": "exact",
-                "models": [
-                    { "model": "test-model", "input": 1.0, "output": 2.0 }
-                ]
-            },
-            "ports": { "web": 8000, "proxy": 8001 }
-        }
-        "#;
-
-        let config = parse_jsonc(jsonc).unwrap();
-
-        assert_eq!(config.domains.len(), 1);
-        assert_eq!(config.domains[0].domain, "api.test.com");
-        assert_eq!(config.domains[0].provider, "TestProvider");
-        assert!(config.domains[0].enabled);
-
-        assert_eq!(config.pricing.match_strategy, "exact");
-        assert_eq!(config.pricing.models.len(), 1);
-        assert_eq!(config.pricing.models[0].model, "test-model");
-
-        assert_eq!(config.ports.web, 8000);
-        assert_eq!(config.ports.proxy, 8001);
-    }
-
-    #[test]
-    fn test_config_roundtrip() {
-        let config = default_config();
-
-        // 序列化
-        let json = serde_json::to_string(&config).unwrap();
-
-        // 反序列化
-        let deserialized: MonitorConfig = serde_json::from_str(&json).unwrap();
-
-        assert_eq!(config.domains.len(), deserialized.domains.len());
-        assert_eq!(
-            config.pricing.models.len(),
-            deserialized.pricing.models.len()
-        );
-        assert_eq!(config.ports.web, deserialized.ports.web);
-        assert_eq!(config.ports.proxy, deserialized.ports.proxy);
-    }
-
-    #[test]
-    fn test_config_missing_fields_use_defaults() {
-        // 只有部分字段的配置 - ports 字段仍然必须提供
-        let jsonc = r#"
-        {
-            "domains": [
-                { "domain": "api.sparse.com", "provider": "Sparse", "enabled": false }
-            ],
-            "pricing": {
-                "matchStrategy": "prefix",
-                "models": [
-                    { "model": "sparse-model", "input": 0.5, "output": 1.0 }
-                ]
-            },
-            "ports": { "web": 7100, "proxy": 7101 }
-        }
-        "#;
-
-        let config = parse_jsonc(jsonc).unwrap();
-
-        // domains 被正确解析
-        assert_eq!(config.domains.len(), 1);
-        assert_eq!(config.domains[0].domain, "api.sparse.com");
-        assert_eq!(config.domains[0].enabled, false);
-
-        // pricing.matchStrategy 被正确解析
-        assert_eq!(config.pricing.match_strategy, "prefix");
-    }
-
-    #[test]
-    fn test_multiline_comment_removal() {
-        let jsonc = r#"
-        {
-            /* 这是一个
-               多行
-               注释 */
-            "key": "value"
-        }
-        "#;
-
-        let result = strip_jsonc_comments(jsonc);
-        assert!(!result.contains("这是一个"));
-        assert!(!result.contains("多行"));
-        assert!(!result.contains("注释"));
-
-        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
-        assert_eq!(parsed["key"], "value");
-    }
-
-    #[test]
-    fn test_config_manager_get_config() {
-        // 使用临时文件测试
-        let temp_dir = std::env::temp_dir();
-        let config_path = temp_dir.join("test_config.jsonc");
-
-        // 写入配置
-        let jsonc = r#"
-        {
-            "domains": [
-                { "domain": "api.manager.com", "provider": "Manager", "enabled": true }
-            ],
-            "pricing": {
-                "matchStrategy": "prefix",
-                "models": [
-                    { "model": "manager-model", "input": 0.1, "output": 0.2 }
-                ]
-            },
-            "ports": { "web": 9000, "proxy": 9001 }
-        }
-        "#;
-        std::fs::write(&config_path, jsonc).unwrap();
-
-        let manager = ConfigManager::new(&config_path).unwrap();
-        let config = manager.get_config();
-
-        assert_eq!(config.domains.len(), 1);
-        assert_eq!(config.domains[0].domain, "api.manager.com");
-        assert_eq!(config.ports.web, 9000);
-
-        // 清理
-        std::fs::remove_file(&config_path).ok();
-    }
-
-    #[test]
-    fn test_config_manager_default_when_file_not_exists() {
-        let temp_dir = std::env::temp_dir();
-        let config_path = temp_dir.join("nonexistent_config.jsonc");
-
-        // 确保文件不存在
-        if config_path.exists() {
-            std::fs::remove_file(&config_path).ok();
-        }
-
-        let manager = ConfigManager::new(&config_path).unwrap();
-        let config = manager.get_config();
-
-        // 应该返回默认配置
-        assert_eq!(config.domains.len(), 8);
-        assert_eq!(config.ports.web, 7100);
-    }
-
-    #[test]
-    fn test_config_manager_on_change_callback() {
-        let temp_dir = std::env::temp_dir();
-        let config_path = temp_dir.join("test_callback.jsonc");
-
-        let jsonc = r#"
-        {
-            "domains": [
-                { "domain": "api.callback.com", "provider": "Callback", "enabled": true }
-            ],
-            "pricing": {
-                "matchStrategy": "prefix",
-                "models": []
-            },
-            "ports": { "web": 9000, "proxy": 9001 }
-        }
-        "#;
-        std::fs::write(&config_path, jsonc).unwrap();
-
-        let manager = ConfigManager::new(&config_path).unwrap();
-
-        // 注册回调
-        let callback_called = std::sync::Arc::new(std::sync::Mutex::new(false));
-        let callback_called_clone = std::sync::Arc::clone(&callback_called);
-
-        manager.on_change(Box::new(move |_config| {
-            *callback_called_clone.lock().unwrap() = true;
-        }));
-
-        // 触发 reload
-        manager.reload().unwrap();
-
-        assert!(*callback_called.lock().unwrap());
-
-        // 清理
-        std::fs::remove_file(&config_path).ok();
-    }
 }

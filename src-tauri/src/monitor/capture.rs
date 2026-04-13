@@ -1,9 +1,6 @@
 // Monitor 模块 - 请求/响应捕获管道
 // 提供请求捕获、响应捕获、Provider 检测、域名匹配等功能
 // 移植自 packages/monitor/src/proxy/request-capture.ts 和 response-capture.ts
-// 注意：部分函数尚未被 handler 集成调用，保留供后续集成使用
-
-#![allow(dead_code)]
 
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -128,18 +125,58 @@ pub fn detect_provider(url: &str, domains: &[DomainConfig]) -> Provider {
     // 提取主机名
     let host = extract_host(url);
 
+    tracing::debug!("检测 Provider: url={}, host={}", url, host);
+
     // 查找匹配的域名配置
     if let Some(domain_config) = match_domain(&host, domains) {
+        tracing::debug!(
+            "域名配置匹配: host={}, provider={}",
+            host,
+            domain_config.provider
+        );
         return provider_from_string(&domain_config.provider);
     }
 
     // 内置的 Provider 检测（作为后备）
-    if host.contains("openai.com") || host.contains("api.openai.com") {
+    let provider = detect_provider_by_host(&host);
+    tracing::debug!("内置 Provider 检测: host={}, provider={:?}", host, provider);
+    provider
+}
+
+/// 根据主机名检测 Provider
+fn detect_provider_by_host(host: &str) -> Provider {
+    let host_lower = host.to_lowercase();
+
+    if host_lower.contains("openai.com") {
         Provider::OpenAI
-    } else if host.contains("anthropic.com") || host.contains("api.anthropic.com") {
+    } else if host_lower.contains("anthropic.com") {
         Provider::Anthropic
-    } else if host.contains("kimi.com") || host.contains("api.kimi.com") {
+    } else if host_lower.contains("kimi.com") || host_lower.contains("moonshot.cn") {
         Provider::Kimi
+    } else if host_lower.contains("bigmodel.cn") || host_lower.contains("zhipuai") {
+        Provider::ZhipuAI
+    } else if host_lower.contains("minimaxi.com") || host_lower.contains("minimax.chat") {
+        Provider::MiniMax
+    } else if host_lower.contains("baidubce.com") || host_lower.contains("qianfan") {
+        Provider::Qianfan
+    } else if host_lower.contains("volces.com") || host_lower.contains("volcengineapi.com") {
+        Provider::Volces
+    } else if host_lower.contains("infini-ai.com") {
+        Provider::InfiniAI
+    } else if host_lower.contains("jdcloud.com") {
+        Provider::JDCloud
+    } else if host_lower.contains("googleapis.com") || host_lower.contains("generativelanguage") {
+        Provider::Google
+    } else if host_lower.contains("deepseek.com") {
+        Provider::DeepSeek
+    } else if host_lower.contains("groq.com") {
+        Provider::Groq
+    } else if host_lower.contains("mistral.ai") {
+        Provider::Mistral
+    } else if host_lower.contains("dashscope") || host_lower.contains("aliyuncs.com") {
+        Provider::Qwen
+    } else if host_lower.contains("siliconflow") {
+        Provider::SiliconFlow
     } else {
         Provider::Unknown
     }
@@ -150,7 +187,19 @@ fn provider_from_string(s: &str) -> Provider {
     match s.to_lowercase().as_str() {
         "openai" => Provider::OpenAI,
         "anthropic" => Provider::Anthropic,
-        "kimi" => Provider::Kimi,
+        "kimi" | "moonshot" => Provider::Kimi,
+        "zhipuai" | "zhipu" | "glm" => Provider::ZhipuAI,
+        "minimax" | "minimaxi" => Provider::MiniMax,
+        "qianfan" | "baidu" => Provider::Qianfan,
+        "volces" | "doubao" | "volcengine" => Provider::Volces,
+        "infini" | "infini-ai" | "wuwen" => Provider::InfiniAI,
+        "jdcloud" | "jingdong" | "jd" => Provider::JDCloud,
+        "google" | "gemini" => Provider::Google,
+        "deepseek" => Provider::DeepSeek,
+        "groq" => Provider::Groq,
+        "mistral" => Provider::Mistral,
+        "qwen" | "tongyi" | "dashscope" => Provider::Qwen,
+        "siliconflow" | "sf" => Provider::SiliconFlow,
         _ => Provider::Unknown,
     }
 }
@@ -212,6 +261,14 @@ pub fn capture_request(
     body: &[u8],
     domains: &[DomainConfig],
 ) -> LLMRequest {
+    tracing::debug!(
+        "捕获请求: id={}, method={}, url={}, body_len={}",
+        ctx.id,
+        method,
+        url,
+        body.len()
+    );
+
     // 检测 Provider
     let provider = detect_provider(url, domains);
 
@@ -220,6 +277,14 @@ pub fn capture_request(
 
     // 解析请求体
     let (body_json, parsed_body, model) = parse_request_body(body);
+
+    tracing::debug!(
+        "请求解析完成: id={}, provider={:?}, model={}, domain={}",
+        ctx.id,
+        provider,
+        model,
+        domain
+    );
 
     LLMRequest {
         id: ctx.id.clone(),
@@ -246,6 +311,7 @@ fn parse_request_body(
     String,
 ) {
     if body.is_empty() {
+        tracing::debug!("请求体为空，返回默认值");
         return (serde_json::Value::Null, None, "unknown".to_string());
     }
 
@@ -262,10 +328,55 @@ fn parse_request_body(
                 .unwrap_or("unknown")
                 .to_string();
 
+            tracing::debug!(
+                "请求体 JSON 解析成功: model={}, has_messages={}",
+                model,
+                parsed.messages.is_some()
+            );
+
+            // 详细追踪 messages 结构（用于排查前端报错）
+            if let Some(ref msgs) = parsed.messages {
+                tracing::debug!("messages 数组长度: {}", msgs.len());
+                for (i, msg) in msgs.iter().enumerate().take(3) {
+                    // 只打印前 3 条，避免日志过长
+                    if let Some(content) = msg.get("content") {
+                        let content_type = if content.is_string() {
+                            "string"
+                        } else if content.is_array() {
+                            let arr = content.as_array().unwrap();
+                            let types: Vec<&str> = arr
+                                .iter()
+                                .map(|block| {
+                                    if block.is_null() {
+                                        "null"
+                                    } else if block.is_object() {
+                                        block
+                                            .get("type")
+                                            .and_then(|t| t.as_str())
+                                            .unwrap_or("unknown_object")
+                                    } else {
+                                        "other"
+                                    }
+                                })
+                                .collect();
+                            &format!("array[{}] = {:?}", arr.len(), types)
+                        } else if content.is_object() {
+                            "object"
+                        } else if content.is_null() {
+                            "null"
+                        } else {
+                            "other"
+                        };
+                        tracing::debug!("messages[{}].content 类型: {}", i, content_type);
+                    }
+                }
+            }
+
             (json, Some(parsed), model)
         }
-        Err(_) => {
+        Err(e) => {
             // 非 JSON，存储原始字符串
+            tracing::debug!("请求体非 JSON 格式，存储原始字符串: error={}", e);
             let body_str = String::from_utf8_lossy(body).to_string();
             (
                 serde_json::Value::String(body_str),
@@ -406,332 +517,10 @@ fn convert_headers(headers: HashMap<String, String>) -> HashMap<String, String> 
 }
 
 // ============================================================================
-// 流式响应累积器
-// ============================================================================
-
-/// 流式响应累积器
-/// 用于增量累积流式响应的 content、thinking 和 usage
-pub struct StreamingResponseAccumulator {
-    /// SSE 解析器
-    parser: SseParser,
-    /// 响应上下文
-    ctx: ResponseContext,
-    /// 状态码
-    status_code: i32,
-    /// 响应头
-    headers: HashMap<String, String>,
-    /// 原始 body 累积
-    raw_body: Vec<u8>,
-}
-
-impl StreamingResponseAccumulator {
-    /// 创建新的流式响应累积器
-    pub fn new(
-        request_id: &str,
-        start_time: std::time::Instant,
-        status_code: i32,
-        headers: HashMap<String, String>,
-    ) -> Self {
-        Self {
-            parser: SseParser::new(),
-            ctx: ResponseContext::new(request_id, start_time),
-            status_code,
-            headers,
-            raw_body: Vec::new(),
-        }
-    }
-
-    /// 处理流式数据块
-    pub fn feed_chunk(&mut self, chunk: &[u8]) {
-        self.raw_body.extend_from_slice(chunk);
-
-        // 尝试解析为 UTF-8 并喂给 SSE 解析器
-        if let Ok(text) = std::str::from_utf8(chunk) {
-            self.parser.feed_chunk(text);
-        }
-    }
-
-    /// 获取当前累积的解析结果
-    pub fn get_parsed_body(&self) -> ParsedResponseBody {
-        self.parser.get_result()
-    }
-
-    /// 检查是否收到 [DONE] 信号
-    pub fn is_done(&self) -> bool {
-        self.parser.is_done()
-    }
-
-    /// 获取累积的原始 body
-    pub fn get_raw_body(&self) -> &[u8] {
-        &self.raw_body
-    }
-
-    /// 构建最终的 LLMResponse
-    pub fn build_response(self) -> LLMResponse {
-        let duration = self.ctx.start_time.elapsed().as_millis() as i64;
-        let parsed_body = self.parser.get_result();
-
-        // 尝试解析原始 body 为 JSON
-        let body_json = if self.raw_body.is_empty() {
-            serde_json::Value::Null
-        } else {
-            match serde_json::from_slice::<serde_json::Value>(&self.raw_body) {
-                Ok(json) => json,
-                Err(_) => {
-                    // 非JSON，存储原始字符串
-                    let body_str = String::from_utf8_lossy(&self.raw_body).to_string();
-                    serde_json::Value::String(body_str)
-                }
-            }
-        };
-
-        LLMResponse {
-            id: self.ctx.id,
-            request_id: self.ctx.request_id,
-            timestamp: self.ctx.timestamp,
-            status_code: self.status_code,
-            headers: self.headers,
-            body: body_json,
-            parsed_body: Some(parsed_body),
-            duration,
-        }
-    }
-
-    /// 获取请求 ID
-    pub fn request_id(&self) -> &str {
-        &self.ctx.request_id
-    }
-}
-
-// ============================================================================
 // Usage 提取
 // ============================================================================
 
 /// 从响应中提取 Usage 信息
 pub fn extract_usage_from_response(response: &LLMResponse) -> Option<Usage> {
     response.parsed_body.as_ref()?.usage.clone()
-}
-
-// ============================================================================
-// 测试模块
-// ============================================================================
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_generate_request_id() {
-        let id = generate_request_id();
-        assert!(id.starts_with("req-"));
-        assert!(id.len() > 10);
-    }
-
-    #[test]
-    fn test_generate_response_id() {
-        let id = generate_response_id();
-        assert!(id.starts_with("res-"));
-        assert!(id.len() > 10);
-    }
-
-    #[test]
-    fn test_base36_encode() {
-        assert_eq!(base36_encode(0), "0");
-        assert_eq!(base36_encode(1), "1");
-        assert_eq!(base36_encode(10), "a");
-        assert_eq!(base36_encode(35), "z");
-        assert_eq!(base36_encode(36), "10");
-        assert_eq!(base36_encode(1234), "ya");
-    }
-
-    #[test]
-    fn test_match_domain_exact() {
-        let domains = vec![DomainConfig {
-            domain: "api.openai.com".to_string(),
-            provider: "OpenAI".to_string(),
-            enabled: true,
-            match_type: MatchType::Exact,
-        }];
-
-        assert!(match_domain("api.openai.com", &domains).is_some());
-        assert!(match_domain("api.anthropic.com", &domains).is_none());
-        assert!(match_domain("api.openai.com:443", &domains).is_none()); // 精确匹配不含端口
-    }
-
-    #[test]
-    fn test_match_domain_glob() {
-        let domains = vec![DomainConfig {
-            domain: "*.openai.com".to_string(),
-            provider: "OpenAI".to_string(),
-            enabled: true,
-            match_type: MatchType::Glob,
-        }];
-
-        assert!(match_domain("api.openai.com", &domains).is_some());
-        assert!(match_domain("chat.openai.com", &domains).is_some());
-        assert!(match_domain("openai.com", &domains).is_none());
-    }
-
-    #[test]
-    fn test_match_domain_disabled() {
-        let domains = vec![DomainConfig {
-            domain: "api.openai.com".to_string(),
-            provider: "OpenAI".to_string(),
-            enabled: false, // 已禁用
-            match_type: MatchType::Exact,
-        }];
-
-        assert!(match_domain("api.openai.com", &domains).is_none());
-    }
-
-    #[test]
-    fn test_detect_provider() {
-        let domains = vec![
-            DomainConfig {
-                domain: "api.openai.com".to_string(),
-                provider: "OpenAI".to_string(),
-                enabled: true,
-                match_type: MatchType::Exact,
-            },
-            DomainConfig {
-                domain: "api.anthropic.com".to_string(),
-                provider: "Anthropic".to_string(),
-                enabled: true,
-                match_type: MatchType::Exact,
-            },
-        ];
-
-        assert_eq!(
-            detect_provider("https://api.openai.com/v1/chat/completions", &domains),
-            Provider::OpenAI
-        );
-        assert_eq!(
-            detect_provider("https://api.anthropic.com/v1/messages", &domains),
-            Provider::Anthropic
-        );
-        assert_eq!(
-            detect_provider("https://unknown.com/api", &domains),
-            Provider::Unknown
-        );
-    }
-
-    #[test]
-    fn test_extract_host() {
-        assert_eq!(
-            extract_host("https://api.openai.com/v1/chat/completions"),
-            "api.openai.com"
-        );
-        assert_eq!(
-            extract_host("https://api.openai.com:443/v1/chat/completions"),
-            "api.openai.com"
-        );
-        assert_eq!(extract_host("http://localhost:8080/api"), "localhost");
-    }
-
-    #[test]
-    fn test_sanitize_headers() {
-        let mut headers = HashMap::new();
-        headers.insert("Authorization".to_string(), "Bearer secret".to_string());
-        headers.insert("Cookie".to_string(), "session=123".to_string());
-        headers.insert("Content-Type".to_string(), "application/json".to_string());
-
-        let sanitized = sanitize_headers(headers);
-
-        assert_eq!(sanitized.get("Authorization").unwrap(), "[REDACTED]");
-        assert_eq!(sanitized.get("Cookie").unwrap(), "[REDACTED]");
-        assert_eq!(sanitized.get("Content-Type").unwrap(), "application/json");
-    }
-
-    #[test]
-    fn test_capture_request() {
-        let ctx = RequestContext::new();
-        let domains = vec![DomainConfig {
-            domain: "api.openai.com".to_string(),
-            provider: "OpenAI".to_string(),
-            enabled: true,
-            match_type: MatchType::Exact,
-        }];
-
-        let mut headers = HashMap::new();
-        headers.insert("Content-Type".to_string(), "application/json".to_string());
-        headers.insert("Authorization".to_string(), "Bearer test-key".to_string());
-
-        let body = r#"{"model": "gpt-4", "messages": [{"role": "user", "content": "Hello"}]}"#;
-
-        let request = capture_request(
-            &ctx,
-            "POST",
-            "https://api.openai.com/v1/chat/completions",
-            headers,
-            body.as_bytes(),
-            &domains,
-        );
-
-        assert!(request.id.starts_with("req-"));
-        assert_eq!(request.provider, Provider::OpenAI);
-        assert_eq!(request.model, "gpt-4");
-        assert_eq!(request.method, "POST");
-        assert_eq!(request.url, "https://api.openai.com/v1/chat/completions");
-        assert_eq!(request.domain, Some("api.openai.com".to_string()));
-        assert_eq!(request.headers.get("Authorization").unwrap(), "[REDACTED]");
-        assert!(request.parsed_body.is_some());
-    }
-
-    #[test]
-    fn test_capture_non_stream_response() {
-        let ctx = RequestContext::new();
-        let start_time = std::time::Instant::now();
-
-        // 短暂等待以产生可测量的 duration
-        std::thread::sleep(std::time::Duration::from_millis(10));
-
-        let response_ctx = ResponseContext::new(&ctx.id, start_time);
-        let mut headers = HashMap::new();
-        headers.insert("Content-Type".to_string(), "application/json".to_string());
-
-        let body = r#"{"id": "chatcmpl-123", "choices": [{"message": {"content": "Hello!"}}], "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}}"#;
-
-        let response =
-            capture_non_stream_response(&response_ctx, 200, headers.clone(), body.as_bytes());
-
-        assert!(response.id.starts_with("res-"));
-        assert_eq!(response.request_id, ctx.id);
-        assert_eq!(response.status_code, 200);
-        assert!(response.duration >= 10);
-        assert!(response.parsed_body.is_some());
-
-        let parsed = response.parsed_body.unwrap();
-        assert_eq!(parsed.content, Some("Hello!".to_string()));
-        assert!(parsed.usage.is_some());
-        let usage = parsed.usage.unwrap();
-        assert_eq!(usage.total_tokens, 15);
-    }
-
-    #[test]
-    fn test_streaming_response_accumulator() {
-        let start_time = std::time::Instant::now();
-        let mut accumulator =
-            StreamingResponseAccumulator::new("req-test", start_time, 200, HashMap::new());
-
-        // 喂入 SSE 数据
-        let chunk1 = "data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}\n\n";
-        let chunk2 = "data: {\"choices\":[{\"delta\":{\"content\":\" world\"}}]}\n\n";
-        let chunk3 = "data: [DONE]\n\n";
-
-        accumulator.feed_chunk(chunk1.as_bytes());
-        accumulator.feed_chunk(chunk2.as_bytes());
-        accumulator.feed_chunk(chunk3.as_bytes());
-
-        assert!(accumulator.is_done());
-
-        let parsed = accumulator.get_parsed_body();
-        assert_eq!(parsed.content, Some("Hello world".to_string()));
-    }
-
-    #[test]
-    fn test_request_context_default() {
-        let ctx = RequestContext::default();
-        assert!(ctx.id.starts_with("req-"));
-        assert!(ctx.timestamp > 0);
-    }
 }

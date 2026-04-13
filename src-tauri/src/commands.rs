@@ -888,6 +888,54 @@ pub async fn start_monitor_service(
         *proxy = Some(proxy_server);
     }
 
+    // 启动定时清理任务
+    {
+        use crate::monitor::tasks::{DataCleanupTask, CleanupConfig, DatabaseBackup, BackupConfig};
+        
+        let cleanup_task = DataCleanupTask::new(
+            state.storage.clone(),
+            CleanupConfig::default(),
+            &state.data_dir,
+        );
+        
+        // 初始化并启动清理任务
+        let cleanup_task = std::sync::Arc::new(cleanup_task);
+        if let Err(e) = cleanup_task.initialize().await {
+            tracing::error!("[Monitor] 初始化清理任务失败: {}", e);
+        } else {
+            tracing::info!("[Monitor] 启动定时清理任务");
+            std::sync::Arc::clone(&cleanup_task).start_scheduled_cleanup();
+        }
+        
+        // 启动定时备份任务
+        let backup = DatabaseBackup::new(
+            state.db_path.clone(),
+            &state.data_dir,
+            BackupConfig::default(),
+        );
+        
+        let backup = std::sync::Arc::new(backup);
+        if let Err(e) = backup.initialize().await {
+            tracing::error!("[Monitor] 初始化备份任务失败: {}", e);
+        } else {
+            tracing::info!("[Monitor] 启动定时备份任务");
+            std::sync::Arc::clone(&backup).start_scheduled_backup();
+        }
+    }
+
+    // 启动配置文件监听
+    {
+        let mut config_manager = state.config_manager.lock().map_err(|e| {
+            format!("获取配置管理器锁失败: {}", e)
+        })?;
+        
+        if let Err(e) = config_manager.start_watching() {
+            tracing::warn!("[Monitor] 启动配置文件监听失败: {}", e);
+        } else {
+            tracing::info!("[Monitor] 配置文件监听已启动");
+        }
+    }
+
     tracing::info!("[Monitor] Rust 代理服务器已启动（完整监控模式）: http://localhost:{}", proxy_port);
 
     Ok(format!("Monitor service started (Full Mode, Port: {})", proxy_port))

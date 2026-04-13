@@ -326,23 +326,22 @@ watch(() => store.selectedRequestId, () => {
     <!-- 请求体详情弹窗 -->
     <RequestBodyDetailDialog
       v-model:visible="bodyDetailVisible"
-      :request-body="store.selectedRequest?.parsedBody || store.selectedRequest?.body"
+      :request-body="store.selectedRequest?.parsedBody || store.selectedRequest?.body || {}"
       :actual-tokens="store.selectedMetrics?.totalTokens"
     />
 
     <!-- 响应体详情弹窗 -->
     <ResponseBodyDetailDialog
       v-model:visible="responseDetailVisible"
-      :response-body="store.selectedResponse?.body"
-      :parsed-body="store.selectedResponse?.parsedBody"
+      :response-body="store.selectedResponse?.body || {}"
+      :parsed-body="store.selectedResponse?.parsedBody || {}"
     />
   </div>
 </template>
 
 <style scoped>
 .request-detail {
-  height: 100%;
-  overflow-y: auto;
+  height: auto;
 }
 
 /* 空状态 */
@@ -370,7 +369,7 @@ watch(() => store.selectedRequestId, () => {
 .detail-content {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 /* 基本信息面板 */
@@ -481,7 +480,9 @@ watch(() => store.selectedRequestId, () => {
 
 /* 标签页 */
 .detail-tabs {
-  flex: 1;
+  border: 1px solid var(--app-border-default);
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .detail-tabs :deep(.el-tabs__header) {

@@ -277,7 +277,9 @@ onUnmounted(() => {
         class="detail-dialog"
         @close="closeDetailDialog"
       >
-        <RequestDetail />
+        <div class="detail-dialog-scroll-container">
+          <RequestDetail />
+        </div>
       </el-dialog>
     </div>
 </template>
@@ -798,7 +800,8 @@ onUnmounted(() => {
   border: 1px solid var(--app-border-default);
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  max-height: 85vh;
+  max-width: 900px;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
 }
@@ -808,6 +811,7 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--app-border-default);
   background: linear-gradient(135deg, rgba(0, 212, 255, 0.05) 0%, transparent 50%);
   margin-right: 0;
+  flex-shrink: 0;
 }
 
 .detail-dialog :deep(.el-dialog__title) {
@@ -831,9 +835,10 @@ onUnmounted(() => {
 }
 
 .detail-dialog :deep(.el-dialog__body) {
-  padding: 0;
+  padding: 16px;
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto !important;
+  max-height: calc(90vh - 60px);
 }
 
 /* ==================== 响应式布局 ==================== */
@@ -1327,5 +1332,41 @@ html.light:not(.cyberpunk):not(.dark) .header-badge {
 html.light:not(.cyberpunk):not(.dark) .error-alert {
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.5);
+}
+</style>
+
+<!-- 全局样式：el-dialog 被 teleport 到 body 外，scoped 无法生效 -->
+<style>
+/* 详情弹窗 */
+.detail-dialog.el-dialog {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  border-radius: 16px;
+}
+</style>
+
+<style scoped>
+/* 详情弹窗滚动容器 */
+.detail-dialog-scroll-container {
+  max-height: calc(90vh - 120px);
+  overflow-y: auto;
+  padding: 0 4px;
+}
+
+.detail-dialog-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.detail-dialog-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.detail-dialog-scroll-container::-webkit-scrollbar-thumb {
+  background: var(--app-border-default);
+  border-radius: 3px;
+}
+
+.detail-dialog-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: var(--app-color-primary);
 }
 </style>

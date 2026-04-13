@@ -165,6 +165,30 @@ export const CATEGORY_INFO: Record<CategoryName, { displayName: string; descript
   }
 }
 
+/**
+ * 按照 AGENT_NAMES / CATEGORY_NAMES 定义的固定顺序重排配置对象内部键
+ * 防止预设切换时 JSON 字段顺序被打乱
+ */
+export function sortConfigKeys<T extends Record<string, unknown>>(
+  obj: T,
+  keyOrder: readonly string[]
+): T {
+  const sorted: Record<string, unknown> = {}
+  // 先按固定顺序写入已知键
+  for (const key of keyOrder) {
+    if (key in obj) {
+      sorted[key] = obj[key]
+    }
+  }
+  // 再追加未知键（向前兼容）
+  for (const key of Object.keys(obj)) {
+    if (!(key in sorted)) {
+      sorted[key] = obj[key]
+    }
+  }
+  return sorted as T
+}
+
 // 创建默认配置
 export function createDefaultConfig(): OhMyOpenCodeConfig {
   const defaultModel = 'wuwen/glm-5'

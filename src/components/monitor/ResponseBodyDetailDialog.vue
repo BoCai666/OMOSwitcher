@@ -13,9 +13,9 @@ const props = defineProps<{
     content?: string
     thinking?: string
     usage?: {
-      prompt_tokens: number
-      completion_tokens: number
-      total_tokens: number
+      promptTokens: number
+      completionTokens: number
+      totalTokens: number
     }
   }
 }>()
@@ -146,15 +146,15 @@ function formatNumber(num: number | undefined): string {
           <div class="usage-grid">
             <div class="usage-item">
               <span class="usage-label">输入</span>
-              <span class="usage-value">{{ formatNumber(usage.prompt_tokens) }}</span>
+              <span class="usage-value">{{ formatNumber(usage.promptTokens) }}</span>
             </div>
             <div class="usage-item">
               <span class="usage-label">输出</span>
-              <span class="usage-value">{{ formatNumber(usage.completion_tokens) }}</span>
+              <span class="usage-value">{{ formatNumber(usage.completionTokens) }}</span>
             </div>
             <div class="usage-item total">
               <span class="usage-label">总计</span>
-              <span class="usage-value">{{ formatNumber(usage.total_tokens) }}</span>
+              <span class="usage-value">{{ formatNumber(usage.totalTokens) }}</span>
             </div>
           </div>
         </div>

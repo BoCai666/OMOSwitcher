@@ -2,6 +2,7 @@
 // 提供前端与 Monitor 后端交互的命令桥接层
 // 所有命令遵循 Result<T, String> 模式，错误消息使用中文
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -85,22 +86,37 @@ impl MonitorCommandState {
 // 统计摘要类型
 // ============================================================================
 
-/// 统计摘要（用于首页仪表盘）
+/// 单个时间段的统计
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct StatsSummary {
-    /// 总请求数
-    pub total_requests: i64,
+pub struct PeriodStats {
+    /// 请求数
+    pub count: i64,
     /// 总 token 数
     pub total_tokens: i64,
     /// 总费用（美元）
     pub total_cost: f64,
-    /// 今日请求数
-    pub today_requests: i64,
-    /// 今日 token 数
-    pub today_tokens: i64,
-    /// 今日费用
-    pub today_cost: f64,
+    /// 按模型分组的统计
+    pub model_stats: HashMap<String, ModelStatEntry>,
+}
+
+/// 模型统计条目
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelStatEntry {
+    pub count: i64,
+    pub tokens: i64,
+    pub cost: f64,
+}
+
+/// 统计摘要（用于首页仪表盘）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StatsSummary {
+    pub today: PeriodStats,
+    pub this_week: PeriodStats,
+    pub this_month: PeriodStats,
+    pub all_time: PeriodStats,
 }
 
 // ============================================================================
@@ -173,39 +189,60 @@ pub async fn monitor_get_stats_summary(
 ) -> Result<StatsSummary, String> {
     let storage = state.storage.clone();
 
-    // 获取当前时间戳范围
-    let now = time::OffsetDateTime::now_utc();
-    let today_start = {
-        let date = time::Date::from_calendar_date(
-            now.year(),
-            now.month(),
-            now.day(),
-        ).map_err(|e| format!("日期计算失败: {}", e))?;
-        let midday = time::PrimitiveDateTime::new(date, time::Time::MIDNIGHT);
-        midday.assume_utc().unix_timestamp() * 1000
+    // 使用 UTC 时间计算，假设用户时区为 Asia/Shanghai (UTC+8)
+    // 注意：这是一个简化实现，实际应从系统获取本地时区
+    let now_utc = time::OffsetDateTime::now_utc();
+    let now_ts = now_utc.unix_timestamp() * 1000;
+    
+    // 本地时间偏移（UTC+8 = 8 小时）
+    const LOCAL_OFFSET_HOURS: i64 = 8;
+    const HOUR_MS: i64 = 60 * 60 * 1000;
+    const DAY_MS: i64 = 24 * HOUR_MS;
+    
+    // 本地时间戳（毫秒）
+    let local_ts = now_ts + LOCAL_OFFSET_HOURS * HOUR_MS;
+    
+    // 今日开始（本地时间午夜）
+    let local_day_start_ts = (local_ts / DAY_MS) * DAY_MS;
+    let today_start_ts = local_day_start_ts - LOCAL_OFFSET_HOURS * HOUR_MS;
+    
+    // 本周开始（周一午夜）
+    let weekday_num = now_utc.weekday().number_days_from_monday() as i64;
+    let week_start_ts = today_start_ts - weekday_num * DAY_MS;
+    
+    // 本月开始（1号午夜）
+    // 简化计算：从今日开始往前推到本月1号
+    let day_of_month = now_utc.day() as i64;
+    let month_start_ts = today_start_ts - (day_of_month - 1) * DAY_MS;
+
+    // 全部时间
+    let all_time_start_ts: i64 = 0;
+
+    // 获取各时间段统计
+    let today_stats = storage.get_metrics_stats(today_start_ts, now_ts).await?;
+    let week_stats = storage.get_metrics_stats(week_start_ts, now_ts).await?;
+    let month_stats = storage.get_metrics_stats(month_start_ts, now_ts).await?;
+    let all_time_stats = storage.get_metrics_stats(all_time_start_ts, now_ts).await?;
+
+    // 转换为 PeriodStats 格式
+    let to_period_stats = |stats: crate::monitor::types::MetricsStats| PeriodStats {
+        count: stats.count,
+        total_tokens: stats.total_tokens,
+        total_cost: stats.total_cost,
+        model_stats: stats.model_stats.into_iter()
+            .map(|(k, v)| (k, ModelStatEntry {
+                count: v.count,
+                tokens: v.tokens,
+                cost: v.cost,
+            }))
+            .collect(),
     };
-    let now_ts = now.unix_timestamp() * 1000;
-
-    // 获取全部统计（过去一年）
-    let one_year_ago = (now.unix_timestamp() - 365 * 24 * 60 * 60) * 1000;
-    let total_stats = storage.get_metrics_stats(one_year_ago, now_ts).await?;
-
-    // 获取今日统计
-    let today_stats = storage.get_metrics_stats(today_start, now_ts).await?;
-
-    // 统计请求总数
-    let total_requests = storage.get_recent_requests_with_metrics(i64::MAX).await?;
-    let today_requests_list = storage
-        .get_requests_by_timestamp_range_with_metrics(today_start, now_ts, None)
-        .await?;
 
     Ok(StatsSummary {
-        total_requests: total_requests.len() as i64,
-        total_tokens: total_stats.total_tokens,
-        total_cost: total_stats.total_cost,
-        today_requests: today_requests_list.len() as i64,
-        today_tokens: today_stats.total_tokens,
-        today_cost: today_stats.total_cost,
+        today: to_period_stats(today_stats),
+        this_week: to_period_stats(week_stats),
+        this_month: to_period_stats(month_stats),
+        all_time: to_period_stats(all_time_stats),
     })
 }
 

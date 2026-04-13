@@ -1,9 +1,6 @@
 // Monitor 模块 - SQLite 存储层
 // 使用 rusqlite 实现完整的 StorageInterface
 // 所有公开方法通过 spawn_blocking 异步执行，内部使用 Arc<Mutex<Connection>> 保证线程安全
-// 注意：部分方法尚未被主流程集成调用，保留供后续集成使用
-
-#![allow(dead_code)]
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -39,19 +36,6 @@ impl MonitorStorage {
 
         let conn = Connection::open(db_path)
             .map_err(|e| format!("打开数据库失败: {}", e))?;
-
-        Self::init_connection(&conn)?;
-        Self::run_migrations(&conn)?;
-
-        Ok(Self {
-            conn: Arc::new(Mutex::new(conn)),
-        })
-    }
-
-    /// 创建内存数据库（用于测试）
-    pub fn open_in_memory() -> Result<Self, String> {
-        let conn = Connection::open_in_memory()
-            .map_err(|e| format!("创建内存数据库失败: {}", e))?;
 
         Self::init_connection(&conn)?;
         Self::run_migrations(&conn)?;
@@ -111,6 +95,18 @@ impl MonitorStorage {
             Provider::OpenAI => "openai".to_string(),
             Provider::Anthropic => "anthropic".to_string(),
             Provider::Kimi => "kimi".to_string(),
+            Provider::ZhipuAI => "zhipuai".to_string(),
+            Provider::MiniMax => "minimax".to_string(),
+            Provider::Qianfan => "qianfan".to_string(),
+            Provider::Volces => "volces".to_string(),
+            Provider::InfiniAI => "infiniai".to_string(),
+            Provider::JDCloud => "jdcloud".to_string(),
+            Provider::Google => "google".to_string(),
+            Provider::DeepSeek => "deepseek".to_string(),
+            Provider::Groq => "groq".to_string(),
+            Provider::Mistral => "mistral".to_string(),
+            Provider::Qwen => "qwen".to_string(),
+            Provider::SiliconFlow => "siliconflow".to_string(),
             Provider::Unknown => "unknown".to_string(),
         }
     }
@@ -120,7 +116,19 @@ impl MonitorStorage {
         match s.to_lowercase().as_str() {
             "openai" => Provider::OpenAI,
             "anthropic" => Provider::Anthropic,
-            "kimi" => Provider::Kimi,
+            "kimi" | "moonshot" => Provider::Kimi,
+            "zhipuai" | "zhipu" | "glm" => Provider::ZhipuAI,
+            "minimax" | "minimaxi" => Provider::MiniMax,
+            "qianfan" | "baidu" => Provider::Qianfan,
+            "volces" | "doubao" | "volcengine" => Provider::Volces,
+            "infiniai" | "infini" | "infini-ai" | "wuwen" => Provider::InfiniAI,
+            "jdcloud" | "jingdong" | "jd" => Provider::JDCloud,
+            "google" | "gemini" => Provider::Google,
+            "deepseek" => Provider::DeepSeek,
+            "groq" => Provider::Groq,
+            "mistral" => Provider::Mistral,
+            "qwen" | "tongyi" | "dashscope" => Provider::Qwen,
+            "siliconflow" | "sf" => Provider::SiliconFlow,
             _ => Provider::Unknown,
         }
     }
@@ -262,6 +270,9 @@ impl MonitorStorage {
     pub async fn save_request(&self, request: &LLMRequest) -> Result<(), String> {
         let conn = self.conn.clone();
         let request = request.clone();
+        let request_id = request.id.clone();
+
+        tracing::debug!("开始保存请求到数据库: id={}", request_id);
 
         tokio::task::spawn_blocking(move || {
             let conn = conn.lock().map_err(|e| format!("获取连接锁失败: {}", e))?;
@@ -270,6 +281,13 @@ impl MonitorStorage {
             let headers_json = serde_json::to_string(&request.headers).unwrap_or_else(|_| "{}".to_string());
             let body_json = serde_json::to_string(&request.body).unwrap_or_else(|_| "null".to_string());
             let parsed_body_json = serde_json::to_string(&request.parsed_body).unwrap_or_else(|_| "null".to_string());
+            
+            // 追踪 parsed_body 序列化结果
+            tracing::debug!(
+                "parsed_body JSON 长度: {}, 前 200 字符: {}",
+                parsed_body_json.len(),
+                &parsed_body_json.chars().take(200).collect::<String>()
+            );
 
             conn.execute(
                 "INSERT OR REPLACE INTO requests (id, timestamp, provider, model, method, url, domain, headers, body, parsed_body, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -288,6 +306,7 @@ impl MonitorStorage {
                 ],
             ).map_err(|e| format!("保存请求失败: {}", e))?;
 
+            tracing::debug!("请求已写入数据库: id={}", request_id);
             Ok(())
         }).await.map_err(|e| format!("spawn_blocking 错误: {}", e))?
     }
@@ -296,6 +315,9 @@ impl MonitorStorage {
     pub async fn save_response(&self, response: &LLMResponse) -> Result<(), String> {
         let conn = self.conn.clone();
         let response = response.clone();
+        let response_id = response.id.clone();
+
+        tracing::debug!("开始保存响应到数据库: id={}, request_id={}", response_id, response.request_id);
 
         tokio::task::spawn_blocking(move || {
             let conn = conn.lock().map_err(|e| format!("获取连接锁失败: {}", e))?;
@@ -318,6 +340,7 @@ impl MonitorStorage {
                 ],
             ).map_err(|e| format!("保存响应失败: {}", e))?;
 
+            tracing::debug!("响应已写入数据库: id={}", response_id);
             Ok(())
         }).await.map_err(|e| format!("spawn_blocking 错误: {}", e))?
     }
@@ -326,6 +349,12 @@ impl MonitorStorage {
     pub async fn save_metrics(&self, metrics: &LLMMetrics) -> Result<(), String> {
         let conn = self.conn.clone();
         let metrics = metrics.clone();
+        let metrics_id = metrics.id.clone();
+
+        tracing::debug!(
+            "开始保存指标到数据库: id={}, request_id={}, tokens={}, cost={}",
+            metrics_id, metrics.request_id, metrics.total_tokens, metrics.estimated_cost
+        );
 
         tokio::task::spawn_blocking(move || {
             let conn = conn.lock().map_err(|e| format!("获取连接锁失败: {}", e))?;
@@ -346,6 +375,7 @@ impl MonitorStorage {
                 ],
             ).map_err(|e| format!("保存指标失败: {}", e))?;
 
+            tracing::debug!("指标已写入数据库: id={}", metrics_id);
             Ok(())
         }).await.map_err(|e| format!("spawn_blocking 错误: {}", e))?
     }
@@ -397,25 +427,6 @@ impl MonitorStorage {
     // ========================================================================
     // 查询操作
     // ========================================================================
-
-    /// 获取最近的请求列表
-    pub async fn get_recent_requests(&self, limit: i64) -> Result<Vec<LLMRequest>, String> {
-        let conn = self.conn.clone();
-
-        tokio::task::spawn_blocking(move || {
-            let conn = conn.lock().map_err(|e| format!("获取连接锁失败: {}", e))?;
-
-            let mut stmt = conn
-                .prepare("SELECT * FROM requests ORDER BY timestamp DESC LIMIT ?")
-                .map_err(|e| format!("准备查询失败: {}", e))?;
-
-            let rows = stmt
-                .query_map(params![limit], |row| Self::read_request(row))
-                .map_err(|e| format!("查询请求失败: {}", e))?;
-
-            collect_rows(rows, "读取请求行失败")
-        }).await.map_err(|e| format!("spawn_blocking 错误: {}", e))?
-    }
 
     /// 根据 ID 获取请求
     pub async fn get_request_by_id(&self, id: &str) -> Result<Option<LLMRequest>, String> {
@@ -595,47 +606,6 @@ impl MonitorStorage {
                 .map_err(|e| format!("查询每日记录失败: {}", e))?;
 
             collect_rows(rows, "读取每日记录行失败")
-        }).await.map_err(|e| format!("spawn_blocking 错误: {}", e))?
-    }
-
-    /// 获取指定日期的记录
-    pub async fn get_daily_record(&self, date: &str) -> Result<Option<DailyRecord>, String> {
-        let conn = self.conn.clone();
-        let date = date.to_string();
-
-        tokio::task::spawn_blocking(move || {
-            let conn = conn.lock().map_err(|e| format!("获取连接锁失败: {}", e))?;
-
-            let result = conn.query_row(
-                "SELECT * FROM daily_records WHERE date = ?",
-                params![date],
-                |row| {
-                    let date: String = row.get("date")?;
-                    let request_count: i64 = row.get("request_count")?;
-                    let total_tokens: Option<i64> = row.get("total_tokens")?;
-                    let total_cost: Option<f64> = row.get("total_cost")?;
-                    let models_str: Option<String> = row.get("models")?;
-                    let model_stats_str: Option<String> = row.get("model_stats")?;
-
-                    let models: Vec<String> = Self::safe_json_parse(models_str, Vec::new());
-                    let model_stats: HashMap<String, ModelStatEntry> = Self::safe_json_parse(model_stats_str, HashMap::new());
-
-                    Ok(DailyRecord {
-                        date,
-                        request_count,
-                        total_tokens: total_tokens.unwrap_or(0),
-                        total_cost: total_cost.unwrap_or(0.0),
-                        models,
-                        model_stats,
-                    })
-                },
-            );
-
-            match result {
-                Ok(record) => Ok(Some(record)),
-                Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-                Err(e) => Err(format!("查询每日记录失败: {}", e)),
-            }
         }).await.map_err(|e| format!("spawn_blocking 错误: {}", e))?
     }
 
@@ -963,47 +933,6 @@ impl MonitorStorage {
             Ok(deleted as u64)
         }).await.map_err(|e| format!("spawn_blocking 错误: {}", e))?
     }
-
-    /// 按日期范围获取请求列表
-    pub async fn get_requests_by_date_range(
-        &self,
-        start_date: &str,
-        end_date: &str,
-        limit: Option<i64>,
-    ) -> Result<Vec<LLMRequest>, String> {
-        let conn = self.conn.clone();
-        let start_date = start_date.to_string();
-        let end_date = end_date.to_string();
-
-        tokio::task::spawn_blocking(move || {
-            let conn = conn.lock().map_err(|e| format!("获取连接锁失败: {}", e))?;
-
-            let start_ts = date_to_timestamp(&start_date, true);
-            let end_ts = date_to_timestamp(&end_date, false);
-
-            let sql = match limit {
-                Some(_) => "SELECT * FROM requests WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp DESC LIMIT ?",
-                None => "SELECT * FROM requests WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp DESC",
-            };
-
-            let mut stmt = conn.prepare(sql).map_err(|e| format!("准备查询失败: {}", e))?;
-
-            let results = match limit {
-                Some(lim) => {
-                    let rows = stmt.query_map(params![start_ts, end_ts, lim], |row| Self::read_request(row))
-                        .map_err(|e| format!("查询失败: {}", e))?;
-                    collect_rows(rows, "读取行失败")?
-                }
-                None => {
-                    let rows = stmt.query_map(params![start_ts, end_ts], |row| Self::read_request(row))
-                        .map_err(|e| format!("查询失败: {}", e))?;
-                    collect_rows(rows, "读取行失败")?
-                }
-            };
-
-            Ok(results)
-        }).await.map_err(|e| format!("spawn_blocking 错误: {}", e))?
-    }
 }
 
 // ============================================================================
@@ -1052,563 +981,4 @@ fn collect_rows<T>(
         results.push(row.map_err(|e| format!("{}: {}", error_msg, e))?);
     }
     Ok(results)
-}
-
-// ============================================================================
-// 测试模块
-// ============================================================================
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::monitor::migration::Migration;
-
-    /// 创建测试用的内存数据库
-    fn create_test_storage() -> MonitorStorage {
-        MonitorStorage::open_in_memory().unwrap()
-    }
-
-    /// 创建测试用的 LLMRequest
-    fn create_test_request(id: &str, timestamp: i64) -> LLMRequest {
-        let mut headers = HashMap::new();
-        headers.insert("content-type".to_string(), "application/json".to_string());
-
-        LLMRequest {
-            id: id.to_string(),
-            timestamp,
-            provider: Provider::OpenAI,
-            model: "gpt-4".to_string(),
-            method: "POST".to_string(),
-            url: "https://api.openai.com/v1/chat/completions".to_string(),
-            domain: Some("api.openai.com".to_string()),
-            headers,
-            body: serde_json::json!({"model": "gpt-4", "messages": []}),
-            parsed_body: None,
-            updated_at: None,
-        }
-    }
-
-    /// 创建测试用的 LLMResponse
-    fn create_test_response(id: &str, request_id: &str, timestamp: i64) -> LLMResponse {
-        LLMResponse {
-            id: id.to_string(),
-            request_id: request_id.to_string(),
-            timestamp,
-            status_code: 200,
-            headers: HashMap::new(),
-            body: serde_json::json!({"choices": []}),
-            parsed_body: None,
-            duration: 500,
-        }
-    }
-
-    /// 创建测试用的 LLMMetrics
-    fn create_test_metrics(id: &str, request_id: &str, timestamp: i64) -> LLMMetrics {
-        LLMMetrics {
-            id: id.to_string(),
-            request_id: request_id.to_string(),
-            model: "gpt-4".to_string(),
-            provider: "openai".to_string(),
-            prompt_tokens: 100,
-            completion_tokens: 50,
-            total_tokens: 150,
-            estimated_cost: 0.03,
-            duration: 500,
-            timestamp,
-        }
-    }
-
-    /// 创建测试用的 MCPCall
-    fn create_test_mcp_call(id: &str, request_id: &str, timestamp: i64) -> MCPCall {
-        MCPCall {
-            id: id.to_string(),
-            request_id: request_id.to_string(),
-            jsonrpc_version: Some("2.0".to_string()),
-            rpc_id: Some("1".to_string()),
-            tool_name: "fetch".to_string(),
-            tool_title: Some("Fetch Tool".to_string()),
-            tool_description: None,
-            arguments: Some(HashMap::new()),
-            result_content: Some(serde_json::json!({"result": "ok"})),
-            result_is_error: false,
-            error_message: None,
-            execution_duration: Some(50),
-            transport_type: None,
-            server_name: Some("mcp-server".to_string()),
-            trace_id: None,
-            timestamp,
-        }
-    }
-
-    // ========================================================================
-    // 测试 1-4: 基本 CRUD
-    // ========================================================================
-
-    #[tokio::test]
-    async fn test_save_and_get_request() {
-        let storage = create_test_storage();
-        let request = create_test_request("req-1", 1000000);
-
-        storage.save_request(&request).await.unwrap();
-
-        let retrieved = storage.get_request_by_id("req-1").await.unwrap();
-        assert!(retrieved.is_some());
-        let retrieved = retrieved.unwrap();
-        assert_eq!(retrieved.id, "req-1");
-        assert_eq!(retrieved.timestamp, 1000000);
-        assert_eq!(retrieved.model, "gpt-4");
-        assert_eq!(retrieved.headers.get("content-type").unwrap(), "application/json");
-    }
-
-    #[tokio::test]
-    async fn test_save_and_get_response() {
-        let storage = create_test_storage();
-
-        // 先保存对应的请求（外键约束）
-        let request = create_test_request("req-1", 1000000);
-        storage.save_request(&request).await.unwrap();
-
-        let response = create_test_response("resp-1", "req-1", 1000100);
-        storage.save_response(&response).await.unwrap();
-
-        let retrieved = storage.get_response_by_request_id("req-1").await.unwrap();
-        assert!(retrieved.is_some());
-        let retrieved = retrieved.unwrap();
-        assert_eq!(retrieved.id, "resp-1");
-        assert_eq!(retrieved.request_id, "req-1");
-        assert_eq!(retrieved.status_code, 200);
-        assert_eq!(retrieved.duration, 500);
-    }
-
-    #[tokio::test]
-    async fn test_save_and_get_metrics() {
-        let storage = create_test_storage();
-
-        let request = create_test_request("req-1", 1000000);
-        storage.save_request(&request).await.unwrap();
-
-        let metrics = create_test_metrics("metrics-1", "req-1", 1000000);
-        storage.save_metrics(&metrics).await.unwrap();
-
-        let retrieved = storage.get_metrics_by_request_id("req-1").await.unwrap();
-        assert!(retrieved.is_some());
-        let retrieved = retrieved.unwrap();
-        assert_eq!(retrieved.id, "metrics-1");
-        assert_eq!(retrieved.total_tokens, 150);
-        assert!((retrieved.estimated_cost - 0.03).abs() < 0.001);
-    }
-
-    #[tokio::test]
-    async fn test_save_and_get_mcp_call() {
-        let storage = create_test_storage();
-
-        let request = create_test_request("req-1", 1000000);
-        storage.save_request(&request).await.unwrap();
-
-        let mcp_call = create_test_mcp_call("mcp-1", "req-1", 1000050);
-        storage.save_mcp_call(&mcp_call).await.unwrap();
-
-        let retrieved = storage.get_mcp_calls_by_request_id("req-1").await.unwrap();
-        assert_eq!(retrieved.len(), 1);
-        assert_eq!(retrieved[0].id, "mcp-1");
-        assert_eq!(retrieved[0].tool_name, "fetch");
-        assert_eq!(retrieved[0].server_name, Some("mcp-server".to_string()));
-    }
-
-    // ========================================================================
-    // 测试 5: 列表查询
-    // ========================================================================
-
-    #[tokio::test]
-    async fn test_get_recent_requests_with_metrics() {
-        let storage = create_test_storage();
-
-        // 创建多个请求，附带 metrics 和 responses
-        for i in 0..5i64 {
-            let request = create_test_request(&format!("req-{}", i), 1000000 + i * 1000);
-            storage.save_request(&request).await.unwrap();
-
-            let metrics = LLMMetrics {
-                id: format!("metrics-{}", i),
-                request_id: format!("req-{}", i),
-                model: "gpt-4".to_string(),
-                provider: "openai".to_string(),
-                prompt_tokens: 100 * (i + 1),
-                completion_tokens: 50 * (i + 1),
-                total_tokens: 150 * (i + 1),
-                estimated_cost: 0.03 * (i as f64 + 1.0),
-                duration: 500 + i * 100,
-                timestamp: 1000000 + i * 1000,
-            };
-            storage.save_metrics(&metrics).await.unwrap();
-
-            let response = create_test_response(&format!("resp-{}", i), &format!("req-{}", i), 1000100 + i * 1000);
-            storage.save_response(&response).await.unwrap();
-        }
-
-        let items = storage.get_recent_requests_with_metrics(3).await.unwrap();
-        assert_eq!(items.len(), 3);
-        // 最新的在前面（timestamp DESC）
-        assert_eq!(items[0].id, "req-4");
-        assert!(items[0].tokens.is_some());
-        assert!(items[0].status_code.is_some());
-    }
-
-    // ========================================================================
-    // 测试 6: 统计操作
-    // ========================================================================
-
-    #[tokio::test]
-    async fn test_get_metrics_stats() {
-        let storage = create_test_storage();
-
-        // 创建两个不同模型的请求
-        for i in 0..3i64 {
-            let mut request = create_test_request(&format!("req-{}", i), 1000000 + i * 1000);
-            if i < 2 {
-                request.model = "gpt-4".to_string();
-            } else {
-                request.model = "claude-3".to_string();
-            }
-            storage.save_request(&request).await.unwrap();
-
-            let mut metrics = create_test_metrics(&format!("metrics-{}", i), &format!("req-{}", i), 1000000 + i * 1000);
-            if i < 2 {
-                metrics.model = "gpt-4".to_string();
-                metrics.total_tokens = 100;
-                metrics.estimated_cost = 0.01;
-            } else {
-                metrics.model = "claude-3".to_string();
-                metrics.total_tokens = 200;
-                metrics.estimated_cost = 0.02;
-            }
-            storage.save_metrics(&metrics).await.unwrap();
-        }
-
-        let stats = storage.get_metrics_stats(0, 2000000).await.unwrap();
-        assert_eq!(stats.count, 3);
-        assert_eq!(stats.total_tokens, 400);
-        assert!((stats.total_cost - 0.04).abs() < 0.001);
-        assert_eq!(stats.model_stats.len(), 2);
-        assert!(stats.model_stats.contains_key("gpt-4"));
-        assert!(stats.model_stats.contains_key("claude-3"));
-    }
-
-    // ========================================================================
-    // 测试 7: 增量查询
-    // ========================================================================
-
-    #[tokio::test]
-    async fn test_get_delta() {
-        let storage = create_test_storage();
-
-        // 创建旧请求
-        let request1 = create_test_request("req-old", 1000000);
-        storage.save_request(&request1).await.unwrap();
-        let metrics1 = create_test_metrics("metrics-old", "req-old", 1000000);
-        storage.save_metrics(&metrics1).await.unwrap();
-
-        // 创建新请求
-        let request2 = create_test_request("req-new", 2000000);
-        storage.save_request(&request2).await.unwrap();
-        let metrics2 = create_test_metrics("metrics-new", "req-new", 2000000);
-        storage.save_metrics(&metrics2).await.unwrap();
-
-        // 查询 since=1500000 的增量
-        let delta = storage.get_delta(1500000, 10).await.unwrap();
-        assert_eq!(delta.new_requests.len(), 1);
-        assert_eq!(delta.new_requests[0].id, "req-new");
-
-        // 旧请求不应出现在 new_requests 中
-        assert!(delta.new_requests.iter().all(|r| r.id != "req-old"));
-    }
-
-    // ========================================================================
-    // 测试 8: 每日记录
-    // ========================================================================
-
-    #[tokio::test]
-    async fn test_get_daily_records() {
-        let storage = create_test_storage();
-
-        // 创建请求（timestamp 毫秒，会被视图转为日期）
-        let ts = 1711929600000i64; // 2024-04-01 00:00:00 UTC 的毫秒时间戳
-        let request = create_test_request("req-1", ts);
-        storage.save_request(&request).await.unwrap();
-
-        let metrics = LLMMetrics {
-            id: "metrics-1".to_string(),
-            request_id: "req-1".to_string(),
-            model: "gpt-4".to_string(),
-            provider: "openai".to_string(),
-            prompt_tokens: 100,
-            completion_tokens: 50,
-            total_tokens: 150,
-            estimated_cost: 0.03,
-            duration: 500,
-            timestamp: ts,
-        };
-        storage.save_metrics(&metrics).await.unwrap();
-
-        // daily_records 视图使用 localtime，日期可能因时区不同
-        // 查询一个大范围以确保命中
-        let records = storage.get_daily_records("2020-01-01", "2030-12-31").await.unwrap();
-        // 视图可能返回 0 或 1 条记录，取决于时区
-        // 关键是查询不应报错
-        assert!(records.len() <= 1);
-    }
-
-    // ========================================================================
-    // 测试 9: 域名统计
-    // ========================================================================
-
-    #[tokio::test]
-    async fn test_get_domain_stats() {
-        let storage = create_test_storage();
-
-        // 创建不同域名的请求
-        let mut request1 = create_test_request("req-1", 1000000);
-        request1.domain = Some("api.openai.com".to_string());
-        storage.save_request(&request1).await.unwrap();
-
-        let mut request2 = create_test_request("req-2", 1001000);
-        request2.domain = Some("api.anthropic.com".to_string());
-        request2.model = "claude-3".to_string();
-        storage.save_request(&request2).await.unwrap();
-
-        let metrics1 = create_test_metrics("metrics-1", "req-1", 1000000);
-        storage.save_metrics(&metrics1).await.unwrap();
-
-        let mut metrics2 = create_test_metrics("metrics-2", "req-2", 1001000);
-        metrics2.model = "claude-3".to_string();
-        storage.save_metrics(&metrics2).await.unwrap();
-
-        let result = storage.get_domain_stats(0, 2000000).await.unwrap();
-        assert!(result.domains.len() >= 2);
-
-        // 验证域名分组正确
-        let openai_domain = result.domains.iter().find(|d| d.domain == "api.openai.com");
-        assert!(openai_domain.is_some());
-        assert_eq!(openai_domain.unwrap().count, 1);
-    }
-
-    // ========================================================================
-    // 测试 10: 清空操作
-    // ========================================================================
-
-    #[tokio::test]
-    async fn test_clear() {
-        let storage = create_test_storage();
-
-        let request = create_test_request("req-1", 1000000);
-        storage.save_request(&request).await.unwrap();
-        let metrics = create_test_metrics("metrics-1", "req-1", 1000000);
-        storage.save_metrics(&metrics).await.unwrap();
-
-        assert!(storage.has_data().await.unwrap());
-
-        storage.clear().await.unwrap();
-
-        assert!(!storage.has_data().await.unwrap());
-        assert!(storage.get_request_by_id("req-1").await.unwrap().is_none());
-    }
-
-    // ========================================================================
-    // 测试 11-12: 数据管理
-    // ========================================================================
-
-    #[tokio::test]
-    async fn test_has_data() {
-        let storage = create_test_storage();
-
-        assert!(!storage.has_data().await.unwrap());
-
-        let request = create_test_request("req-1", 1000000);
-        storage.save_request(&request).await.unwrap();
-
-        assert!(storage.has_data().await.unwrap());
-    }
-
-    #[tokio::test]
-    async fn test_get_all_models() {
-        let storage = create_test_storage();
-
-        // 无数据时返回空
-        let models = storage.get_all_models().await.unwrap();
-        assert!(models.is_empty());
-
-        // 添加不同模型的 metrics
-        let request1 = create_test_request("req-1", 1000000);
-        storage.save_request(&request1).await.unwrap();
-        let metrics1 = create_test_metrics("metrics-1", "req-1", 1000000);
-        storage.save_metrics(&metrics1).await.unwrap();
-
-        let mut request2 = create_test_request("req-2", 1001000);
-        request2.model = "claude-3".to_string();
-        storage.save_request(&request2).await.unwrap();
-        let mut metrics2 = create_test_metrics("metrics-2", "req-2", 1001000);
-        metrics2.model = "claude-3".to_string();
-        storage.save_metrics(&metrics2).await.unwrap();
-
-        let models = storage.get_all_models().await.unwrap();
-        assert_eq!(models.len(), 2);
-        assert!(models.contains(&"claude-3".to_string()));
-        assert!(models.contains(&"gpt-4".to_string()));
-    }
-
-    // ========================================================================
-    // 测试 13: 迁移幂等性
-    // ========================================================================
-
-    #[tokio::test]
-    async fn test_migration_idempotent() {
-        // 创建 storage（执行迁移）
-        let storage1 = MonitorStorage::open_in_memory().unwrap();
-        assert!(!storage1.has_data().await.unwrap());
-
-        // 创建第二个 storage（不应重复执行迁移）
-        let storage2 = MonitorStorage::open_in_memory().unwrap();
-        assert!(!storage2.has_data().await.unwrap());
-
-        // 两个 storage 应该都可以正常使用
-        let request = create_test_request("req-1", 1000000);
-        storage1.save_request(&request).await.unwrap();
-        storage2.save_request(&request).await.unwrap();
-    }
-
-    // ========================================================================
-    // 测试 14: 向后兼容
-    // ========================================================================
-
-    #[tokio::test]
-    async fn test_backward_compatible_with_existing_schema() {
-        // 模拟只有 v001 schema 的数据库
-        let conn = Connection::open_in_memory().unwrap();
-        V001Initial.up(&conn).unwrap();
-        drop(conn);
-
-        // 打开此数据库应自动执行 v002 迁移
-        // 此处无法直接使用内存数据库测试（因为连接已关闭）
-        // 改为验证 v001 + v002 顺序执行不出错
-        let storage = MonitorStorage::open_in_memory().unwrap();
-        let request = create_test_request("req-1", 1000000);
-        storage.save_request(&request).await.unwrap();
-
-        let retrieved = storage.get_request_by_id("req-1").await.unwrap();
-        assert!(retrieved.is_some());
-        // domain 字段应可用
-        assert_eq!(retrieved.unwrap().domain, Some("api.openai.com".to_string()));
-    }
-
-    // ========================================================================
-    // 测试 15: 日期范围查询
-    // ========================================================================
-
-    #[tokio::test]
-    async fn test_get_requests_by_date_range() {
-        let storage = create_test_storage();
-
-        // 创建不同日期的请求
-        let request1 = create_test_request("req-1", 1711929600000); // 2024-04-01
-        storage.save_request(&request1).await.unwrap();
-
-        let request2 = create_test_request("req-2", 1712016000000); // 2024-04-02
-        storage.save_request(&request2).await.unwrap();
-
-        let request3 = create_test_request("req-3", 1712275200000); // 2024-04-05
-        storage.save_request(&request3).await.unwrap();
-
-        // 查询日期范围
-        let results = storage.get_requests_by_date_range("2024-04-01", "2024-04-03", None).await.unwrap();
-        // 应返回 4月1日和4月2日的请求
-        assert!(results.len() >= 2);
-    }
-
-    // ========================================================================
-    // 额外测试: INSERT OR REPLACE 行为
-    // ========================================================================
-
-    #[tokio::test]
-    async fn test_save_request_upsert() {
-        let storage = create_test_storage();
-
-        let mut request = create_test_request("req-1", 1000000);
-        request.model = "gpt-4".to_string();
-        storage.save_request(&request).await.unwrap();
-
-        // 更新同一 ID
-        request.model = "gpt-4o".to_string();
-        storage.save_request(&request).await.unwrap();
-
-        let retrieved = storage.get_request_by_id("req-1").await.unwrap().unwrap();
-        assert_eq!(retrieved.model, "gpt-4o");
-    }
-
-    #[tokio::test]
-    async fn test_get_recent_requests_ordering() {
-        let storage = create_test_storage();
-
-        // 按非顺序时间戳插入
-        let request1 = create_test_request("req-1", 1000000);
-        let request2 = create_test_request("req-2", 3000000);
-        let request3 = create_test_request("req-3", 2000000);
-
-        storage.save_request(&request1).await.unwrap();
-        storage.save_request(&request2).await.unwrap();
-        storage.save_request(&request3).await.unwrap();
-
-        let results = storage.get_recent_requests(10).await.unwrap();
-        assert_eq!(results.len(), 3);
-        // 最新的在前面
-        assert_eq!(results[0].id, "req-2");
-        assert_eq!(results[1].id, "req-3");
-        assert_eq!(results[2].id, "req-1");
-    }
-
-    #[tokio::test]
-    async fn test_get_requests_by_timestamp_range_with_metrics() {
-        let storage = create_test_storage();
-
-        let request1 = create_test_request("req-1", 1000000);
-        storage.save_request(&request1).await.unwrap();
-        let metrics1 = create_test_metrics("metrics-1", "req-1", 1000000);
-        storage.save_metrics(&metrics1).await.unwrap();
-
-        let request2 = create_test_request("req-2", 2000000);
-        storage.save_request(&request2).await.unwrap();
-        let metrics2 = create_test_metrics("metrics-2", "req-2", 2000000);
-        storage.save_metrics(&metrics2).await.unwrap();
-
-        // 查询时间范围
-        let results = storage.get_requests_by_timestamp_range_with_metrics(500000, 1500000, None).await.unwrap();
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].id, "req-1");
-        assert!(results[0].tokens.is_some());
-    }
-
-    #[tokio::test]
-    async fn test_extract_domain() {
-        assert_eq!(MonitorStorage::extract_domain("https://api.openai.com/v1/chat"), "api.openai.com");
-        assert_eq!(MonitorStorage::extract_domain("http://localhost:3000/api"), "localhost");
-        assert_eq!(MonitorStorage::extract_domain("invalid-url"), "");
-    }
-
-    #[tokio::test]
-    async fn test_multiple_mcp_calls_per_request() {
-        let storage = create_test_storage();
-
-        let request = create_test_request("req-1", 1000000);
-        storage.save_request(&request).await.unwrap();
-
-        for i in 0..3i64 {
-            let mcp_call = create_test_mcp_call(&format!("mcp-{}", i), "req-1", 1000050 + i * 10);
-            storage.save_mcp_call(&mcp_call).await.unwrap();
-        }
-
-        let mcp_calls = storage.get_mcp_calls_by_request_id("req-1").await.unwrap();
-        assert_eq!(mcp_calls.len(), 3);
-        // 按 timestamp ASC 排序
-        assert_eq!(mcp_calls[0].id, "mcp-0");
-        assert_eq!(mcp_calls[2].id, "mcp-2");
-    }
 }

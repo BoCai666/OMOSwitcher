@@ -23,18 +23,20 @@ const dialogVisible = computed({
 
 // 解析请求体
 const parsedBody = computed(() => {
-  if (!props.requestBody) return null
-  
-  // 如果是字符串，尝试解析
+  if (!props.requestBody) {
+    console.log('[RequestBodyDetailDialog] requestBody 为空:', props.requestBody)
+    return null
+  }
   let body = props.requestBody
+  console.log('[RequestBodyDetailDialog] requestBody 类型:', typeof body, '内容:', body)
   if (typeof body === 'string') {
-    try {
-      body = JSON.parse(body)
-    } catch {
-      return null
+    try { body = JSON.parse(body) } catch { 
+      console.log('[RequestBodyDetailDialog] JSON 解析失败')
+      return null 
     }
   }
-  
+  console.log('[RequestBodyDetailDialog] parsedBody:', body)
+  console.log('[RequestBodyDetailDialog] messages:', body?.messages)
   return body
 })
 
@@ -77,8 +79,16 @@ function formatTokens(tokens: number): string {
 
 // 消息列表
 const messages = computed(() => {
-  const msgs = parsedBody.value?.messages || []
+  const rawMsgs = parsedBody.value?.messages
+  console.log('[RequestBodyDetailDialog] rawMsgs:', rawMsgs, 'isArray:', Array.isArray(rawMsgs))
+  const msgs = Array.isArray(rawMsgs) ? rawMsgs : []
   return msgs.map((msg: any, index: number) => {
+    // 追踪每个 message 的 content
+    console.log(`[RequestBodyDetailDialog] messages[${index}].content:`, msg.content, 'type:', typeof msg.content, 'isArray:', Array.isArray(msg.content))
+    if (Array.isArray(msg.content)) {
+      console.log(`[RequestBodyDetailDialog] messages[${index}].content 数组元素:`, msg.content.map((b: any) => b === null ? 'null' : typeof b))
+    }
+    
     // 解析 content，支持字符串和数组格式
     let contentStr = ''
     let thinkingBlocks: Array<{ type: string; text: string }> = []
@@ -92,6 +102,8 @@ const messages = computed(() => {
       // Anthropic 格式：content 数组可能包含 thinking 和 text 块
       const textParts: string[] = []
       for (const block of msg.content) {
+        // 跳过 null/undefined 元素
+        if (!block || typeof block !== 'object') continue
         if (block.type === 'thinking' && block.thinking) {
           thinkingBlocks.push({ type: 'thinking', text: block.thinking })
         } else if (block.type === 'text' && block.text) {
@@ -131,15 +143,18 @@ const messages = computed(() => {
 
 // 工具定义
 const tools = computed(() => {
-  return parsedBody.value?.tools || []
+  const rawTools = parsedBody.value?.tools
+  return Array.isArray(rawTools) ? rawTools : []
 })
 
 // 工具调用列表
 const toolCalls = computed(() => {
   // 从最后一条 assistant 消息中获取 tool_calls
-  const msgs = parsedBody.value?.messages || []
+  const rawMsgs = parsedBody.value?.messages
+  const msgs = Array.isArray(rawMsgs) ? rawMsgs : []
   const lastAssistantMsg = [...msgs].reverse().find((m: any) => m.role === 'assistant')
-  return lastAssistantMsg?.tool_calls || []
+  const rawToolCalls = lastAssistantMsg?.tool_calls
+  return Array.isArray(rawToolCalls) ? rawToolCalls : []
 })
 
 // 参数设置
@@ -188,7 +203,7 @@ const thinkingParams = computed(() => {
   }
   
   // thinking (Anthropic)
-  if (body.thinking !== undefined) {
+  if (body.thinking !== undefined && body.thinking !== null) {
     if (typeof body.thinking === 'object' && body.thinking.type) {
       params.push({
         key: 'thinking',

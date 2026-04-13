@@ -2,5 +2,5 @@
 // 在编译时生成配置和资源
 
 fn main() {
-    tauri_build::build()
+    tauri_build::build();
 }

@@ -5,6 +5,7 @@
  */
 
 import type { Preset, OhMyOpenCodeConfig } from '@/types'
+import { sortConfigKeys, AGENT_NAMES, CATEGORY_NAMES } from '@/types'
 import { AppError, ErrorCode } from '@/utils/errorHandler'
 import {
   getCurrentPreset as getSettingsCurrentPreset,
@@ -104,9 +105,15 @@ export async function savePreset(
       throw new AppError('无法保存预设：Tauri API 不可用', ErrorCode.PRESET_SAVE_FAILED)
     }
 
-    // 保存到文件系统
+    // 保存到文件系统，按固定顺序排列 agents 和 categories 内部键
+    const sortedConfig: OhMyOpenCodeConfig = {
+      ...preset.config,
+      agents: sortConfigKeys(preset.config.agents, AGENT_NAMES),
+      categories: sortConfigKeys(preset.config.categories, CATEGORY_NAMES)
+    }
+    
     const content = JSON.stringify({
-      config: preset.config,
+      config: sortedConfig,
       description: preset.description,
       createdAt: preset.createdAt,
       updatedAt: preset.updatedAt

@@ -22,7 +22,7 @@ notify = "8"
 notify-debouncer-full = "0.5"
 hudsucker = { version = "0.24", features = ["rcgen-ca", "rustls-client"] }
 rcgen = { version = "0.14", features = ["x509-parser"] }
-rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "aws_lc_rs", "std"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tokio-util = { version = "0.7", features = ["rt"] }
