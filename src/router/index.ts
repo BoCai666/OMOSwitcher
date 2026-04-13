@@ -38,6 +38,14 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/sync',
+    name: 'SyncSettings',
+    component: () => import('@/views/SyncSettings.vue'),
+    meta: {
+      title: '同步设置'
+    }
+  },
+  {
     path: '/monitor',
     name: 'Monitor',
     component: () => MonitorPage,
