@@ -529,13 +529,22 @@ impl MonitorStorage {
             let conn = conn.lock().map_err(|e| format!("获取连接锁失败: {}", e))?;
 
             // 获取基本统计数据
-            let (count, total_tokens, total_cost): (i64, i64, f64) = conn
+            // count 从 requests 表获取（包含所有请求），tokens/cost 从 metrics 表获取
+            let count: i64 = conn
                 .query_row(
-                    "SELECT COUNT(*) as count, COALESCE(SUM(total_tokens), 0) as total_tokens, COALESCE(SUM(estimated_cost), 0) as total_cost FROM metrics WHERE timestamp >= ? AND timestamp <= ?",
+                    "SELECT COUNT(*) FROM requests WHERE timestamp >= ? AND timestamp <= ?",
                     params![start_time, end_time],
-                    |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+                    |row| row.get(0),
                 )
-                .map_err(|e| format!("查询统计失败: {}", e))?;
+                .map_err(|e| format!("查询请求统计失败: {}", e))?;
+
+            let (total_tokens, total_cost): (i64, f64) = conn
+                .query_row(
+                    "SELECT COALESCE(SUM(total_tokens), 0), COALESCE(SUM(estimated_cost), 0) FROM metrics WHERE timestamp >= ? AND timestamp <= ?",
+                    params![start_time, end_time],
+                    |row| Ok((row.get(0)?, row.get(1)?)),
+                )
+                .map_err(|e| format!("查询指标统计失败: {}", e))?;
 
             // 获取按模型分组的统计
             let mut stmt = conn
