@@ -54,6 +54,9 @@ export const useMonitorStore = defineStore('monitor', () => {
   const sseConnected = ref(false)
   let sseDisconnect: (() => void) | null = null
 
+  // 统计刷新防抖定时器
+  let statsDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
   // ========== 计算属性 ==========
 
   // 服务是否运行中
@@ -131,6 +134,17 @@ export const useMonitorStore = defineStore('monitor', () => {
     responseDetails.value.clear()
     mcpCallsCache.value.clear()
     metricsCache.value.clear()
+  }
+
+  // 防抖刷新统计数据（500ms 内多次调用只执行一次）
+  function debouncedFetchStats(): void {
+    if (statsDebounceTimer) {
+      clearTimeout(statsDebounceTimer)
+    }
+    statsDebounceTimer = setTimeout(() => {
+      statsDebounceTimer = null
+      fetchStats()
+    }, 500)
   }
 
   // ========== 公共方法 ==========
@@ -406,6 +420,8 @@ export const useMonitorStore = defineStore('monitor', () => {
         if (!exists) {
           requests.value = [newItem, ...requests.value]
         }
+        // 刷新统计数据（请求数变化）
+        debouncedFetchStats()
       },
 
       onResponse: (response) => {
@@ -419,26 +435,29 @@ export const useMonitorStore = defineStore('monitor', () => {
             duration: response.duration
           }
         }
-        // 缓存响应详情
-        responseDetails.value.set(response.requestId, response)
+        // 注意：不缓存响应详情，因为 SSE 事件只包含部分字段
+        // 完整数据由 loadResponseDetail 从后端获取
+        // 刷新统计数据（响应状态变化）
+        debouncedFetchStats()
       },
 
       onMetrics: (metrics) => {
         console.log('[Monitor] SSE: metrics', metrics.requestId, metrics.totalTokens, 'tokens')
         // 更新列表中对应请求的 tokens 和 cost
+        // 注意：不更新 duration，因为 MetricsEventPayload 没有该字段
+        // duration 已由 onResponse 事件设置
         const index = requests.value.findIndex(r => r.id === metrics.requestId)
         if (index !== -1) {
           requests.value[index] = {
             ...requests.value[index],
             tokens: metrics.totalTokens,
-            cost: metrics.estimatedCost,
-            duration: metrics.duration
+            cost: metrics.estimatedCost
           }
         }
-        // 缓存指标
-        metricsCache.value.set(metrics.requestId, metrics)
-        // 刷新统计数据
-        fetchStats()
+        // 注意：不缓存指标，因为 SSE 事件只包含部分字段
+        // 完整数据由 loadMetrics 从后端获取
+        // 刷新统计数据（token/cost 变化）
+        debouncedFetchStats()
       },
 
       onError: (err) => {
@@ -457,6 +476,10 @@ export const useMonitorStore = defineStore('monitor', () => {
       sseDisconnect()
       sseDisconnect = null
     }
+    if (statsDebounceTimer) {
+      clearTimeout(statsDebounceTimer)
+      statsDebounceTimer = null
+    }
     sseConnected.value = false
     await monitorApi.disconnectSSE()
     console.log('[Monitor] SSE stopped')
@@ -468,6 +491,10 @@ export const useMonitorStore = defineStore('monitor', () => {
   async function reset(): Promise<void> {
     stopAutoRefresh()
     await stopSSE()
+    if (statsDebounceTimer) {
+      clearTimeout(statsDebounceTimer)
+      statsDebounceTimer = null
+    }
     requests.value = []
     stats.value = null
     status.value = { is_running: false, port: 7100 }

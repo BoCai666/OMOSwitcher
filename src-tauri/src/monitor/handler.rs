@@ -417,13 +417,16 @@ impl MonitorHandler {
     }
 
     /// 发射新请求事件
-    fn emit_new_request(&self, request_id: &str, provider: &Provider, model: &str, timestamp: i64) {
+    fn emit_new_request(&self, request: &crate::monitor::types::LLMRequest) {
         if let Some(ref app_handle) = self.app_handle {
             let payload = RequestEventPayload {
-                id: request_id.to_string(),
-                provider: format!("{:?}", provider).to_lowercase(),
-                model: model.to_string(),
-                timestamp,
+                id: request.id.clone(),
+                provider: format!("{:?}", request.provider).to_lowercase(),
+                model: request.model.clone(),
+                method: request.method.clone(),
+                url: request.url.clone(),
+                domain: request.domain.clone(),
+                timestamp: request.timestamp,
             };
             if let Err(e) = app_handle.emit(EVENT_NEW_REQUEST, &payload) {
                 tracing::warn!("发射 monitor:new-request 事件失败: {}", e);
@@ -600,7 +603,7 @@ impl HttpHandler for MonitorHandler {
                         model
                     );
                     // 发射新请求事件
-                    self.emit_new_request(&request_id, &llm_request.provider, &model, llm_request.timestamp);
+                    self.emit_new_request(&llm_request);
                 }
 
                 // MCP 调用检测

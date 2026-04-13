@@ -50,7 +50,7 @@ impl MonitorCommandState {
         let home = dirs::home_dir().ok_or("无法获取用户主目录")?;
         let omoswitcher_dir = home.join(".config").join("omoswitcher");
         let data_dir = omoswitcher_dir.join("monitor");
-        let db_path = omoswitcher_dir.join("monitor.db");
+        let db_path = data_dir.join("monitor.db");
         let config_path = data_dir.join("config.jsonc");
         let certs_dir = data_dir.join("certs");
 

@@ -37,6 +37,9 @@ pub struct RequestEventPayload {
     pub id: String,
     pub provider: String,
     pub model: String,
+    pub method: String,
+    pub url: String,
+    pub domain: Option<String>,
     pub timestamp: i64,
 }
 

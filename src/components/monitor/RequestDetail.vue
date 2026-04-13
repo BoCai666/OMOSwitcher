@@ -333,8 +333,8 @@ watch(() => store.selectedRequestId, () => {
     <!-- 响应体详情弹窗 -->
     <ResponseBodyDetailDialog
       v-model:visible="responseDetailVisible"
-      :response-body="store.selectedResponse?.body || {}"
-      :parsed-body="store.selectedResponse?.parsedBody || {}"
+      :response-body="store.selectedResponse?.body"
+      :parsed-body="store.selectedResponse?.parsedBody"
     />
   </div>
 </template>

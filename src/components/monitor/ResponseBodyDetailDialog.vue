@@ -31,7 +31,8 @@ const dialogVisible = computed({
 
 // 解析响应体
 const parsedResponse = computed(() => {
-  if (props.parsedBody) {
+  // 只有 parsedBody 是有效对象（非空、有实际内容）时才优先使用
+  if (props.parsedBody && typeof props.parsedBody === 'object' && Object.keys(props.parsedBody).length > 0) {
     return props.parsedBody
   }
   
@@ -45,6 +46,11 @@ const parsedResponse = computed(() => {
     } catch {
       return null
     }
+  }
+  
+  // 如果解析结果是 null 或空对象，返回 null
+  if (!body || (typeof body === 'object' && !Array.isArray(body) && Object.keys(body).length === 0)) {
+    return null
   }
   
   return body
