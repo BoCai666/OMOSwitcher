@@ -51,6 +51,17 @@ export enum ErrorCode {
   NETWORK_ERROR = 'NETWORK_ERROR',
   TIMEOUT_ERROR = 'TIMEOUT_ERROR',
 
+  // 同步相关错误
+  SYNC_NOT_CONFIGURED = 'SYNC_NOT_CONFIGURED',
+  SYNC_AUTH_FAILED = 'SYNC_AUTH_FAILED',
+  SYNC_TOKEN_EXPIRED = 'SYNC_TOKEN_EXPIRED',
+  SYNC_UPLOAD_FAILED = 'SYNC_UPLOAD_FAILED',
+  SYNC_DOWNLOAD_FAILED = 'SYNC_DOWNLOAD_FAILED',
+  SYNC_CONFLICT_DETECTED = 'SYNC_CONFLICT_DETECTED',
+  SYNC_NETWORK_ERROR = 'SYNC_NETWORK_ERROR',
+  SYNC_GIST_NOT_FOUND = 'SYNC_GIST_NOT_FOUND',
+  SYNC_RATE_LIMITED = 'SYNC_RATE_LIMITED',
+
   // 未知错误
   UNKNOWN_ERROR = 'UNKNOWN_ERROR'
 }
@@ -80,6 +91,16 @@ const ERROR_MESSAGES: Record<string, string> = {
 
   [ErrorCode.NETWORK_ERROR]: '网络连接失败',
   [ErrorCode.TIMEOUT_ERROR]: '请求超时',
+
+  [ErrorCode.SYNC_NOT_CONFIGURED]: '同步功能未配置',
+  [ErrorCode.SYNC_AUTH_FAILED]: 'GitHub 认证失败',
+  [ErrorCode.SYNC_TOKEN_EXPIRED]: 'GitHub Token 已过期，请重新登录',
+  [ErrorCode.SYNC_UPLOAD_FAILED]: '同步上传失败',
+  [ErrorCode.SYNC_DOWNLOAD_FAILED]: '同步下载失败',
+  [ErrorCode.SYNC_CONFLICT_DETECTED]: '检测到同步冲突',
+  [ErrorCode.SYNC_NETWORK_ERROR]: '同步网络连接失败',
+  [ErrorCode.SYNC_GIST_NOT_FOUND]: '同步 Gist 未找到',
+  [ErrorCode.SYNC_RATE_LIMITED]: 'GitHub API 请求频率超限',
 
   [ErrorCode.UNKNOWN_ERROR]: '未知错误'
 }
