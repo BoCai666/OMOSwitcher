@@ -17,6 +17,14 @@ const DEBOUNCE_DELAY = 1000
 // 状态提示自动清除时间（毫秒）
 const STATUS_CLEAR_DELAY = 5000
 
+// 保存后同步回调（由外部注入，避免 store 循环依赖）
+let afterSaveCallback: (() => void) | null = null
+
+/** 注册保存后回调（由 App.vue 调用，注入同步上传逻辑） */
+export function registerAfterSaveCallback(cb: () => void): void {
+  afterSaveCallback = cb
+}
+
 export const useConfigStore = defineStore('config', () => {
   // ========== 状态 ==========
 
@@ -113,6 +121,9 @@ export const useConfigStore = defineStore('config', () => {
       originalConfig.value = JSON.parse(JSON.stringify(config.value))
 
       scheduleStatusCleanup()
+
+      // 触发保存后回调（如同步上传）
+      afterSaveCallback?.()
     } catch (e) {
       saveStatus.value = 'error'
       error.value = (e as Error).message

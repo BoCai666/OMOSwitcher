@@ -2,6 +2,8 @@
 import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useMonitorStore } from '@/stores/monitor'
+import { useSyncStore } from '@/stores/sync'
+import { registerAfterSaveCallback } from '@/stores/config'
 import { listModels } from '@/services/modelStore'
 import { listPresets } from '@/services/presetStore'
 import { ElMessage } from 'element-plus'
@@ -11,10 +13,27 @@ import SyncConflictDialog from '@/components/SyncConflictDialog.vue'
 
 const route = useRoute()
 const monitorStore = useMonitorStore()
+const syncStore = useSyncStore()
 const startupAttempted = ref(false)
 
 // 从路由 meta 获取页面标题
 const pageTitle = computed(() => (route.meta.title as string) || 'OMOSwitcher')
+
+// 上传防抖定时器
+let uploadDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+// 注册保存后回调：配置保存后自动上传（3 秒防抖）
+registerAfterSaveCallback(() => {
+  if (!syncStore.isLoggedIn) return
+  if (uploadDebounceTimer) clearTimeout(uploadDebounceTimer)
+  uploadDebounceTimer = setTimeout(async () => {
+    try {
+      await syncStore.upload()
+    } catch {
+      // 上传失败静默处理，不阻塞用户
+    }
+  }, 3000)
+})
 
 // 应用启动时自动启动监控服务和预加载数据
 onMounted(async () => {
@@ -49,11 +68,27 @@ onMounted(async () => {
     }).catch((e) => {
       console.warn('[App] Failed to preload presets:', e)
     }),
+    // 检查同步登录状态并自动同步
+    (async () => {
+      try {
+        await syncStore.checkAuth()
+        if (syncStore.isLoggedIn) {
+          await syncStore.sync()
+          console.log('[App] Auto sync completed')
+        }
+      } catch (e) {
+        console.warn('[App] Auto sync failed:', e)
+      }
+    })(),
   ])
 })
 
 // 应用关闭时停止监控服务
 onUnmounted(async () => {
+  if (uploadDebounceTimer) {
+    clearTimeout(uploadDebounceTimer)
+    uploadDebounceTimer = null
+  }
   try {
     await monitorStore.stopMonitor()
     console.log('[App] Monitor service stopped')
