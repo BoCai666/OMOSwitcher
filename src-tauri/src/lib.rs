@@ -11,12 +11,17 @@ pub fn run() {
     let monitor_state = monitor::command::MonitorCommandState::new()
         .expect("Monitor 初始化失败");
 
+    // 初始化 Sync 状态
+    let sync_state = sync::command::SyncCommandState::default();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_keyring::init())
         // 注册 Monitor 状态管理
         .manage(monitor_state)
+        // 注册 Sync 状态管理
+        .manage(sync_state)
         .invoke_handler(tauri::generate_handler![
             // 配置管理命令
             commands::read_config,
@@ -80,6 +85,18 @@ pub fn run() {
             // ========== Monitor 证书操作命令 ==========
             monitor::command::monitor_cert_status,
             monitor::command::monitor_health,
+            // ========== Sync 同步命令 ==========
+            sync::command::sync_get_auth_state,
+            sync::command::sync_start_device_login,
+            sync::command::sync_complete_device_login,
+            sync::command::sync_login_with_pat,
+            sync::command::sync_logout,
+            sync::command::sync_get_status,
+            sync::command::sync_upload,
+            sync::command::sync_download,
+            sync::command::sync_perform,
+            sync::command::sync_resolve_conflict,
+            sync::command::sync_cancel_device_login,
         ])
         .on_window_event(|window, event| {
             // 窗口关闭时的处理
