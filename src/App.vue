@@ -19,6 +19,9 @@ const startupAttempted = ref(false)
 // 从路由 meta 获取页面标题
 const pageTitle = computed(() => (route.meta.title as string) || 'OMOSwitcher')
 
+// 是否为公开页面（不需要布局）
+const isPublicPage = computed(() => route.meta.isPublic === true)
+
 // 上传防抖定时器
 let uploadDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -99,16 +102,28 @@ onUnmounted(async () => {
 </script>
 
 <template>
-  <AppLayout :title="pageTitle">
+  <!-- 公开页面（登录页）：全屏无布局 -->
+  <template v-if="isPublicPage">
     <router-view v-slot="{ Component }">
       <transition name="page-fade" mode="out-in" :duration="100">
         <component :is="Component" />
       </transition>
     </router-view>
-  </AppLayout>
+  </template>
 
-  <!-- 全局同步冲突对话框 -->
-  <SyncConflictDialog />
+  <!-- 需要登录的页面：带布局 -->
+  <template v-else>
+    <AppLayout :title="pageTitle">
+      <router-view v-slot="{ Component }">
+        <transition name="page-fade" mode="out-in" :duration="100">
+          <component :is="Component" />
+        </transition>
+      </router-view>
+    </AppLayout>
+
+    <!-- 全局同步冲突对话框 -->
+    <SyncConflictDialog />
+  </template>
 </template>
 
 <style>

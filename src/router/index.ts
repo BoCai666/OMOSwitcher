@@ -1,12 +1,25 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
+import { useSyncStore } from '@/stores/sync'
 
 // 预加载 Monitor 组件（避免懒加载延迟）
 const MonitorPage = import('@/views/Monitor.vue')
+
+// 本地存储键：是否跳过了登录
+const SKIP_LOGIN_KEY = 'omo-skip-login'
 
 // 路由配置
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
+    name: 'Login',
+    component: () => import('@/views/LoginView.vue'),
+    meta: {
+      title: '登录',
+      isPublic: true // 公开页面，不需要登录
+    }
+  },
+  {
+    path: '/home',
     name: 'Home',
     component: () => import('@/views/Home.vue'),
     meta: {
@@ -38,14 +51,6 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/sync',
-    name: 'SyncSettings',
-    component: () => import('@/views/SyncSettings.vue'),
-    meta: {
-      title: '同步设置'
-    }
-  },
-  {
     path: '/monitor',
     name: 'Monitor',
     component: () => MonitorPage,
@@ -61,10 +66,29 @@ const router = createRouter({
   routes
 })
 
-// 路由守卫 - 设置页面标题
-router.beforeEach((to, _from, next) => {
+// 路由守卫 - 检查登录状态 + 设置页面标题
+router.beforeEach(async (to, _from, next) => {
+  // 设置页面标题
   document.title = (to.meta.title as string) || 'OMOSwitcher'
-  next()
+
+  // 公开页面直接放行
+  if (to.meta.isPublic) {
+    next()
+    return
+  }
+
+  // 检查是否已登录或已跳过
+  const syncStore = useSyncStore()
+  const isLoggedIn = syncStore.isLoggedIn
+  const hasSkipped = localStorage.getItem(SKIP_LOGIN_KEY) === 'true'
+
+  if (isLoggedIn || hasSkipped) {
+    // 已登录或已跳过，允许访问
+    next()
+  } else {
+    // 未登录且未跳过，跳转到登录页
+    next('/')
+  }
 })
 
 export default router
