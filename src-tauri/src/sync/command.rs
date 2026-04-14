@@ -11,14 +11,14 @@ use tokio::sync::Mutex as AsyncMutex;
 use super::auth;
 use super::engine;
 use super::token;
-use super::types::{AuthState, ConflictResolution, SyncResult};
+use super::types::{AuthState, ConflictResolution, OAuthSession, SyncResult};
 
 // ============================================================================
 // Sync 命令状态
 // ============================================================================
 
 /// Sync 命令层共享状态
-/// 用于管理 Device Flow 认证过程中的临时状态
+/// 用于管理认证过程中的临时状态
 #[derive(Clone, Default)]
 pub struct SyncCommandState {
     /// 正在进行的 Device Flow 的 device_code
@@ -26,6 +26,8 @@ pub struct SyncCommandState {
     pub pending_device_code: Arc<AsyncMutex<Option<String>>>,
     /// Device Flow 响应信息（用于取消时清理）
     pub pending_user_code: Arc<AsyncMutex<Option<String>>>,
+    /// OAuth Web Flow 进行中的会话（PKCE 参数）
+    pub pending_oauth: Arc<AsyncMutex<Option<OAuthSession>>>,
 }
 
 // ============================================================================
@@ -394,7 +396,17 @@ pub async fn sync_perform(app: AppHandle) -> Result<String, String> {
     let current_preset = get_current_preset_name().await.unwrap_or_default();
 
     // 执行完整同步
-    let result = engine::full_sync(&app, &token, &presets_json, &current_preset).await?;
+    println!("[Sync:Command] 开始同步，本地预设: {} bytes", presets_json.len());
+    let result = match engine::full_sync(&app, &token, &presets_json, &current_preset).await {
+        Ok(r) => {
+            println!("[Sync:Command] 同步完成: {:?}", r);
+            r
+        }
+        Err(e) => {
+            println!("[Sync:Command] 同步失败: {}", e);
+            return Err(e);
+        }
+    };
 
     // 如果是下载，需要写入本地文件
     if let SyncResult::Downloaded { .. } = &result {
@@ -469,6 +481,117 @@ pub async fn sync_cancel_device_login(state: State<'_, SyncCommandState>) -> Res
         *user_code = None;
     }
 
+    Ok(())
+}
+
+// ============================================================================
+// OAuth Web Flow 命令
+// ============================================================================
+
+/// 启动 OAuth Web Flow 登录
+///
+/// 1. 生成 PKCE 参数 + 启动本地回调服务器
+/// 2. 自动打开浏览器到 GitHub 授权页面
+/// 3. 等待用户授权后换取 token
+/// 4. 返回用户信息 JSON
+#[tauri::command]
+pub async fn sync_start_oauth_login(
+    app: AppHandle,
+    state: State<'_, SyncCommandState>,
+) -> Result<String, String> {
+    // 1. 准备 OAuth 参数并启动回调服务器
+    let (auth_url, session, listener) = auth::prepare_oauth_flow().await?;
+    let expected_state = session.state.clone();
+    let code_verifier = session.code_verifier.clone();
+    println!("[OAuth:Command] prepare_oauth_flow 完成，等待浏览器回调");
+
+    // 保存会话
+    {
+        let mut pending = state.pending_oauth.lock().await;
+        *pending = Some(session);
+    }
+
+    // 自动打开浏览器到 GitHub 授权页面
+    crate::commands::open_url_in_browser(auth_url)?;
+
+    // 等待浏览器回调（最多 5 分钟）
+    println!("[OAuth:Command] 正在等待浏览器回调...");
+    let callback_data = auth::wait_for_callback(listener).await?;
+    println!("[OAuth:Command] 收到回调数据: {}", callback_data);
+
+    // 解析回调数据：格式 "code||state"
+    let (code, received_state) = if let Some((c, s)) = callback_data.split_once("||") {
+        (c.to_string(), Some(s.to_string()))
+    } else {
+        (callback_data, None)
+    };
+    println!("[OAuth:Command] 解析回调 → code 长度: {}, state: {}", code.len(), received_state.as_deref().unwrap_or("无"));
+
+    // CSRF state 验证
+    if let Some(rs) = &received_state {
+        if rs != &expected_state {
+            let mut pending = state.pending_oauth.lock().await;
+            *pending = None;
+            return Err("OAuth state 不匹配，可能遭受 CSRF 攻击，请重试".to_string());
+        }
+        println!("[OAuth:Command] CSRF state 验证通过");
+    }
+
+    // 用 code + code_verifier 换取 access_token
+    println!("[OAuth:Command] 正在用 code 换取 access_token...");
+    let access_token = match auth::exchange_code_for_token(&code, &code_verifier).await {
+        Ok(t) => {
+            println!("[OAuth:Command] access_token 获取成功，长度: {}", t.len());
+            t
+        }
+        Err(e) => {
+            println!("[OAuth:Command] access_token 获取失败: {}", e);
+            return Err(e);
+        }
+    };
+
+    // 验证 token 并获取用户信息
+    println!("[OAuth:Command] 正在验证 token 获取用户信息...");
+    let user = match auth::validate_token(&access_token).await {
+        Ok(u) => {
+            println!("[OAuth:Command] 用户验证成功: {} (id: {})", u.login, u.id);
+            u
+        }
+        Err(e) => {
+            println!("[OAuth:Command] token 验证失败: {}", e);
+            return Err(e);
+        }
+    };
+
+    // 保存 token
+    println!("[OAuth:Command] 正在保存 token...");
+    if let Err(e) = token::save_token(&app, &access_token) {
+        println!("[OAuth:Command] token 保存失败: {}", e);
+        return Err(e);
+    }
+    println!("[OAuth:Command] token 保存成功");
+
+    // 更新同步元数据中的用户信息
+    let mut meta = token::get_sync_meta(&app).await.unwrap_or_default();
+    meta.github_user_id = Some(user.id);
+    meta.github_login = Some(user.login.clone());
+    token::save_sync_meta(&app, &meta).await?;
+
+    // 清除 pending 状态
+    {
+        let mut pending = state.pending_oauth.lock().await;
+        *pending = None;
+    }
+
+    // 返回用户信息 JSON
+    serde_json::to_string(&user).map_err(|e| format!("序列化用户信息失败: {}", e))
+}
+
+/// 取消 OAuth Web Flow 登录
+#[tauri::command]
+pub async fn sync_cancel_oauth_login(state: State<'_, SyncCommandState>) -> Result<(), String> {
+    let mut pending = state.pending_oauth.lock().await;
+    *pending = None;
     Ok(())
 }
 

@@ -32,6 +32,9 @@ hyper-util = { version = "0.1", features = ["tokio"] }
 http-body-util = "0.1"
 rand = "0.8"
 regex = "1"
+sha2 = "0.10"
+base64 = "0.22"
+urlencoding = "2.1"
 
 
 [features]

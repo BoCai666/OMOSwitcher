@@ -56,11 +56,12 @@ export const useSyncStore = defineStore('sync', () => {
     try {
       lastError.value = null
       const state = await syncApi.getAuthState()
+      if (!state) return
       authState.value = state
       if (state.type === 'LoggedIn') {
         // 已登录，加载同步元数据
         const meta = await syncApi.getSyncStatus()
-        syncMetadata.value = meta
+        if (meta) syncMetadata.value = meta
       }
     } catch (e) {
       lastError.value = String(e)
@@ -74,6 +75,9 @@ export const useSyncStore = defineStore('sync', () => {
   async function startDeviceLogin(): Promise<{ user_code: string; verification_uri: string }> {
     lastError.value = null
     const result = await syncApi.startDeviceLogin()
+    if (!result) {
+      throw new Error('启动 Device Flow 登录失败，请检查网络连接后重试')
+    }
     authState.value = {
       type: 'LoggingIn',
       user_code: result.user_code,
@@ -89,9 +93,43 @@ export const useSyncStore = defineStore('sync', () => {
   async function completeDeviceLogin(): Promise<GitHubUser> {
     lastError.value = null
     const user = await syncApi.completeDeviceLogin()
+    if (!user) {
+      throw new Error('完成 Device Flow 登录失败，请重试')
+    }
     authState.value = { type: 'LoggedIn', user }
     // 登录成功后自动触发首次同步
     await sync()
+    return user
+  }
+
+  /**
+   * 使用 OAuth Web Flow 登录（推荐）
+   * 自动打开浏览器，用户只需点击授权按钮
+   * @returns 登录的 GitHub 用户信息
+   */
+  async function loginWithOAuth(): Promise<GitHubUser> {
+    lastError.value = null
+    authState.value = { type: 'OAuthLoggingIn' }
+    let user: GitHubUser
+    try {
+      const result = await syncApi.startOAuthLogin()
+      if (!result) {
+        authState.value = { type: 'LoggedOut' }
+        throw new Error('GitHub 登录失败，请重试')
+      }
+      user = result
+      authState.value = { type: 'LoggedIn', user }
+    } catch (e) {
+      authState.value = { type: 'LoggedOut' }
+      throw e
+    }
+    // 登录成功后自动触发首次同步（失败不影响登录状态）
+    try {
+      await sync()
+    } catch (e) {
+      // 同步失败只记录错误，不重置登录状态
+      lastError.value = String(e)
+    }
     return user
   }
 
@@ -102,10 +140,23 @@ export const useSyncStore = defineStore('sync', () => {
    */
   async function loginWithPat(pat: string): Promise<GitHubUser> {
     lastError.value = null
-    const user = await syncApi.loginWithPat(pat)
-    authState.value = { type: 'LoggedIn', user }
-    // 登录成功后自动触发首次同步
-    await sync()
+    let user: GitHubUser
+    try {
+      const result = await syncApi.loginWithPat(pat)
+      if (!result) {
+        throw new Error('PAT 登录失败，请检查 Token 是否正确')
+      }
+      user = result
+      authState.value = { type: 'LoggedIn', user }
+    } catch (e) {
+      throw e
+    }
+    // 登录成功后自动触发首次同步（失败不影响登录状态）
+    try {
+      await sync()
+    } catch (e) {
+      lastError.value = String(e)
+    }
     return user
   }
 
@@ -131,16 +182,16 @@ export const useSyncStore = defineStore('sync', () => {
     lastError.value = null
     try {
       const result = await syncApi.performSync()
+      if (!result) {
+        throw new Error('执行同步失败')
+      }
       if (result.type === 'Conflict') {
         // 检测到冲突，设置待处理冲突供 UI 处理
         pendingConflict.value = result
-      } else if (result.type === 'Downloaded') {
-        // 下载后需要刷新配置 — 但这里不直接引用 configStore
-        // 留给调用方处理刷新逻辑（或通过事件）
-        syncMetadata.value = await syncApi.getSyncStatus()
       } else {
-        // UpToDate 或 Uploaded
-        syncMetadata.value = await syncApi.getSyncStatus()
+        // UpToDate / Uploaded / Downloaded
+        const meta = await syncApi.getSyncStatus()
+        if (meta) syncMetadata.value = meta
       }
       return result
     } catch (e) {
@@ -161,7 +212,11 @@ export const useSyncStore = defineStore('sync', () => {
     lastError.value = null
     try {
       const result = await syncApi.uploadSync()
-      syncMetadata.value = await syncApi.getSyncStatus()
+      if (!result) {
+        throw new Error('上传同步失败')
+      }
+      const meta = await syncApi.getSyncStatus()
+      if (meta) syncMetadata.value = meta
       return result
     } catch (e) {
       lastError.value = String(e)
@@ -181,7 +236,11 @@ export const useSyncStore = defineStore('sync', () => {
     lastError.value = null
     try {
       const result = await syncApi.downloadSync()
-      syncMetadata.value = await syncApi.getSyncStatus()
+      if (!result) {
+        throw new Error('下载同步失败')
+      }
+      const meta = await syncApi.getSyncStatus()
+      if (meta) syncMetadata.value = meta
       return result
     } catch (e) {
       lastError.value = String(e)
@@ -253,6 +312,7 @@ export const useSyncStore = defineStore('sync', () => {
     checkAuth,
     startDeviceLogin,
     completeDeviceLogin,
+    loginWithOAuth,
     loginWithPat,
     logout,
     sync,

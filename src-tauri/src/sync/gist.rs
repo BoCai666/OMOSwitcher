@@ -124,13 +124,24 @@ pub async fn create_gist(
     
     check_rate_limit(response.headers());
     
-    if response.status() == StatusCode::CREATED {
+    let status = response.status();
+    println!("[Gist] create_gist 响应状态: {}", status);
+    
+    if status == StatusCode::CREATED {
         response
             .json::<GistResponse>()
             .await
             .map_err(|e| format!("解析 Gist 响应失败: {}", e))
     } else {
-        Err(handle_error(response).await)
+        let body = response.text().await.unwrap_or_default();
+        println!("[Gist] create_gist 失败响应体: {}", body);
+        let error_msg = match status {
+            StatusCode::UNAUTHORIZED => "GitHub Token 已过期，请重新登录".to_string(),
+            StatusCode::FORBIDDEN => format!("访问被拒绝: {}", body),
+            StatusCode::NOT_FOUND => format!("创建 Gist 返回 404 (可能是 Token 缺少 gist 权限): {}", body),
+            _ => format!("创建 Gist 失败 ({}): {}", status, body),
+        };
+        Err(error_msg)
     }
 }
 
@@ -190,6 +201,7 @@ pub async fn update_gist(
         .map_err(|e| format!("更新 Gist 请求失败: {}", e))?;
     
     check_rate_limit(response.headers());
+    println!("[Gist] update_gist 响应状态: {}", response.status());
     
     if response.status() == StatusCode::OK {
         response
@@ -205,6 +217,7 @@ pub async fn update_gist(
 ///
 /// DELETE /gists/{gist_id}
 /// 成功返回 204 No Content
+#[allow(dead_code)]
 pub async fn delete_gist(token: &str, gist_id: &str) -> Result<(), String> {
     let client = build_client()?;
     let url = format!("{}/gists/{}", GITHUB_API_BASE, gist_id);
@@ -253,10 +266,10 @@ pub async fn find_omoswitcher_gist(token: &str) -> Result<Option<GistResponse>, 
         .map_err(|e| format!("解析 Gist 列表响应失败: {}", e))?;
     
     // 搜索 description 包含 "OMOSwitcher" 的 gist
-    for gist in gists {
+    for gist in &gists {
         if let Some(ref desc) = gist.description {
             if desc.contains("OMOSwitcher") {
-                return Ok(Some(gist));
+                return Ok(Some(gist.clone()));
             }
         }
     }
@@ -316,17 +329,21 @@ pub async fn upload_presets(
     match gist_id {
         Some(id) if !id.is_empty() => {
             // 已有 gist_id，直接更新
+            println!("[Gist] upload_presets: 更新已有 Gist id={}", id);
             update_gist(token, id, files).await
         }
         _ => {
             // 没有 gist_id，先查找是否存在
+            println!("[Gist] upload_presets: 无 gist_id，查找已有 Gist...");
             match find_omoswitcher_gist(token).await? {
                 Some(existing_gist) => {
                     // 找到现有的，更新它
+                    println!("[Gist] upload_presets: 找到已有 Gist id={}", existing_gist.id);
                     update_gist(token, &existing_gist.id, files).await
                 }
                 None => {
                     // 没有现有的，创建新的
+                    println!("[Gist] upload_presets: 未找到已有 Gist，创建新的");
                     create_gist(token, "OMOSwitcher 预设配置", files).await
                 }
             }
@@ -349,16 +366,20 @@ pub async fn download_presets(
         .get("presets.json")
         .ok_or("Gist 中未找到 presets.json 文件")?
         .content
-        .clone();
+        .clone()
+        .ok_or("Gist 中 presets.json 内容为空")?;
     
     // 尝试提取 metadata.json 获取 current_preset_name
     let current_preset_name = if let Some(metadata_file) = gist.files.get("metadata.json") {
-        match serde_json::from_str::<PresetMetadata>(&metadata_file.content) {
-            Ok(metadata) => Some(metadata.current_preset_name),
-            Err(e) => {
-                tracing::warn!("解析 metadata.json 失败: {}", e);
-                None
-            }
+        match &metadata_file.content {
+            Some(content) => match serde_json::from_str::<PresetMetadata>(content) {
+                Ok(metadata) => Some(metadata.current_preset_name),
+                Err(e) => {
+                    tracing::warn!("解析 metadata.json 失败: {}", e);
+                    None
+                }
+            },
+            None => None,
         }
     } else {
         None

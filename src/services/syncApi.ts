@@ -26,6 +26,7 @@ export interface GitHubUser {
 export type AuthState =
   | { type: 'LoggedOut' }
   | { type: 'LoggingIn'; user_code: string; verification_uri: string }
+  | { type: 'OAuthLoggingIn' }
   | { type: 'LoggedIn'; user: GitHubUser }
 
 /**
@@ -62,33 +63,33 @@ export type ConflictResolution = 'KeepLocal' | 'KeepRemote'
  * 获取认证状态
  * @returns 当前 GitHub 认证状态
  */
-export async function getAuthState(): Promise<AuthState> {
+export async function getAuthState(): Promise<AuthState | null> {
   return withErrorHandling(async () => {
     const json = await invoke<string>('sync_get_auth_state')
     return JSON.parse(json) as AuthState
-  }, '获取认证状态失败') as Promise<AuthState>
+  }, '获取认证状态失败')
 }
 
 /**
  * 启动 Device Flow 登录
  * @returns 用户码和验证链接
  */
-export async function startDeviceLogin(): Promise<{ user_code: string; verification_uri: string }> {
+export async function startDeviceLogin(): Promise<{ user_code: string; verification_uri: string } | null> {
   return withErrorHandling(async () => {
     const json = await invoke<string>('sync_start_device_login')
     return JSON.parse(json) as { user_code: string; verification_uri: string }
-  }, '启动登录失败') as Promise<{ user_code: string; verification_uri: string }>
+  }, '启动登录失败')
 }
 
 /**
  * 完成 Device Flow 登录
  * @returns 登录的 GitHub 用户信息
  */
-export async function completeDeviceLogin(): Promise<GitHubUser> {
+export async function completeDeviceLogin(): Promise<GitHubUser | null> {
   return withErrorHandling(async () => {
     const json = await invoke<string>('sync_complete_device_login')
     return JSON.parse(json) as GitHubUser
-  }, '完成登录失败') as Promise<GitHubUser>
+  }, '完成登录失败')
 }
 
 /**
@@ -96,11 +97,11 @@ export async function completeDeviceLogin(): Promise<GitHubUser> {
  * @param pat GitHub Personal Access Token
  * @returns 登录的 GitHub 用户信息
  */
-export async function loginWithPat(pat: string): Promise<GitHubUser> {
+export async function loginWithPat(pat: string): Promise<GitHubUser | null> {
   return withErrorHandling(async () => {
     const json = await invoke<string>('sync_login_with_pat', { pat })
     return JSON.parse(json) as GitHubUser
-  }, 'PAT 登录失败') as Promise<GitHubUser>
+  }, 'PAT 登录失败')
 }
 
 /**
@@ -117,44 +118,44 @@ export async function logout(): Promise<void> {
  * 获取同步状态
  * @returns 当前同步元数据
  */
-export async function getSyncStatus(): Promise<SyncMetadata> {
+export async function getSyncStatus(): Promise<SyncMetadata | null> {
   return withErrorHandling(async () => {
     const json = await invoke<string>('sync_get_status')
     return JSON.parse(json) as SyncMetadata
-  }, '获取同步状态失败') as Promise<SyncMetadata>
+  }, '获取同步状态失败')
 }
 
 /**
  * 上传预设到 GitHub Gist
  * @returns 同步结果
  */
-export async function uploadSync(): Promise<SyncResult> {
+export async function uploadSync(): Promise<SyncResult | null> {
   return withErrorHandling(async () => {
     const json = await invoke<string>('sync_upload')
     return JSON.parse(json) as SyncResult
-  }, '上传同步失败') as Promise<SyncResult>
+  }, '上传同步失败')
 }
 
 /**
  * 从 GitHub Gist 下载预设
  * @returns 同步结果
  */
-export async function downloadSync(): Promise<SyncResult> {
+export async function downloadSync(): Promise<SyncResult | null> {
   return withErrorHandling(async () => {
     const json = await invoke<string>('sync_download')
     return JSON.parse(json) as SyncResult
-  }, '下载同步失败') as Promise<SyncResult>
+  }, '下载同步失败')
 }
 
 /**
  * 执行自动同步（上传或下载，视情况而定）
  * @returns 同步结果
  */
-export async function performSync(): Promise<SyncResult> {
+export async function performSync(): Promise<SyncResult | null> {
   return withErrorHandling(async () => {
     const json = await invoke<string>('sync_perform')
     return JSON.parse(json) as SyncResult
-  }, '执行同步失败') as Promise<SyncResult>
+  }, '执行同步失败')
 }
 
 /**
@@ -173,5 +174,26 @@ export async function resolveConflict(resolution: ConflictResolution): Promise<v
 export async function cancelDeviceLogin(): Promise<void> {
   await withErrorHandling(async () => {
     await invoke<void>('sync_cancel_device_login')
+  }, '取消登录失败')
+}
+
+/**
+ * 启动 OAuth Web Flow 登录
+ * 自动打开浏览器，等待用户授权后返回用户信息
+ * @returns 登录的 GitHub 用户信息
+ */
+export async function startOAuthLogin(): Promise<GitHubUser | null> {
+  return withErrorHandling(async () => {
+    const json = await invoke<string>('sync_start_oauth_login')
+    return JSON.parse(json) as GitHubUser
+  }, 'GitHub 登录失败')
+}
+
+/**
+ * 取消 OAuth Web Flow 登录
+ */
+export async function cancelOAuthLogin(): Promise<void> {
+  await withErrorHandling(async () => {
+    await invoke<void>('sync_cancel_oauth_login')
   }, '取消登录失败')
 }

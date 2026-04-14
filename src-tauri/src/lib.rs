@@ -42,6 +42,8 @@ pub fn run() {
             commands::write_settings,
             // 启动命令
             commands::launch_opencode,
+            // 浏览器命令
+            commands::open_url_in_browser,
             // 热重载命令
             commands::detect_opencode_server,
             commands::hot_reload_config,
@@ -100,6 +102,8 @@ pub fn run() {
             sync::command::sync_perform,
             sync::command::sync_resolve_conflict,
             sync::command::sync_cancel_device_login,
+            sync::command::sync_start_oauth_login,
+            sync::command::sync_cancel_oauth_login,
         ])
         .on_window_event(|window, event| {
             // 窗口关闭时的处理

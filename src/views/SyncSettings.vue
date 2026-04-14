@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Connection, Upload, Download, Refresh, SwitchButton, CopyDocument } from '@element-plus/icons-vue'
+import { Connection, Upload, Download, Refresh, SwitchButton } from '@element-plus/icons-vue'
 import { useSyncStore } from '@/stores/sync'
 
 const syncStore = useSyncStore()
@@ -16,37 +16,11 @@ const isSyncing = computed(() => syncStore.isSyncing)
 const lastSyncTime = computed(() => syncStore.lastSyncTime)
 const lastError = computed(() => syncStore.lastError)
 
-// 复制文本到剪贴板
-const copyToClipboard = async (text: string) => {
+// OAuth Web Flow 登录（推荐）
+const handleOAuthLogin = async () => {
   try {
-    await navigator.clipboard.writeText(text)
-    ElMessage.success('已复制到剪贴板')
-  } catch {
-    ElMessage.error('复制失败')
-  }
-}
-
-// Device Flow 登录
-const handleDeviceLogin = async () => {
-  try {
-    await syncStore.startDeviceLogin()
-    // authState 自动变为 LoggingIn
-    // 开始轮询完成登录
-    await syncStore.completeDeviceLogin()
+    await syncStore.loginWithOAuth()
     ElMessage.success(`已登录为 ${currentUser.value?.login}`)
-  } catch (e) {
-    if (authState.value.type === 'LoggingIn') {
-      // 轮询失败，回到未登录
-      await syncStore.cancelDeviceLogin()
-    }
-    ElMessage.error(String(e))
-  }
-}
-
-// 取消 Device Flow
-const handleCancelLogin = async () => {
-  try {
-    await syncStore.cancelDeviceLogin()
   } catch (e) {
     ElMessage.error(String(e))
   }
@@ -131,14 +105,6 @@ const formatSyncTime = (time: string | null | undefined) => {
     minute: '2-digit'
   })
 }
-
-// user_code 和 verification_uri（从 LoggingIn 状态提取）
-const userCode = computed(() =>
-  authState.value.type === 'LoggingIn' ? authState.value.user_code : ''
-)
-const verificationUri = computed(() =>
-  authState.value.type === 'LoggingIn' ? authState.value.verification_uri : ''
-)
 </script>
 
 <template>
@@ -158,12 +124,11 @@ const verificationUri = computed(() =>
         <h2 class="auth-title">登录 GitHub</h2>
         <p class="auth-desc">登录后可将预设配置同步到 GitHub Gist，在多台设备间共享配置</p>
 
-        <!-- Device Flow 登录 -->
+        <!-- OAuth Web Flow 登录 -->
         <el-button
           type="primary"
           class="neon-button-primary"
-          :loading="false"
-          @click="handleDeviceLogin"
+          @click="handleOAuthLogin"
         >
           <el-icon><Connection /></el-icon>
           使用 GitHub 登录
@@ -189,31 +154,13 @@ const verificationUri = computed(() =>
       </div>
     </el-card>
 
-    <!-- Device Flow 进行中 -->
-    <el-card v-else-if="authState.type === 'LoggingIn'" class="auth-card">
+    <!-- OAuth 登录进行中 -->
+    <el-card v-else-if="authState.type === 'OAuthLoggingIn'" class="auth-card">
       <div class="auth-section">
         <div class="device-flow-pending">
           <el-icon :size="48" color="var(--app-color-primary)" class="is-loading"><Refresh /></el-icon>
           <h2 class="auth-title">等待 GitHub 授权</h2>
-          <p class="auth-desc">请在浏览器中完成授权</p>
-
-          <!-- 用户码 -->
-          <div class="user-code-block">
-            <span class="user-code-label">验证码</span>
-            <div class="user-code-value" @click="copyToClipboard(userCode)">
-              {{ userCode }}
-              <el-icon class="copy-icon"><CopyDocument /></el-icon>
-            </div>
-          </div>
-
-          <!-- 验证链接 -->
-          <div class="verification-link">
-            <span>请访问 </span>
-            <a class="link-text" @click="copyToClipboard(verificationUri)">{{ verificationUri }}</a>
-            <span> 并输入验证码</span>
-          </div>
-
-          <el-button @click="handleCancelLogin">取消</el-button>
+          <p class="auth-desc">浏览器已打开，请在 GitHub 页面点击授权按钮</p>
         </div>
       </div>
     </el-card>
@@ -393,56 +340,6 @@ const verificationUri = computed(() =>
   gap: 8px;
 }
 
-.user-code-label {
-  font-size: 12px;
-  color: var(--app-text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.user-code-value {
-  font-size: 32px;
-  font-weight: 700;
-  font-family: 'Consolas', 'Monaco', monospace;
-  color: var(--app-color-primary);
-  letter-spacing: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border: 1px dashed var(--app-border-default);
-  border-radius: 8px;
-  transition: all 0.3s ease;
-}
-
-.user-code-value:hover {
-  border-color: var(--app-color-primary);
-  background: rgba(0, 212, 255, 0.05);
-}
-
-.copy-icon {
-  font-size: 16px;
-  color: var(--app-text-tertiary);
-}
-
-.verification-link {
-  font-size: 14px;
-  color: var(--app-text-secondary);
-  text-align: center;
-}
-
-.link-text {
-  color: var(--app-color-primary);
-  cursor: pointer;
-  text-decoration: underline;
-  word-break: break-all;
-}
-
-.link-text:hover {
-  color: var(--app-color-primary-hover);
-}
-
 /* 已登录区域 */
 .logged-in-section {
   display: flex;
@@ -610,16 +507,6 @@ html.cyberpunk .auth-card {
 
 html.cyberpunk .auth-title {
   text-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
-}
-
-html.cyberpunk .user-code-value {
-  text-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
-  border-color: rgba(0, 255, 255, 0.3);
-}
-
-html.cyberpunk .user-code-value:hover {
-  border-color: var(--app-color-primary);
-  box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
 }
 
 html.cyberpunk .sync-status {

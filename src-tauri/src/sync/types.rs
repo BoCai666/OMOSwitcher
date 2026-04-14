@@ -49,9 +49,23 @@ pub enum AuthState {
         user_code: String,
         verification_uri: String,
     },
+    OAuthLoggingIn,
     LoggedIn {
         user: GitHubUser,
     },
+}
+
+/// OAuth Web Flow 进行中的会话状态
+/// 保存在 SyncCommandState 中，用于跨命令传递 PKCE 参数
+#[derive(Debug)]
+pub struct OAuthSession {
+    /// PKCE code_verifier（43+ 字符的随机串）
+    pub code_verifier: String,
+    /// CSRF 防护随机串
+    pub state: String,
+    /// 实际使用的回调地址 http://127.0.0.1:PORT/callback
+    #[allow(dead_code)]
+    pub redirect_uri: String,
 }
 
 // ============================================================================
@@ -59,10 +73,11 @@ pub enum AuthState {
 // ============================================================================
 
 /// Gist 文件
+/// 列表 API 返回的 content 可能为 null 或缺失，只有详情 API 才有完整内容
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GistFile {
-    pub content: String,
-    pub filename: String,
+    pub content: Option<String>,
+    pub filename: Option<String>,
 }
 
 /// 创建/更新 Gist 请求
@@ -85,6 +100,7 @@ pub struct GistResponse {
     pub description: Option<String>,
     pub updated_at: String,
     pub files: HashMap<String, GistFile>,
+    #[allow(dead_code)]
     pub html_url: String,
 }
 

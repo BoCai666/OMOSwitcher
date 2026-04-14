@@ -1132,3 +1132,35 @@ pub async fn hot_reload_config(
     Ok(())
 }
 
+/// 在系统默认浏览器中打开 URL
+#[tauri::command]
+ pub fn open_url_in_browser(url: String) -> Result<(), String> {
+     #[cfg(target_os = "windows")]
+     {
+        // Windows: 使用 rundll32 打开 URL
+        // 避免 cmd /C start 把 URL 中的 & 解释为命令分隔符
+         Command::new("rundll32")
+             .args(["url.dll,FileProtocolHandler", &url])
+             .spawn()
+             .map_err(|e| format!("打开浏览器失败: {}", e))?;
+     }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| format!("打开浏览器失败: {}", e))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| format!("打开浏览器失败: {}", e))?;
+    }
+
+    Ok(())
+}
+
