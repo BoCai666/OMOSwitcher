@@ -279,10 +279,14 @@ pub async fn write_config(content: String) -> Result<(), String> {
 /// 启动 opencode 命令行工具
 /// working_path: 工作目录路径，为空则使用用户主目录
 /// proxy_enabled: 是否启用监控代理
+/// hot_reload_enabled: 是否启用模型热重载
+/// hot_reload_port: 热重载端口（仅 hot_reload_enabled 为 true 时有效）
 #[tauri::command]
 pub fn launch_opencode(
     working_path: String,
     proxy_enabled: bool,
+    hot_reload_enabled: bool,
+    hot_reload_port: u16,
 ) -> Result<(), String> {
     // 从配置读取代理端口
     let (_, proxy_port) = get_monitor_ports();
@@ -307,16 +311,23 @@ pub fn launch_opencode(
             working_path
         };
 
+        // 构建 opencode 命令（热重载时带 --port 参数启动 server）
+        let opencode_cmd = if hot_reload_enabled {
+            format!("opencode --port {}", hot_reload_port)
+        } else {
+            "opencode".to_string()
+        };
+
         // 构建启动命令
         let ps_command = if proxy_enabled {
             // 启用代理模式，设置代理和证书路径
             format!(
-                "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; $env:NODE_EXTRA_CA_CERTS='{}'; cd '{}'; opencode",
-                proxy_url, proxy_url, ca_cert_path, path
+                "$env:HTTP_PROXY='{}'; $env:HTTPS_PROXY='{}'; $env:NODE_EXTRA_CA_CERTS='{}'; cd '{}'; {}",
+                proxy_url, proxy_url, ca_cert_path, path, opencode_cmd
             )
         } else {
             // 直连模式，不设置代理
-            format!("cd '{}'; opencode", path)
+            format!("cd '{}'; {}", path, opencode_cmd)
         };
 
         // 使用 CREATE_NEW_CONSOLE 标志创建独立的控制台窗口

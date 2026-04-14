@@ -18,7 +18,9 @@ export function useOpenCode() {
    */
   const launchOpenCode = async (
     workingPath: string = '',
-    proxyEnabled: boolean = false
+    proxyEnabled: boolean = false,
+    hotReloadEnabled: boolean = false,
+    hotReloadPort: number = 4096
   ) => {
     isLaunching.value = true
     error.value = null
@@ -28,7 +30,9 @@ export function useOpenCode() {
       const { invoke } = await import('@tauri-apps/api/core')
       await invoke('launch_opencode', { 
         workingPath,
-        proxyEnabled
+        proxyEnabled,
+        hotReloadEnabled,
+        hotReloadPort
       })
       // 启动成功，不显示消息，让用户继续操作
     } catch (e) {
