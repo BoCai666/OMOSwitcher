@@ -397,10 +397,10 @@ pub async fn sync_perform(app: AppHandle) -> Result<String, String> {
 
     // 执行完整同步
     println!("[Sync:Command] 开始同步，本地预设: {} bytes", presets_json.len());
-    let result = match engine::full_sync(&app, &token, &presets_json, &current_preset).await {
-        Ok(r) => {
+    let (result, downloaded_json) = match engine::full_sync(&app, &token, &presets_json, &current_preset).await {
+        Ok((r, json)) => {
             println!("[Sync:Command] 同步完成: {:?}", r);
-            r
+            (r, json)
         }
         Err(e) => {
             println!("[Sync:Command] 同步失败: {}", e);
@@ -408,15 +408,9 @@ pub async fn sync_perform(app: AppHandle) -> Result<String, String> {
         }
     };
 
-    // 如果是下载，需要写入本地文件
-    if let SyncResult::Downloaded { .. } = &result {
-        // 注意：full_sync 内部已经处理了元数据更新，但文件写入在 engine 外部
-        // 这里需要重新下载并写入
-        let meta = token::get_sync_meta(&app).await?;
-        if let Some(gist_id) = &meta.gist_id {
-            let (remote_json, _) = engine::perform_download(&token, gist_id).await?;
-            write_presets_from_map(&remote_json).await?;
-        }
+    // 如果是下载，使用引擎返回的内容直接写入本地文件（无需重复 API 调用）
+    if let Some(remote_json) = downloaded_json {
+        write_presets_from_map(&remote_json).await?;
     }
 
     serde_json::to_string(&result)
@@ -444,7 +438,7 @@ pub async fn sync_resolve_conflict(app: AppHandle, resolution: String) -> Result
     let current_preset = get_current_preset_name().await.unwrap_or_default();
 
     // 执行冲突解决
-    engine::resolve_conflict(
+    let downloaded_json = engine::resolve_conflict(
         resolution.clone(),
         &app,
         &token,
@@ -454,12 +448,9 @@ pub async fn sync_resolve_conflict(app: AppHandle, resolution: String) -> Result
     )
     .await?;
 
-    // 如果是保留远端，需要写入本地文件
-    if matches!(resolution, ConflictResolution::KeepRemote) {
-        if let Some(gist_id) = &meta.gist_id {
-            let (remote_json, _) = engine::perform_download(&token, gist_id).await?;
-            write_presets_from_map(&remote_json).await?;
-        }
+    // 如果是保留远端，使用引擎返回的内容直接写入本地文件
+    if let Some(remote_json) = downloaded_json {
+        write_presets_from_map(&remote_json).await?;
     }
 
     Ok(())

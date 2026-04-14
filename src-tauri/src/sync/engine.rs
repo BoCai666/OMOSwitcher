@@ -182,7 +182,7 @@ pub async fn perform_download(
 ///
 /// 根据 ConflictResolution 选择保留本地或远端版本：
 /// - KeepLocal：上传本地版本到远端，覆盖远端
-/// - KeepRemote：从远端下载并更新本地元数据
+/// - KeepRemote：从远端下载并更新本地元数据，返回下载的预设 JSON
 pub async fn resolve_conflict(
     resolution: ConflictResolution,
     app: &tauri::AppHandle,
@@ -190,12 +190,12 @@ pub async fn resolve_conflict(
     gist_id: Option<&str>,
     local_presets_json: &str,
     current_preset_name: &str,
-) -> Result<(), String> {
+) -> Result<Option<String>, String> {
     match resolution {
         ConflictResolution::KeepLocal => {
             // 保留本地：上传本地版本到远端
             perform_upload(app, token, gist_id, local_presets_json, current_preset_name).await?;
-            Ok(())
+            Ok(None)
         }
         ConflictResolution::KeepRemote => {
             // 保留远端：下载远端版本并更新本地元数据
@@ -209,7 +209,7 @@ pub async fn resolve_conflict(
             meta.last_sync_at = Some(current_timestamp());
             token::save_sync_meta(app, &meta).await?;
 
-            Ok(())
+            Ok(Some(remote_json))
         }
     }
 }
@@ -227,7 +227,7 @@ pub async fn full_sync(
     token: &str,
     local_presets_json: &str,
     current_preset_name: &str,
-) -> Result<SyncResult, String> {
+) -> Result<(SyncResult, Option<String>), String> {
     // 1. 加载同步元数据
     let meta = token::get_sync_meta(app).await?;
     println!("[Sync:Engine] 元数据: gist_id={}, last_sync_at={}, hash={}",
@@ -276,20 +276,65 @@ pub async fn full_sync(
             }
         }
         None => {
-            // 没有 Gist，根据本地内容决定
-            let action = if local_hash.is_empty() {
-                SyncAction::NoSync
-            } else {
-                SyncAction::UploadNeeded
-            };
-            println!("[Sync:Engine] 无 Gist ID，同步动作: {:?}", action);
+            // 本地无 Gist ID，但远端可能已有 OMOSwitcher Gist
+            match gist::find_omoswitcher_gist(token).await {
+                Ok(Some(remote_gist)) => {
+                    // 远端已有 Gist，记录并走正常对比流程
+                    println!(
+                        "[Sync:Engine] 本地无 Gist ID，但远端找到已有 Gist id={}",
+                        remote_gist.id
+                    );
+                    valid_gist_id = Some(remote_gist.id.clone());
+
+                    // 本地元数据全空，远端有内容 → 判定为需要下载
+                    let action = detect_sync_action(
+                        &local_hash,
+                        meta.last_sync_content_hash.as_deref(),
+                        &remote_gist.updated_at,
+                        meta.last_sync_at.as_deref(),
+                    );
+                    println!("[Sync:Engine] 同步动作判定: {:?}", action);
+                    action
+                }
+                Ok(None) => {
+                    // 远端也没有 Gist，根据本地内容决定
+                    let action = if local_hash.is_empty() {
+                        SyncAction::NoSync
+                    } else {
+                        SyncAction::UploadNeeded
+                    };
+                    println!("[Sync:Engine] 本地和远端均无 Gist，同步动作: {:?}", action);
+                    action
+                }
+                Err(e) => {
+                    println!("[Sync:Engine] 查找远端 Gist 失败: {}，回退到上传流程", e);
+                    if local_hash.is_empty() {
+                        SyncAction::NoSync
+                    } else {
+                        SyncAction::UploadNeeded
+                    }
+                }
+            }
+        }
+    };
+
+    // 安全检查：本地预设为空但远端有数据时，不应上传空内容覆盖远端
+    let action = if action == SyncAction::UploadNeeded && valid_gist_id.is_some() {
+        let local_empty = local_presets_json.trim().is_empty()
+            || count_presets(local_presets_json) == 0;
+        if local_empty {
+            println!("[Sync:Engine] 本地预设为空但远端有数据，改为下载");
+            SyncAction::DownloadNeeded
+        } else {
             action
         }
+    } else {
+        action
     };
 
     // 5. 执行同步动作
     match action {
-        SyncAction::NoSync => Ok(SyncResult::UpToDate),
+        SyncAction::NoSync => Ok((SyncResult::UpToDate, None)),
         SyncAction::UploadNeeded => {
             let _new_meta = perform_upload(
                 app,
@@ -300,38 +345,45 @@ pub async fn full_sync(
             )
             .await?;
             let count = count_presets(local_presets_json);
-            Ok(SyncResult::Uploaded { count })
+            Ok((SyncResult::Uploaded { count }, None))
         }
         SyncAction::DownloadNeeded => {
-            let gid = meta
-                .gist_id
+            let gid = valid_gist_id
                 .as_ref()
                 .ok_or_else(|| "缺少 Gist ID，无法下载".to_string())?;
             let (remote_json, _) = perform_download(token, gid).await?;
 
-            // 更新同步元数据
+            // 更新同步元数据（包括可能新发现的 gist_id）
             let mut new_meta = meta.clone();
+            new_meta.gist_id = valid_gist_id.clone();
             new_meta.last_sync_content_hash = Some(compute_content_hash(&remote_json));
             new_meta.last_sync_at = Some(current_timestamp());
             token::save_sync_meta(app, &new_meta).await?;
 
             let count = count_presets(&remote_json);
-            Ok(SyncResult::Downloaded { count })
+            Ok((SyncResult::Downloaded { count }, Some(remote_json)))
         }
         SyncAction::Conflict => {
-            let gid = meta
-                .gist_id
+            let gid = valid_gist_id
                 .as_ref()
                 .ok_or_else(|| "缺少 Gist ID，无法报告冲突".to_string())?;
             let remote = gist::read_gist(token, gid).await?;
-            let (remote_json, _) = perform_download(token, gid).await?;
+            // 直接从 Gist 响应中提取预设内容计数，避免额外下载
+            let remote_presets_json = remote
+                .files
+                .get("presets.json")
+                .and_then(|f| f.content.clone())
+                .unwrap_or_default();
 
-            Ok(SyncResult::Conflict {
-                local_updated_at: meta.last_sync_at.clone().unwrap_or_default(),
-                remote_updated_at: remote.updated_at.clone(),
-                local_count: count_presets(local_presets_json),
-                remote_count: count_presets(&remote_json),
-            })
+            Ok((
+                SyncResult::Conflict {
+                    local_updated_at: meta.last_sync_at.clone().unwrap_or_default(),
+                    remote_updated_at: remote.updated_at.clone(),
+                    local_count: count_presets(local_presets_json),
+                    remote_count: count_presets(&remote_presets_json),
+                },
+                None,
+            ))
         }
     }
 }
