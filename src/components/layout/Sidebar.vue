@@ -5,7 +5,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { computed, ref, onMounted } from 'vue'
 import { Sunny, Moon } from '@element-plus/icons-vue'
 import { useTheme } from '@/composables/useTheme'
-import SyncStatusIndicator from '@/components/SyncStatusIndicator.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -28,7 +27,7 @@ const menuItems = [
   { index: '/config', title: '模型配置', icon: 'Setting' },
   { index: '/models', title: '模型管理', icon: 'Collection' },
   { index: '/presets', title: '预设管理', icon: 'Folder' },
-  { index: '/sync', title: '同步设置', icon: 'Connection' },
+
   { index: '/monitor', title: '监控', icon: 'Monitor' }
 ]
 
@@ -77,7 +76,6 @@ const handleSelect = (index: string) => {
 
     <!-- 底部状态区域 -->
     <div class="sidebar-footer">
-      <SyncStatusIndicator />
       <div class="theme-toggle-placeholder" @click="toggleTheme">
         <el-icon :size="16">
           <Sunny v-if="isDark" />

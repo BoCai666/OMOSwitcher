@@ -145,7 +145,7 @@ async function handleLaunchOpenCode() {
   await savePath()
   await saveProxyConfig()
   await saveHotReloadConfig()
-  launchOpenCode(workingPath.value, proxyEnabled.value)
+  launchOpenCode(workingPath.value, proxyEnabled.value, hotReloadEnabled.value, hotReloadPort.value)
   
   // 如果启用了代理，启动证书状态轮询
   if (proxyEnabled.value) {
