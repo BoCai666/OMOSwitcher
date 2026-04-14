@@ -2,16 +2,22 @@
 /**
  * 自定义标题栏组件
  * 提供窗口控制、拖拽移动、双击最大化/还原功能
- * 支持主题切换和主题特定视觉效果
+ * 支持主题特定视觉效果和用户头像入口
  */
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useTheme } from '@/composables/useTheme'
+import { useSyncStore } from '@/stores/sync'
+import UserDrawer from '@/components/UserDrawer.vue'
 
 // 窗口最大化状态
 const isMaximized = ref(false)
 
-// 主题
-const { isCyberpunk, isGlassmorphism, toggleTheme } = useTheme()
+// 主题（仅用于 class 绑定，切换功能在 Sidebar）
+const { isCyberpunk, isGlassmorphism } = useTheme()
+
+// 同步状态
+const syncStore = useSyncStore()
+const showUserDrawer = ref(false)
 
 // 动态导入 Tauri API（避免 SSR 问题）
 let appWindow: Awaited<ReturnType<typeof import('@tauri-apps/api/window').getCurrentWindow>> | null = null
@@ -92,39 +98,27 @@ onUnmounted(() => {
     <!-- 中间：拖拽区域（占位） -->
     <div class="title-bar-center" data-tauri-drag-region></div>
 
-    <!-- 右侧：主题切换 + 窗口控制按钮 -->
+    <!-- 右侧：用户头像 + 窗口控制按钮 -->
     <div class="title-bar-right">
-      <!-- 主题切换按钮 -->
+      <!-- 用户头像按钮 -->
       <button 
-        class="theme-btn"
+        class="user-avatar-btn"
         type="button"
-        :title="isCyberpunk ? '切换到玻璃主题' : '切换到赛博朋克主题'"
-        @click.stop="toggleTheme"
+        :title="syncStore.isLoggedIn ? '用户设置' : '登录'"
+        @click.stop="showUserDrawer = true"
       >
-        <span class="theme-icon-wrapper">
-          <!-- 赛博朋克图标 -->
-          <svg 
-            v-if="isCyberpunk" 
-            class="theme-icon cyberpunk-icon" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <!-- 玻璃拟态图标 -->
-          <svg 
-            v-else 
-            class="theme-icon glass-icon" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-            <path d="M3 9H21" stroke="currentColor" stroke-width="2"/>
-            <path d="M9 21V9" stroke="currentColor" stroke-width="2"/>
+        <!-- 已登录：显示 GitHub 头像 -->
+        <img 
+          v-if="syncStore.isLoggedIn && syncStore.currentUser?.avatar_url" 
+          :src="syncStore.currentUser.avatar_url" 
+          :alt="syncStore.currentUser.login"
+          class="user-avatar-img"
+        />
+        <!-- 未登录：空心人形图标占位 -->
+        <span v-else class="user-avatar-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
           </svg>
         </span>
       </button>
@@ -183,6 +177,9 @@ onUnmounted(() => {
         </svg>
       </button>
     </div>
+
+    <!-- 用户抽屉 -->
+    <UserDrawer v-model="showUserDrawer" />
   </div>
 </template>
 
@@ -307,9 +304,9 @@ html.cyberpunk .logo-icon {
   97% { transform: translate(-1px, -2px); }
 }
 
-/* Cyberpunk 主题按钮样式 */
-html.cyberpunk .theme-btn {
-  width: 40px;
+/* Cyberpunk 用户头像按钮样式 */
+html.cyberpunk .user-avatar-btn {
+  width: 36px;
   height: 36px;
   display: flex;
   align-items: center;
@@ -317,40 +314,51 @@ html.cyberpunk .theme-btn {
   background: transparent;
   border: none;
   cursor: pointer;
-  color: #00ffff;
+  padding: 5px;
   transition: all 0.3s ease;
   position: relative;
 }
 
-html.cyberpunk .theme-btn::before {
-  content: '';
-  position: absolute;
-  inset: 4px 8px;
-  border: 1px solid transparent;
-  transition: all 0.3s ease;
-}
-
-html.cyberpunk .theme-btn:hover {
+html.cyberpunk .user-avatar-btn:hover {
   background: rgba(0, 255, 255, 0.1);
 }
 
-html.cyberpunk .theme-btn:hover::before {
-  border-color: rgba(0, 255, 255, 0.5);
-  box-shadow: 
-    inset 0 0 10px rgba(0, 255, 255, 0.2),
-    0 0 15px rgba(0, 255, 255, 0.4);
+html.cyberpunk .user-avatar-img {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid rgba(0, 255, 255, 0.6);
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+  transition: all 0.3s ease;
 }
 
-html.cyberpunk .cyberpunk-icon {
-  width: 16px;
-  height: 16px;
-  filter: drop-shadow(0 0 5px rgba(0, 255, 255, 0.8));
-  animation: icon-float 2s ease-in-out infinite;
+html.cyberpunk .user-avatar-btn:hover .user-avatar-img {
+  border-color: rgba(0, 255, 255, 0.9);
+  box-shadow: 0 0 16px rgba(0, 255, 255, 0.8);
 }
 
-@keyframes icon-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-2px); }
+html.cyberpunk .user-avatar-placeholder {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(0, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 255, 255, 0.5);
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .user-avatar-placeholder svg {
+  width: 14px;
+  height: 14px;
+}
+
+html.cyberpunk .user-avatar-btn:hover .user-avatar-placeholder {
+  border-color: rgba(0, 255, 255, 0.7);
+  color: rgba(0, 255, 255, 0.8);
+  box-shadow: 0 0 12px rgba(0, 255, 255, 0.3);
 }
 
 html.cyberpunk .window-btn {
@@ -436,9 +444,9 @@ html.glassmorphism .title-bar-left:hover .logo-icon {
   transform: scale(1.05);
 }
 
-/* Glassmorphism 主题按钮样式 */
-html.glassmorphism .theme-btn {
-  width: 40px;
+/* Glassmorphism 用户头像按钮样式 */
+html.glassmorphism .user-avatar-btn {
+  width: 36px;
   height: 36px;
   display: flex;
   align-items: center;
@@ -446,25 +454,50 @@ html.glassmorphism .theme-btn {
   background: transparent;
   border: none;
   cursor: pointer;
-  color: #64748b;
+  padding: 5px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 6px;
+  border-radius: 50%;
   margin: 0 2px;
 }
 
-html.glassmorphism .theme-btn:hover {
-  color: #2563eb;
+html.glassmorphism .user-avatar-btn:hover {
   background: rgba(37, 99, 235, 0.08);
 }
 
-html.glassmorphism .glass-icon {
-  width: 16px;
-  height: 16px;
-  transition: transform 0.3s ease;
+html.glassmorphism .user-avatar-img {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid rgba(37, 99, 235, 0.3);
+  transition: all 0.3s ease;
 }
 
-html.glassmorphism .theme-btn:hover .glass-icon {
-  transform: rotate(15deg);
+html.glassmorphism .user-avatar-btn:hover .user-avatar-img {
+  border-color: rgba(37, 99, 235, 0.6);
+  box-shadow: 0 0 8px rgba(37, 99, 235, 0.2);
+}
+
+html.glassmorphism .user-avatar-placeholder {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(100, 116, 139, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(100, 116, 139, 0.5);
+  transition: all 0.3s ease;
+}
+
+html.glassmorphism .user-avatar-placeholder svg {
+  width: 14px;
+  height: 14px;
+}
+
+html.glassmorphism .user-avatar-btn:hover .user-avatar-placeholder {
+  border-color: rgba(37, 99, 235, 0.5);
+  color: rgba(37, 99, 235, 0.7);
 }
 
 html.glassmorphism .window-btn {
@@ -521,10 +554,42 @@ html.glassmorphism .close-btn:hover {
   height: 12px;
 }
 
-.theme-icon-wrapper {
+/* 用户头像按钮基础样式 */
+.user-avatar-btn {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.user-avatar-img {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  transition: all 0.3s ease;
+}
+
+.user-avatar-placeholder {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(128, 128, 128, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(128, 128, 128, 0.5);
+  transition: all 0.3s ease;
+}
+
+.user-avatar-placeholder svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* ==================== 主题切换过渡动画 ==================== */
@@ -535,7 +600,7 @@ html:not(.reduce-motion) .title-bar {
 html:not(.reduce-motion) .logo-icon,
 html:not(.reduce-motion) .logo-text,
 html:not(.reduce-motion) .window-btn,
-html:not(.reduce-motion) .theme-btn {
+html:not(.reduce-motion) .user-avatar-btn {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -551,10 +616,6 @@ html.reduce-motion .glitch-text::after {
 }
 
 html.reduce-motion .logo-icon {
-  animation: none;
-}
-
-html.reduce-motion .cyberpunk-icon {
   animation: none;
 }
 
