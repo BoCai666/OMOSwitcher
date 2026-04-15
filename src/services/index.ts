@@ -74,3 +74,6 @@ export {
   buildOpenCodeAgentConfig,
   hotReloadConfig
 } from './opencodeApi'
+
+// 额度查询服务
+export { quotaApi } from './quotaApi'

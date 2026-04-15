@@ -23,11 +23,11 @@ onMounted(() => {
 
 // 导航菜单项配置
 const menuItems = [
-  { index: '/', title: '主页', icon: 'House' },
+  { index: '/home', title: '主页', icon: 'House' },
   { index: '/config', title: '模型配置', icon: 'Setting' },
   { index: '/models', title: '模型管理', icon: 'Collection' },
   { index: '/presets', title: '预设管理', icon: 'Folder' },
-
+  { index: '/quota', title: '配额', icon: 'Wallet' },
   { index: '/monitor', title: '监控', icon: 'Monitor' }
 ]
 
@@ -249,6 +249,7 @@ const handleSelect = (index: string) => {
 .menu-list:not(.animation-done) .menu-item:nth-child(3) { animation-delay: 0.15s; }
 .menu-list:not(.animation-done) .menu-item:nth-child(4) { animation-delay: 0.2s; }
 .menu-list:not(.animation-done) .menu-item:nth-child(5) { animation-delay: 0.25s; }
+.menu-list:not(.animation-done) .menu-item:nth-child(6) { animation-delay: 0.3s; }
 </style>
 
 <style>

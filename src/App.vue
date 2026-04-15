@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useMonitorStore } from '@/stores/monitor'
 import { useSyncStore } from '@/stores/sync'
 import { registerAfterSaveCallback } from '@/stores/config'
@@ -12,9 +12,16 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import SyncConflictDialog from '@/components/SyncConflictDialog.vue'
 
 const route = useRoute()
+const router = useRouter()
 const monitorStore = useMonitorStore()
 const syncStore = useSyncStore()
 const startupAttempted = ref(false)
+
+// 等待路由就绪，避免初始渲染时 meta 未解析导致布局闪烁
+const isRouterReady = ref(false)
+router.isReady().then(() => {
+  isRouterReady.value = true
+})
 
 // 从路由 meta 获取页面标题
 const pageTitle = computed(() => (route.meta.title as string) || 'OMOSwitcher')
@@ -102,8 +109,11 @@ onUnmounted(async () => {
 </script>
 
 <template>
+  <!-- 路由未就绪时显示空白，避免布局闪烁 -->
+  <div v-if="!isRouterReady" class="app-boot-placeholder"></div>
+
   <!-- 公开页面（登录页）：全屏无布局 -->
-  <template v-if="isPublicPage">
+  <template v-else-if="isPublicPage">
     <router-view v-slot="{ Component }">
       <transition name="page-fade" mode="out-in" :duration="100">
         <component :is="Component" />
@@ -143,6 +153,13 @@ html, body {
 #app {
   width: 100%;
   height: 100%;
+}
+
+/* 启动占位：路由解析前保持背景色一致，避免白屏闪烁 */
+.app-boot-placeholder {
+  width: 100%;
+  height: 100%;
+  background-color: var(--app-bg-base, #f5f5f5);
 }
 
 /* 页面切换过渡动画（快速版本） */

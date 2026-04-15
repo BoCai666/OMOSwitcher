@@ -51,6 +51,14 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/quota',
+    name: 'Quota',
+    component: () => import('@/views/QuotaView.vue'),
+    meta: {
+      title: '配额'
+    }
+  },
+  {
     path: '/monitor',
     name: 'Monitor',
     component: () => MonitorPage,
@@ -67,9 +75,30 @@ const router = createRouter({
 })
 
 // 路由守卫 - 检查登录状态 + 设置页面标题
+// 标记是否已从后端检查过认证状态（仅在首次导航时检查一次）
+let authChecked = false
+
 router.beforeEach(async (to, _from, next) => {
   // 设置页面标题
   document.title = (to.meta.title as string) || 'OMOSwitcher'
+
+  const syncStore = useSyncStore()
+
+  // 首次导航时从后端获取真实认证状态（keyring token）
+  if (!authChecked) {
+    authChecked = true
+    await syncStore.checkAuth()
+  }
+
+  const isLoggedIn = syncStore.isLoggedIn
+  const hasSkipped = localStorage.getItem(SKIP_LOGIN_KEY) === 'true'
+  const isAuthenticated = isLoggedIn || hasSkipped
+
+  // 已认证用户访问登录页，直接跳转主页
+  if (to.meta.isPublic && isAuthenticated) {
+    next('/home')
+    return
+  }
 
   // 公开页面直接放行
   if (to.meta.isPublic) {
@@ -77,12 +106,7 @@ router.beforeEach(async (to, _from, next) => {
     return
   }
 
-  // 检查是否已登录或已跳过
-  const syncStore = useSyncStore()
-  const isLoggedIn = syncStore.isLoggedIn
-  const hasSkipped = localStorage.getItem(SKIP_LOGIN_KEY) === 'true'
-
-  if (isLoggedIn || hasSkipped) {
+  if (isAuthenticated) {
     // 已登录或已跳过，允许访问
     next()
   } else {

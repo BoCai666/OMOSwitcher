@@ -3,6 +3,7 @@
 
 mod commands;
 mod monitor;
+mod quota;
 mod sync;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -63,6 +64,9 @@ pub fn run() {
             commands::get_custom_provider_ids,
             commands::add_custom_provider,
             commands::delete_custom_provider,
+            // 额度查询命令
+            quota::fetch_all_provider_quotas,
+            quota::zhipu::fetch_zhipu_usage_details,
             // ========== Monitor 数据查询命令 ==========
             monitor::command::monitor_get_requests,
             monitor::command::monitor_get_request,

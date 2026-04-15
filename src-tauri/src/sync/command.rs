@@ -422,9 +422,12 @@ pub async fn sync_perform(app: AppHandle) -> Result<String, String> {
 /// 根据 resolution 选择保留本地或远端版本
 #[tauri::command]
 pub async fn sync_resolve_conflict(app: AppHandle, resolution: String) -> Result<(), String> {
-    // 解析 resolution
-    let resolution: ConflictResolution = serde_json::from_str(&resolution)
-        .map_err(|e| format!("解析冲突解决策略失败: {}", e))?;
+    // 解析 resolution（前端传入纯字符串，非 JSON 编码）
+    let resolution = match resolution.as_str() {
+        "KeepLocal" => ConflictResolution::KeepLocal,
+        "KeepRemote" => ConflictResolution::KeepRemote,
+        _ => return Err(format!("未知的冲突解决策略: {}", resolution)),
+    };
 
     // 获取 token
     let token = token::get_token(&app)?

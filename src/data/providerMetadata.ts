@@ -147,6 +147,14 @@ export const PROVIDER_METADATA: Record<string, ProviderMetadata> = {
     iconPath: 'M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z',
     iconViewBox: '0 0 24 24',
     description: '多模型聚合'
+  },
+  minimax: {
+    displayName: 'MiniMax',
+    color: '#2563eb',
+    gradient: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+    iconPath: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z',
+    iconViewBox: '0 0 24 24',
+    description: 'MiniMax AI'
   }
 }
 

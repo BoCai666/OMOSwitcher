@@ -271,6 +271,15 @@ export const useSyncStore = defineStore('sync', () => {
   }
 
   /**
+   * 取消 OAuth Web Flow 登录
+   */
+  async function cancelOAuthLogin(): Promise<void> {
+    lastError.value = null
+    await syncApi.cancelOAuthLogin()
+    authState.value = { type: 'LoggedOut' }
+  }
+
+  /**
    * 清除错误状态
    */
   function clearError(): void {
@@ -320,6 +329,7 @@ export const useSyncStore = defineStore('sync', () => {
     download,
     resolveConflict,
     cancelDeviceLogin,
+    cancelOAuthLogin,
     clearError,
     clearPendingConflict,
     reset,

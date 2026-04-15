@@ -19,6 +19,9 @@ const { isCyberpunk, isGlassmorphism } = useTheme()
 const syncStore = useSyncStore()
 const showUserDrawer = ref(false)
 
+// 头像按钮 ref，用于下拉面板定位
+const avatarBtnRef = ref<HTMLButtonElement | null>(null)
+
 // 动态导入 Tauri API（避免 SSR 问题）
 let appWindow: Awaited<ReturnType<typeof import('@tauri-apps/api/window').getCurrentWindow>> | null = null
 
@@ -102,6 +105,7 @@ onUnmounted(() => {
     <div class="title-bar-right">
       <!-- 用户头像按钮 -->
       <button 
+        ref="avatarBtnRef"
         class="user-avatar-btn"
         type="button"
         :title="syncStore.isLoggedIn ? '用户设置' : '登录'"
@@ -114,11 +118,11 @@ onUnmounted(() => {
           :alt="syncStore.currentUser.login"
           class="user-avatar-img"
         />
-        <!-- 未登录：空心人形图标占位 -->
+        <!-- 未登录：头像占位 -->
         <span v-else class="user-avatar-placeholder">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M5.5 19.5a7.5 7.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
           </svg>
         </span>
       </button>
@@ -178,8 +182,8 @@ onUnmounted(() => {
       </button>
     </div>
 
-    <!-- 用户抽屉 -->
-    <UserDrawer v-model="showUserDrawer" />
+    <!-- 用户下拉面板 -->
+    <UserDrawer v-model="showUserDrawer" :trigger-ref="avatarBtnRef" />
   </div>
 </template>
 
@@ -342,7 +346,8 @@ html.cyberpunk .user-avatar-placeholder {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  border: 1.5px dashed rgba(0, 255, 255, 0.4);
+  background: rgba(0, 255, 255, 0.08);
+  border: 1px solid rgba(0, 255, 255, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -356,9 +361,10 @@ html.cyberpunk .user-avatar-placeholder svg {
 }
 
 html.cyberpunk .user-avatar-btn:hover .user-avatar-placeholder {
-  border-color: rgba(0, 255, 255, 0.7);
+  border-color: rgba(0, 255, 255, 0.5);
   color: rgba(0, 255, 255, 0.8);
-  box-shadow: 0 0 12px rgba(0, 255, 255, 0.3);
+  background: rgba(0, 255, 255, 0.12);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
 }
 
 html.cyberpunk .window-btn {
@@ -482,11 +488,12 @@ html.glassmorphism .user-avatar-placeholder {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  border: 1.5px dashed rgba(100, 116, 139, 0.4);
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(100, 116, 139, 0.5);
+  color: rgba(37, 99, 235, 0.5);
   transition: all 0.3s ease;
 }
 
@@ -496,8 +503,9 @@ html.glassmorphism .user-avatar-placeholder svg {
 }
 
 html.glassmorphism .user-avatar-btn:hover .user-avatar-placeholder {
-  border-color: rgba(37, 99, 235, 0.5);
+  border-color: rgba(37, 99, 235, 0.4);
   color: rgba(37, 99, 235, 0.7);
+  background: rgba(37, 99, 235, 0.12);
 }
 
 html.glassmorphism .window-btn {
@@ -579,11 +587,11 @@ html.glassmorphism .close-btn:hover {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  border: 1.5px dashed rgba(128, 128, 128, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(128, 128, 128, 0.5);
+  background: var(--app-bg-hover);
+  color: var(--app-text-tertiary);
   transition: all 0.3s ease;
 }
 

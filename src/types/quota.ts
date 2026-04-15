@@ -1,0 +1,121 @@
+/**
+ * 额度类型定义
+ * 归一化显示模型，不是原始 API 响应
+ */
+
+/**
+ * 额度查询状态
+ */
+export type QuotaStatus = 'loading' | 'success' | 'error'
+
+/**
+ * 额度类型
+ */
+export type QuotaType = 'balance' | 'token_limit' | 'unsupported'
+
+/**
+ * 智谱 limits 数组中的单项
+ */
+export interface ZhipuLimitItem {
+  /** 限制类型: TOKENS_LIMIT | TIME_LIMIT | RATE_LIMIT | TIMES_LIMIT | SESSION_LIMIT */
+  type: string
+  /** 已用百分比 (0-100) */
+  percentage?: number
+  /** 总额度 */
+  usage?: number
+  /** 当前已用 */
+  currentValue?: number
+  /** 剩余 */
+  remaining?: number
+  /** 下次重置时间 (ISO 时间戳字符串或毫秒时间戳) */
+  nextResetTime?: string | number
+}
+
+/**
+ * 单个供应商的额度信息（统一格式）
+ * 与 Rust 端 ProviderQuota 结构体一一对应
+ */
+export interface ProviderQuota {
+  /** 供应商 ID */
+  providerId: string
+  /** 供应商显示名 */
+  providerName: string
+  /** 额度类型 */
+  quotaType: QuotaType
+  /** 查询状态 */
+  status: QuotaStatus
+  /** 错误信息 */
+  errorMessage?: string | null
+
+  // 余额型字段
+  /** 总余额 */
+  totalBalance?: number | null
+  /** 可用余额 */
+  availableBalance?: number | null
+  /** 已用余额 */
+  usedBalance?: number | null
+  /** 货币类型 (CNY / USD) */
+  currency?: string | null
+
+  // 配额型字段
+  /** 已用配额百分比 (0-100) */
+  quotaPercentage?: number | null
+  /** 已用 token */
+  quotaUsed?: number | null
+  /** 总限额 token */
+  quotaLimit?: number | null
+  /** 下次重置时间 */
+  resetTime?: string | null
+
+  // OpenRouter 专用
+  /** 每日用量 (USD) */
+  dailyUsage?: number | null
+  /** 每周用量 (USD) */
+  weeklyUsage?: number | null
+  /** 每月用量 (USD) */
+  monthlyUsage?: number | null
+  /** 消费上限 (USD) */
+  spendingLimit?: number | null
+  /** 剩余额度 (USD) */
+  limitRemaining?: number | null
+
+  // 智谱 (Zhipu/GLM) 专用
+  /** 完整 limits 数组，供详情弹窗使用 */
+  limits?: ZhipuLimitItem[] | null
+}
+
+/**
+ * 模型用量单项
+ */
+export interface ModelUsageItem {
+  /** 模型代码 */
+  modelCode: string
+  /** 用量 (tokens) */
+  usage: number
+  /** 输入 tokens */
+  inputTokens?: number | null
+  /** 输出 tokens */
+  outputTokens?: number | null
+}
+
+/**
+ * 工具用量单项
+ */
+export interface ToolUsageItem {
+  /** 工具名称 */
+  toolName: string
+  /** 使用次数 */
+  usage: number
+}
+
+/**
+ * 智谱用量详情（点击卡片时查询）
+ */
+export interface ZhipuUsageDetails {
+  /** 供应商 ID */
+  providerId: string
+  /** 模型用量列表 (近 7 天) */
+  modelUsage: ModelUsageItem[]
+  /** 工具用量列表 (近 7 天) */
+  toolUsage: ToolUsageItem[]
+}
