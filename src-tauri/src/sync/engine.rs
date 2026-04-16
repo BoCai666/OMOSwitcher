@@ -121,20 +121,6 @@ fn count_presets(json: &str) -> usize {
     }
 }
 
-/// 生成当前 UTC 时间戳（RFC 3339 格式）
-fn current_timestamp() -> String {
-    time::OffsetDateTime::now_utc()
-        .format(&time::format_description::well_known::Rfc3339)
-        .unwrap_or_else(|_| {
-            // 降级：使用 Unix 时间戳
-            let secs = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs();
-            format!("unix:{}", secs)
-        })
-}
-
 // ============================================================================
 // 异步同步操作
 // ============================================================================
@@ -170,11 +156,11 @@ pub async fn perform_upload(
 
 /// 从 Gist 下载预设
 ///
-/// 调 gist::download_presets → 返回 (presets_json, current_preset_name)
+/// 调 gist::download_presets → 返回 (presets_json, current_preset_name, updated_at)
 pub async fn perform_download(
     token: &str,
     gist_id: &str,
-) -> Result<(String, Option<String>), String> {
+) -> Result<(String, Option<String>, String), String> {
     gist::download_presets(token, gist_id).await
 }
 
@@ -201,12 +187,12 @@ pub async fn resolve_conflict(
             // 保留远端：下载远端版本并更新本地元数据
             let gist_id_str = gist_id
                 .ok_or_else(|| "缺少 Gist ID，无法下载远端版本".to_string())?;
-            let (remote_json, _) = perform_download(token, gist_id_str).await?;
+            let (remote_json, _, remote_updated_at) = perform_download(token, gist_id_str).await?;
 
             // 更新本地同步元数据
             let mut meta = token::get_sync_meta(app).await.unwrap_or_default();
             meta.last_sync_content_hash = Some(compute_content_hash(&remote_json));
-            meta.last_sync_at = Some(current_timestamp());
+            meta.last_sync_at = Some(remote_updated_at);
             token::save_sync_meta(app, &meta).await?;
 
             Ok(Some(remote_json))
@@ -351,13 +337,13 @@ pub async fn full_sync(
             let gid = valid_gist_id
                 .as_ref()
                 .ok_or_else(|| "缺少 Gist ID，无法下载".to_string())?;
-            let (remote_json, _) = perform_download(token, gid).await?;
+            let (remote_json, _, remote_updated_at) = perform_download(token, gid).await?;
 
             // 更新同步元数据（包括可能新发现的 gist_id）
             let mut new_meta = meta.clone();
             new_meta.gist_id = valid_gist_id.clone();
             new_meta.last_sync_content_hash = Some(compute_content_hash(&remote_json));
-            new_meta.last_sync_at = Some(current_timestamp());
+            new_meta.last_sync_at = Some(remote_updated_at);
             token::save_sync_meta(app, &new_meta).await?;
 
             let count = count_presets(&remote_json);

@@ -353,12 +353,13 @@ pub async fn upload_presets(
 
 /// 从 Gist 下载预设
 ///
-/// 返回 (presets_json, current_preset_name)
+/// 返回 (presets_json, current_preset_name, updated_at)
 pub async fn download_presets(
     token: &str,
     gist_id: &str,
-) -> Result<(String, Option<String>), String> {
+) -> Result<(String, Option<String>, String), String> {
     let gist = read_gist(token, gist_id).await?;
+    let updated_at = gist.updated_at.clone();
     
     // 提取 presets.json 内容
     let presets_json = gist
@@ -385,7 +386,7 @@ pub async fn download_presets(
         None
     };
     
-    Ok((presets_json, current_preset_name))
+    Ok((presets_json, current_preset_name, updated_at))
 }
 
 // ============================================================================

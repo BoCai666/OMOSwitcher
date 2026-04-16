@@ -358,7 +358,7 @@ pub async fn sync_download(app: AppHandle) -> Result<String, String> {
         .ok_or_else(|| "没有关联的 Gist，请先上传预设".to_string())?;
 
     // 执行下载
-    let (presets_json, _) = engine::perform_download(&token, gist_id).await?;
+    let (presets_json, _, remote_updated_at) = engine::perform_download(&token, gist_id).await?;
 
     // 写入本地预设文件
     let count = write_presets_from_map(&presets_json).await?;
@@ -366,11 +366,7 @@ pub async fn sync_download(app: AppHandle) -> Result<String, String> {
     // 更新同步元数据
     let mut new_meta = meta.clone();
     new_meta.last_sync_content_hash = Some(engine::compute_content_hash(&presets_json));
-    new_meta.last_sync_at = Some(
-        time::OffsetDateTime::now_utc()
-            .format(&time::format_description::well_known::Rfc3339)
-            .unwrap_or_else(|_| String::new()),
-    );
+    new_meta.last_sync_at = Some(remote_updated_at);
     token::save_sync_meta(&app, &new_meta).await?;
 
     // 返回结果
