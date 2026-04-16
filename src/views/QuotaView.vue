@@ -117,6 +117,11 @@ function getProviderColor(providerId: string): string {
   return getProviderMetadata(providerId).color
 }
 
+// 获取供应商完整元数据（图标、渐变等）
+function getProviderMeta(providerId: string) {
+  return getProviderMetadata(providerId)
+}
+
 // 判断是否为智谱供应商（含 Z.ai，两者共用同一套监控 API）
 function isZhipuProvider(providerId: string): boolean {
   const id = providerId.toLowerCase()
@@ -260,12 +265,14 @@ onMounted(() => {
         <div class="title-icon-wrapper">
           <el-icon class="title-icon"><Coin /></el-icon>
         </div>
-        <span class="title-text">配额</span>
+        <div class="header-title-group">
+          <span class="title-text">配额</span>
+          <span v-if="lastRefreshTime" class="refresh-time">
+            最后刷新: {{ lastRefreshTime }}
+          </span>
+        </div>
       </div>
       <div class="header-right">
-        <span v-if="lastRefreshTime" class="refresh-time">
-          最后刷新: {{ lastRefreshTime }}
-        </span>
         <el-button
           class="refresh-btn"
           :icon="Refresh"
@@ -290,8 +297,13 @@ onMounted(() => {
         >
           <div
             class="quota-card"
-            :style="{ '--provider-color': getProviderColor(quota.providerId) }"
+            :style="{
+              '--provider-color': getProviderColor(quota.providerId)
+            }"
           >
+            <!-- 底部发光线装饰 -->
+            <div class="card-glow-line"></div>
+
             <!-- 加载状态 -->
             <div v-if="quota.status === 'loading'" class="card-body">
               <el-skeleton :rows="4" animated />
@@ -308,7 +320,12 @@ onMounted(() => {
 
             <!-- 不支持额度查询 -->
             <div v-else-if="quota.quotaType === 'unsupported'" class="card-body unsupported-state">
-              <div class="card-provider">
+              <div class="card-header-row">
+                <div class="provider-icon-badge" :style="{ background: getProviderMeta(quota.providerId).gradient || getProviderColor(quota.providerId) }">
+                  <svg :viewBox="getProviderMeta(quota.providerId).iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
+                    <path :d="getProviderMeta(quota.providerId).iconPath" />
+                  </svg>
+                </div>
                 <span class="provider-name">{{ quota.providerName }}</span>
               </div>
               <el-empty
@@ -320,13 +337,21 @@ onMounted(() => {
 
             <!-- 余额型 -->
             <div v-else-if="quota.quotaType === 'balance'" class="card-body clickable" @click="openDetail(quota)">
-              <div class="card-provider">
+              <div class="card-header-row">
+                <div class="provider-icon-badge" :style="{ background: getProviderMeta(quota.providerId).gradient || getProviderColor(quota.providerId) }">
+                  <svg :viewBox="getProviderMeta(quota.providerId).iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
+                    <path :d="getProviderMeta(quota.providerId).iconPath" />
+                  </svg>
+                </div>
                 <span class="provider-name">{{ quota.providerName }}</span>
               </div>
               <div class="balance-main">
                 <span class="balance-label">配额使用</span>
                 <span class="balance-value">
                   {{ getBalancePercentage(quota).toFixed(1) }}%
+                </span>
+                <span class="balance-detail">
+                  {{ formatBalance(quota.usedBalance, quota.currency) }} / {{ formatBalance(quota.totalBalance, quota.currency) }}
                 </span>
               </div>
               <el-progress
@@ -336,20 +361,28 @@ onMounted(() => {
                 :show-text="false"
                 class="quota-progress"
               />
-              <div v-if="quota.resetTime" class="reset-info">
+              <div v-if="quota.resetTime" class="reset-badge">
                 {{ formatResetTime(quota.resetTime) }}
               </div>
             </div>
 
             <!-- 配额型 (token_limit) -->
             <div v-else-if="quota.quotaType === 'token_limit'" class="card-body clickable" @click="openDetail(quota)">
-              <div class="card-provider">
+              <div class="card-header-row">
+                <div class="provider-icon-badge" :style="{ background: getProviderMeta(quota.providerId).gradient || getProviderColor(quota.providerId) }">
+                  <svg :viewBox="getProviderMeta(quota.providerId).iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
+                    <path :d="getProviderMeta(quota.providerId).iconPath" />
+                  </svg>
+                </div>
                 <span class="provider-name">{{ quota.providerName }}</span>
               </div>
               <div class="balance-main">
                 <span class="balance-label">配额使用</span>
                 <span class="balance-value">
                   {{ quota.quotaPercentage != null ? `${quota.quotaPercentage.toFixed(1)}%` : '--' }}
+                </span>
+                <span class="balance-detail">
+                  {{ formatTokens(quota.quotaUsed) }} / {{ formatTokens(quota.quotaLimit) }}
                 </span>
               </div>
               <el-progress
@@ -359,7 +392,7 @@ onMounted(() => {
                 :show-text="false"
                 class="quota-progress"
               />
-              <div v-if="quota.resetTime" class="reset-info">
+              <div v-if="quota.resetTime" class="reset-badge">
                 {{ formatResetTime(quota.resetTime) }}
               </div>
             </div>
@@ -669,20 +702,16 @@ onMounted(() => {
   padding: 20px 24px;
   background: var(--app-bg-card);
   border: 1px solid var(--app-border-default);
-  border-radius: 20px;
+  border-radius: 16px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: var(--app-shadow-md);
   margin-bottom: 24px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .page-header:hover {
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: var(--app-shadow-lg);
   border-color: var(--app-color-primary);
 }
 
@@ -690,6 +719,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 14px;
+}
+
+.header-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .title-icon-wrapper {
@@ -701,9 +736,7 @@ onMounted(() => {
   background: linear-gradient(135deg, var(--app-color-primary) 20%, transparent 100%);
   border: 1px solid var(--app-color-primary);
   border-radius: 12px;
-  box-shadow:
-    0 0 20px rgba(0, 212, 255, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
 }
 
 .title-icon {
@@ -735,7 +768,6 @@ onMounted(() => {
   font-weight: 600;
 }
 
-/* 刷新按钮 - hover 时保持文字可读 */
 .refresh-btn:not(.el-button--primary) {
   background: transparent !important;
   border: 1px solid var(--app-border-default) !important;
@@ -749,83 +781,143 @@ onMounted(() => {
   color: #ffffff !important;
 }
 
-/* 暗色模式下刷新按钮 hover 使用紫色，避免天蓝色 */
-html.dark .refresh-btn:not(.el-button--primary):hover {
-  background: var(--app-color-purple) !important;
-  border-color: var(--app-color-purple) !important;
-}
-
-/* ==================== 额度卡片 ==================== */
+/* ==================== 额度卡片网格 ==================== */
 .quota-grid {
   margin-bottom: 24px;
 }
 
-/* el-row 子元素底部间距 */
 .quota-grid :deep(.el-col) {
   margin-bottom: 20px;
 }
 
+/* ==================== 额度卡片 ==================== */
 .quota-card {
+  position: relative;
   background: var(--app-bg-card);
   border: 1px solid var(--app-border-default);
   border-top: 3px solid var(--provider-color, var(--app-color-primary));
   border-radius: 16px;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--app-shadow-sm);
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* 品牌色渐变背景层（真实 DOM，不走伪元素） */
+.card-brand-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--provider-gradient, var(--provider-color, var(--app-color-primary)));
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 0.3s ease;
+}
+
+.quota-card:hover .card-brand-bg {
+  opacity: 0.15;
+}
+
 .quota-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+  transform: translateY(-4px);
+  box-shadow: var(--app-shadow-hover);
   border-color: var(--provider-color, var(--app-color-primary));
   border-top-color: var(--provider-color, var(--app-color-primary));
 }
 
+/* 底部发光线装饰 */
+.card-glow-line {
+  position: absolute;
+  bottom: 0;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: var(--provider-color, var(--app-color-primary));
+  border-radius: 2px;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 0 8px var(--provider-color, var(--app-color-primary));
+  transition: all 0.3s ease;
+}
+
+.quota-card:hover .card-glow-line {
+  opacity: 0.7;
+  left: 5%;
+  right: 5%;
+  height: 3px;
+  box-shadow: 0 0 12px var(--provider-color, var(--app-color-primary));
+}
+
 /* ==================== 卡片内容 ==================== */
 .card-body {
+  position: relative;
+  z-index: 1;
   padding: 20px;
-  min-height: 160px;
+  min-height: 170px;
   display: flex;
   flex-direction: column;
 }
 
-/* 供应商名 */
-.card-provider {
+/* 供应商头部行 */
+.card-header-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 16px;
+}
+
+.provider-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .provider-name {
   font-size: 14px;
   font-weight: 600;
   color: var(--app-text-primary);
+  line-height: 1.3;
 }
 
-/* 余额主数字 */
+/* 余额主区域 */
 .balance-main {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 12px;
+  gap: 2px;
+  margin-bottom: 14px;
+  flex: 1;
 }
 
 .balance-label {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--app-text-tertiary);
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 500;
 }
 
 .balance-value {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
   color: var(--app-text-primary);
-  font-family: 'Consolas', 'Monaco', monospace;
+  font-family: 'Consolas', 'Monaco', 'JetBrains Mono', monospace;
   line-height: 1.2;
+  letter-spacing: -0.5px;
+}
+
+.balance-detail {
+  font-size: 12px;
+  color: var(--app-text-tertiary);
+  font-family: 'Consolas', 'Monaco', monospace;
+  margin-top: 2px;
 }
 
 /* 进度条 */
@@ -834,40 +926,26 @@ html.dark .refresh-btn:not(.el-button--primary):hover {
 }
 
 .quota-progress :deep(.el-progress-bar__outer) {
-  border-radius: 4px;
+  border-radius: 6px;
   background: var(--app-bg-hover);
+  height: 8px;
 }
 
 .quota-progress :deep(.el-progress-bar__inner) {
+  border-radius: 6px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 重置时间徽章 */
+.reset-badge {
+  margin-top: auto;
+  padding: 3px 8px;
   border-radius: 4px;
-}
-
-/* 用量明细 */
-.usage-details {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  font-size: 12px;
-  color: var(--app-text-secondary);
-}
-
-/* OpenRouter 周/月/日用量 */
-.usage-periods {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--app-border-default);
   font-size: 11px;
   color: var(--app-text-tertiary);
-}
-
-/* 重置时间 */
-.reset-info {
-  margin-top: 8px;
-  font-size: 11px;
-  color: var(--app-text-tertiary);
+  background: var(--app-bg-hover);
+  display: inline-block;
+  width: fit-content;
 }
 
 /* ==================== 错误状态 ==================== */
@@ -920,7 +998,7 @@ html.dark .refresh-btn:not(.el-button--primary):hover {
   border-radius: 16px;
 }
 
-/* ==================== 骨架屏覆盖 ==================== */
+/* ==================== 骨架屏 ==================== */
 .card-body :deep(.el-skeleton) {
   width: 100%;
 }
@@ -931,11 +1009,12 @@ html.dark .refresh-btn:not(.el-button--primary):hover {
 }
 
 .card-body.clickable:hover {
-  background: var(--app-bg-hover);
+  background: color-mix(in srgb, var(--provider-color, var(--app-color-primary)) 5%, transparent);
 }
 
 .card-body.clickable:active {
-  background: var(--app-bg-active, rgba(255, 255, 255, 0.04));
+  background: color-mix(in srgb, var(--provider-color, var(--app-color-primary)) 10%, transparent);
+  transform: scale(0.99);
 }
 
 /* ==================== 详情弹窗 ==================== */
@@ -1035,6 +1114,359 @@ html.dark .refresh-btn:not(.el-button--primary):hover {
   text-align: right;
 }
 
+/* ============================================================
+   赛博朋克主题 - 霓虹发光效果
+   ============================================================ */
+
+/* 页面头部 */
+html.cyberpunk .page-header {
+  background: rgba(18, 18, 31, 0.9);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  box-shadow:
+    0 0 20px rgba(0, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+html.cyberpunk .page-header:hover {
+  border-color: rgba(0, 255, 255, 0.5);
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .title-icon-wrapper {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.2) 0%, rgba(0, 255, 255, 0.05) 100%);
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+}
+
+html.cyberpunk .title-icon {
+  color: #00ffff;
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+}
+
+html.cyberpunk .title-text {
+  color: #e0e0ff;
+  text-shadow: 0 0 6px rgba(0, 255, 255, 0.2);
+}
+
+/* 刷新按钮 - 赛博朋克 */
+html.cyberpunk .refresh-btn:not(.el-button--primary) {
+  border: 1px solid rgba(0, 255, 255, 0.3) !important;
+  color: #00ffff !important;
+  background: rgba(0, 255, 255, 0.05) !important;
+}
+
+html.cyberpunk .refresh-btn:not(.el-button--primary):hover {
+  background: rgba(0, 255, 255, 0.15) !important;
+  border-color: rgba(0, 255, 255, 0.6) !important;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+  color: #00ffff !important;
+}
+
+/* 卡片 - 赛博朋克 */
+html.cyberpunk .quota-card {
+  background: rgba(18, 18, 31, 0.85);
+  border: 1px solid rgba(0, 255, 255, 0.1);
+  border-top: 3px solid var(--provider-color, #00ffff);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+html.cyberpunk .card-brand-bg {
+  opacity: 0.12;
+}
+
+html.cyberpunk .quota-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--provider-color, rgba(0, 255, 255, 0.5));
+  border-top-color: var(--provider-color, #00ffff);
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.5),
+    0 0 20px var(--provider-color, rgba(0, 255, 255, 0.3));
+}
+
+html.cyberpunk .quota-card:hover .card-brand-bg {
+  opacity: 0.22;
+}
+
+/* 底部发光线 - 赛博朋克增强 */
+html.cyberpunk .card-glow-line {
+  opacity: 0.5;
+  height: 2px;
+  box-shadow: 0 0 10px var(--provider-color, #00ffff);
+}
+
+html.cyberpunk .quota-card:hover .card-glow-line {
+  opacity: 1;
+  height: 3px;
+  box-shadow: 0 0 15px var(--provider-color, #00ffff);
+}
+
+/* 供应商名 - 赛博朋克 */
+html.cyberpunk .provider-name {
+  color: #e0e0ff;
+}
+
+/* 百分比数字 - 赛博朋克霓虹 */
+html.cyberpunk .balance-value {
+  color: #00ffff;
+  text-shadow: 0 0 12px rgba(0, 255, 255, 0.5);
+}
+
+/* 进度条 - 赛博朋克 */
+html.cyberpunk .quota-progress :deep(.el-progress-bar__outer) {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* 重置徽章 - 赛博朋克 */
+html.cyberpunk .reset-badge {
+  background: rgba(0, 255, 255, 0.08);
+  border: 1px solid rgba(0, 255, 255, 0.15);
+  color: rgba(0, 255, 255, 0.7);
+}
+
+/* 可点击卡片悬停 - 赛博朋克 */
+html.cyberpunk .card-body.clickable:hover {
+  background: rgba(0, 255, 255, 0.04);
+}
+
+/* 弹窗 - 赛博朋克 */
+html.cyberpunk .detail-dialog :deep(.el-dialog) {
+  background: rgba(18, 18, 31, 0.95);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  box-shadow: 0 0 40px rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .detail-dialog :deep(.el-dialog__header) {
+  border-bottom: 1px solid rgba(0, 255, 255, 0.15);
+}
+
+html.cyberpunk .detail-dialog :deep(.el-dialog__title) {
+  color: #00ffff;
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+html.cyberpunk .detail-section-title {
+  color: #00ffff;
+  border-left-color: #00ffff;
+  text-shadow: 0 0 6px rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .detail-descriptions :deep(.el-descriptions__label) {
+  background: rgba(0, 255, 255, 0.05);
+  color: #8080a0;
+  border-color: rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .detail-descriptions :deep(.el-descriptions__content) {
+  color: #e0e0ff;
+  border-color: rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .detail-table :deep(.el-table__header th) {
+  background: rgba(0, 255, 255, 0.06) !important;
+  color: rgba(0, 255, 255, 0.7);
+  border-color: rgba(0, 255, 255, 0.1);
+}
+
+html.cyberpunk .detail-table :deep(.el-table__body td) {
+  color: #e0e0ff;
+  border-color: rgba(0, 255, 255, 0.06);
+}
+
+html.cyberpunk .detail-table :deep(.el-table__row:hover > td) {
+  background: rgba(0, 255, 255, 0.05) !important;
+}
+
+/* 空状态 - 赛博朋克 */
+html.cyberpunk .empty-state {
+  background: rgba(18, 18, 31, 0.85);
+  border: 1px solid rgba(0, 255, 255, 0.1);
+}
+
+/* 错误图标 - 赛博朋克 */
+html.cyberpunk .error-icon {
+  color: #ff3366;
+  text-shadow: 0 0 10px rgba(255, 51, 102, 0.5);
+}
+
+/* ============================================================
+   玻璃拟态主题 - 毛玻璃效果
+   ============================================================ */
+
+/* 页面头部 */
+html.glassmorphism .page-header {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(37, 99, 235, 0.08);
+}
+
+html.glassmorphism .page-header:hover {
+  border-color: rgba(37, 99, 235, 0.4);
+  box-shadow: 0 12px 40px rgba(37, 99, 235, 0.12);
+}
+
+html.glassmorphism .title-icon-wrapper {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(37, 99, 235, 0.05) 100%);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+
+html.glassmorphism .title-icon {
+  color: #2563eb;
+}
+
+html.glassmorphism .title-text {
+  color: #1e293b;
+}
+
+/* 刷新按钮 - 玻璃拟态 */
+html.glassmorphism .refresh-btn:not(.el-button--primary) {
+  border: 1px solid rgba(37, 99, 235, 0.25) !important;
+  color: #2563eb !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(8px);
+}
+
+html.glassmorphism .refresh-btn:not(.el-button--primary):hover {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+}
+
+/* 卡片 - 玻璃拟态 */
+html.glassmorphism .quota-card {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  border-top: 3px solid var(--provider-color, #2563eb);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+html.glassmorphism .card-brand-bg {
+  opacity: 0.05;
+}
+
+html.glassmorphism .quota-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--provider-color, rgba(37, 99, 235, 0.35));
+  border-top-color: var(--provider-color, #2563eb);
+  box-shadow: 0 12px 32px rgba(37, 99, 235, 0.12);
+}
+
+html.glassmorphism .quota-card:hover .card-brand-bg {
+  opacity: 0.10;
+}
+
+/* 底部发光线 - 玻璃拟态 */
+html.glassmorphism .card-glow-line {
+  opacity: 0.2;
+}
+
+html.glassmorphism .quota-card:hover .card-glow-line {
+  opacity: 0.5;
+}
+
+/* 供应商名 - 玻璃拟态 */
+html.glassmorphism .provider-name {
+  color: #1e293b;
+}
+
+/* 百分比数字 - 玻璃拟态 */
+html.glassmorphism .balance-value {
+  color: #1e293b;
+}
+
+/* 进度条 - 玻璃拟态 */
+html.glassmorphism .quota-progress :deep(.el-progress-bar__outer) {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+/* 重置徽章 - 玻璃拟态 */
+html.glassmorphism .reset-badge {
+  background: rgba(37, 99, 235, 0.06);
+  color: #475569;
+}
+
+/* 可点击卡片悬停 - 玻璃拟态 */
+html.glassmorphism .card-body.clickable:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* 弹窗 - 玻璃拟态 */
+html.glassmorphism .detail-dialog :deep(.el-dialog) {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  box-shadow: 0 12px 48px rgba(37, 99, 235, 0.12);
+}
+
+html.glassmorphism .detail-dialog :deep(.el-dialog__header) {
+  border-bottom: 1px solid rgba(37, 99, 235, 0.12);
+}
+
+html.glassmorphism .detail-dialog :deep(.el-dialog__title) {
+  color: #1e293b;
+}
+
+html.glassmorphism .detail-section-title {
+  color: #1e293b;
+  border-left-color: #2563eb;
+}
+
+html.glassmorphism .detail-descriptions :deep(.el-descriptions__label) {
+  background: rgba(37, 99, 235, 0.04);
+  color: #94a3b8;
+}
+
+html.glassmorphism .detail-descriptions :deep(.el-descriptions__content) {
+  color: #1e293b;
+}
+
+html.glassmorphism .detail-table :deep(.el-table__header th) {
+  background: rgba(37, 99, 235, 0.04) !important;
+  color: #475569;
+}
+
+html.glassmorphism .detail-table :deep(.el-table__body td) {
+  color: #1e293b;
+}
+
+html.glassmorphism .detail-table :deep(.el-table__row:hover > td) {
+  background: rgba(37, 99, 235, 0.04) !important;
+}
+
+/* 空状态 - 玻璃拟态 */
+html.glassmorphism .empty-state {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(37, 99, 235, 0.15);
+}
+
+/* ============================================================
+   暗色模式 - 补充样式
+   ============================================================ */
+html.dark .refresh-btn:not(.el-button--primary):hover {
+  background: var(--app-color-purple) !important;
+  border-color: var(--app-color-purple) !important;
+}
+
+html.dark .quota-card {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .quota-card:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+html.dark .card-body.clickable:hover {
+  background: color-mix(in srgb, var(--provider-color, var(--app-color-primary)) 6%, transparent);
+}
+
 /* ==================== 响应式 ==================== */
 @media (max-width: 768px) {
   .quota-page {
@@ -1054,7 +1486,7 @@ html.dark .refresh-btn:not(.el-button--primary):hover {
   }
 
   .balance-value {
-    font-size: 24px;
+    font-size: 26px;
   }
 }
 </style>
