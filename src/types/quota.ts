@@ -85,27 +85,37 @@ export interface ProviderQuota {
 }
 
 /**
- * 模型用量单项
+ * 单个模型的 7 天 token 汇总
  */
-export interface ModelUsageItem {
-  /** 模型代码 */
-  modelCode: string
-  /** 用量 (tokens) */
-  usage: number
-  /** 输入 tokens */
-  inputTokens?: number | null
-  /** 输出 tokens */
-  outputTokens?: number | null
+export interface ModelSummaryItem {
+  /** 模型名称 (如 "GLM-5.1") */
+  modelName: string
+  /** 该模型 7 天总 token 数 */
+  totalTokens: number
 }
 
 /**
- * 工具用量单项
+ * 模型用量汇总（来自 /api/monitor/usage/model-usage 的 totalUsage）
  */
-export interface ToolUsageItem {
-  /** 工具名称 */
-  toolName: string
-  /** 使用次数 */
-  usage: number
+export interface ModelUsageSummary {
+  /** 总调用次数 */
+  totalCalls: number
+  /** 总 token 消耗 */
+  totalTokens: number
+  /** 各模型 token 消耗明细 */
+  modelList: ModelSummaryItem[]
+}
+
+/**
+ * 工具用量汇总（来自 /api/monitor/usage/tool-usage 的 totalUsage）
+ */
+export interface ToolUsageSummary {
+  /** 联网搜索次数 */
+  networkSearchCount: number
+  /** 网页阅读次数 */
+  webReadCount: number
+  /** 仓库搜索次数 */
+  zreadCount: number
 }
 
 /**
@@ -114,8 +124,8 @@ export interface ToolUsageItem {
 export interface ZhipuUsageDetails {
   /** 供应商 ID */
   providerId: string
-  /** 模型用量列表 (近 7 天) */
-  modelUsage: ModelUsageItem[]
-  /** 工具用量列表 (近 7 天) */
-  toolUsage: ToolUsageItem[]
+  /** 模型用量汇总 (近 7 天) */
+  modelUsage: ModelUsageSummary
+  /** 工具用量汇总 (近 7 天) */
+  toolUsage: ToolUsageSummary
 }

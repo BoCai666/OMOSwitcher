@@ -95,6 +95,8 @@ pub(crate) async fn parse_zhipu_response(provider: &ProviderInfo, resp: reqwest:
 
             // 从 limits 数组中查找 TOKENS_LIMIT 类型的配额
             let mut quota_percentage: Option<f64> = None;
+            let mut quota_used: Option<f64> = None;
+            let mut quota_limit: Option<f64> = None;
             let mut reset_time: Option<String> = None;
             let limits_value = data_obj.get("limits").cloned();
 
@@ -103,6 +105,15 @@ pub(crate) async fn parse_zhipu_response(provider: &ProviderInfo, resp: reqwest:
                     let lim_type = lim.get("type").and_then(|v| v.as_str()).unwrap_or("");
                     if lim_type == "TOKENS_LIMIT" {
                         quota_percentage = lim.get("percentage").and_then(|v| v.as_f64());
+                        // 提取已用量和总额度
+                        quota_used = lim.get("currentValue").and_then(|v| v.as_f64());
+                        quota_limit = lim.get("usage").and_then(|v| v.as_f64());
+                        // 如果 API 未直接返回 currentValue，从 percentage 和 usage 反推已用量
+                        if quota_used.is_none() {
+                            if let (Some(pct), Some(limit)) = (quota_percentage, quota_limit) {
+                                quota_used = Some(limit * pct / 100.0);
+                            }
+                        }
                         // 解析 nextResetTime（可能是毫秒时间戳数字或 ISO 字符串）
                         if let Some(reset) = lim.get("nextResetTime") {
                             if let Some(s) = reset.as_str() {
@@ -135,8 +146,8 @@ pub(crate) async fn parse_zhipu_response(provider: &ProviderInfo, resp: reqwest:
                 used_balance: None,
                 currency: None,
                 quota_percentage,
-                quota_used: None,
-                quota_limit: None,
+                quota_used,
+                quota_limit,
                 reset_time,
                 daily_usage: None,
                 weekly_usage: None,
@@ -157,26 +168,44 @@ pub(crate) async fn parse_zhipu_response(provider: &ProviderInfo, resp: reqwest:
 #[serde(rename_all = "camelCase")]
 struct ZhipuUsageDetails {
     provider_id: String,
-    /// 模型用量列表
-    model_usage: Vec<ModelUsageItem>,
-    /// 工具用量列表
-    tool_usage: Vec<ToolUsageItem>,
+    /// 7天模型用量汇总
+    model_usage: ModelUsageSummary,
+    /// 7天工具用量汇总
+    tool_usage: ToolUsageSummary,
 }
 
+/// 模型用量汇总（来自 /api/monitor/usage/model-usage）
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct ModelUsageItem {
-    model_code: String,
-    usage: f64,
-    input_tokens: Option<f64>,
-    output_tokens: Option<f64>,
+struct ModelUsageSummary {
+    /// 总调用次数
+    total_calls: u64,
+    /// 总 token 消耗
+    total_tokens: u64,
+    /// 各模型 token 消耗明细
+    model_list: Vec<ModelSummaryItem>,
 }
 
+/// 单个模型的 7 天 token 汇总
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct ToolUsageItem {
-    tool_name: String,
-    usage: f64,
+struct ModelSummaryItem {
+    /// 模型名称 (如 "GLM-5.1")
+    model_name: String,
+    /// 该模型 7 天总 token 数
+    total_tokens: u64,
+}
+
+/// 工具用量汇总（来自 /api/monitor/usage/tool-usage）
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ToolUsageSummary {
+    /// 联网搜索次数
+    network_search_count: u64,
+    /// 网页阅读次数
+    web_read_count: u64,
+    /// 仓库搜索次数
+    zread_count: u64,
 }
 
 /// 查询智谱供应商的模型用量和工具用量详情
@@ -398,7 +427,9 @@ pub async fn fetch_zhipu_usage_details(provider_id: String) -> Result<String, St
     let model_usage = parse_model_usage(&model_data);
     let tool_usage = parse_tool_usage(&tool_data);
 
-    tracing::info!("[额度详情] 解析结果: 模型 {} 条, 工具 {} 条", model_usage.len(), tool_usage.len());
+    tracing::info!("[额度详情] 解析结果: 模型 {} 次调用/{} tokens ({} 个模型明细), 工具 搜索:{}/阅读:{}/仓库:{}",
+        model_usage.total_calls, model_usage.total_tokens, model_usage.model_list.len(),
+        tool_usage.network_search_count, tool_usage.web_read_count, tool_usage.zread_count);
 
     let details = ZhipuUsageDetails {
         provider_id: provider_id.clone(),
@@ -433,49 +464,77 @@ fn find_provider_info(provider_id: &str) -> Result<ProviderInfo, String> {
 }
 
 /// 解析模型用量响应
-fn parse_model_usage(data: &Option<serde_json::Value>) -> Vec<ModelUsageItem> {
+/// 实际 API 响应: { data: { totalUsage: { totalModelCallCount, totalTokensUsage, modelSummaryList: [{modelName, totalTokens}] } } }
+fn parse_model_usage(data: &Option<serde_json::Value>) -> ModelUsageSummary {
+    let empty = ModelUsageSummary {
+        total_calls: 0,
+        total_tokens: 0,
+        model_list: Vec::new(),
+    };
+
     let data = match data {
         Some(d) => d,
-        None => return Vec::new(),
+        None => return empty,
     };
 
-    let items = match data.get("data").and_then(|d| d.get("modelUsage")).and_then(|v| v.as_array()) {
-        Some(arr) => arr,
-        None => return Vec::new(),
+    let data_obj = match data.get("data") {
+        Some(d) => d,
+        None => return empty,
     };
 
-    items.iter().filter_map(|item| {
-        let model_code = item.get("modelCode").and_then(|v| v.as_str())?.to_string();
-        let usage = item.get("usage").and_then(|v| v.as_f64()).unwrap_or(0.0);
-        let input_tokens = item.get("inputTokens").and_then(|v| v.as_f64());
-        let output_tokens = item.get("outputTokens").and_then(|v| v.as_f64());
-        Some(ModelUsageItem { model_code, usage, input_tokens, output_tokens })
-    }).collect()
+    let total_usage = data_obj.get("totalUsage");
+
+    let total_calls = total_usage
+        .and_then(|t| t.get("totalModelCallCount"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let total_tokens = total_usage
+        .and_then(|t| t.get("totalTokensUsage"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+
+    // 提取各模型汇总 (modelSummaryList)
+    let model_list = total_usage
+        .and_then(|t| t.get("modelSummaryList"))
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter().filter_map(|item| {
+                let model_name = item.get("modelName").and_then(|v| v.as_str())?.to_string();
+                let total_tokens = item.get("totalTokens").and_then(|v| v.as_u64()).unwrap_or(0);
+                Some(ModelSummaryItem { model_name, total_tokens })
+            }).collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    ModelUsageSummary { total_calls, total_tokens, model_list }
 }
 
 /// 解析工具用量响应
-fn parse_tool_usage(data: &Option<serde_json::Value>) -> Vec<ToolUsageItem> {
+/// 实际 API 响应: { data: { x_time: [...], totalUsage: { totalNetworkSearchCount, totalWebReadMcpCount, totalZreadMcpCount } } }
+fn parse_tool_usage(data: &Option<serde_json::Value>) -> ToolUsageSummary {
     let data = match data {
         Some(d) => d,
-        None => return Vec::new(),
+        None => return ToolUsageSummary { network_search_count: 0, web_read_count: 0, zread_count: 0 },
     };
 
-    let items = match data.get("data").and_then(|d| d.as_array()) {
-        Some(arr) => arr,
-        None => match data.get("data").and_then(|d| d.get("toolUsage")).and_then(|v| v.as_array()) {
-            Some(arr) => arr,
-            None => return Vec::new(),
-        }
+    let data_obj = match data.get("data") {
+        Some(d) => d,
+        None => return ToolUsageSummary { network_search_count: 0, web_read_count: 0, zread_count: 0 },
     };
 
-    items.iter().filter_map(|item| {
-        let tool_name = item.get("toolName")
-            .or_else(|| item.get("name"))
-            .and_then(|v| v.as_str())?.to_string();
-        let usage = item.get("usage")
-            .or_else(|| item.get("count"))
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0);
-        Some(ToolUsageItem { tool_name, usage })
-    }).collect()
+    let total_usage = data_obj.get("totalUsage");
+    let network_search_count = total_usage
+        .and_then(|t| t.get("totalNetworkSearchCount"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let web_read_count = total_usage
+        .and_then(|t| t.get("totalWebReadMcpCount"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let zread_count = total_usage
+        .and_then(|t| t.get("totalZreadMcpCount"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+
+    ToolUsageSummary { network_search_count, web_read_count, zread_count }
 }

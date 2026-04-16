@@ -458,45 +458,59 @@ onMounted(() => {
             </el-table>
           </template>
 
-          <!-- 模型用量表 (仅智谱) -->
-          <template v-if="zhipuDetails && zhipuDetails.modelUsage.length > 0">
+          <!-- 7天用量汇总 (仅智谱) -->
+          <template v-if="zhipuDetails">
+            <!-- 模型用量汇总 -->
             <div class="detail-section-title">模型用量 (近7天)</div>
-            <el-table :data="zhipuDetails.modelUsage" size="small" class="detail-table">
-              <el-table-column prop="modelCode" label="模型" min-width="160" />
-              <el-table-column label="总用量" width="100">
-                <template #default="{ row }">
-                  {{ formatTokens(row.usage) }}
-                </template>
-              </el-table-column>
-              <el-table-column label="输入" width="100">
-                <template #default="{ row }">
-                  {{ row.inputTokens != null ? formatTokens(row.inputTokens) : '--' }}
-                </template>
-              </el-table-column>
-              <el-table-column label="输出" width="100">
-                <template #default="{ row }">
-                  {{ row.outputTokens != null ? formatTokens(row.outputTokens) : '--' }}
-                </template>
-              </el-table-column>
-            </el-table>
-          </template>
+            <el-descriptions :column="2" border class="detail-descriptions">
+              <el-descriptions-item label="总调用次数">
+                {{ zhipuDetails.modelUsage.totalCalls.toLocaleString() }}
+              </el-descriptions-item>
+              <el-descriptions-item label="总 Token 消耗">
+                {{ formatTokens(zhipuDetails.modelUsage.totalTokens) }}
+              </el-descriptions-item>
+            </el-descriptions>
 
-          <!-- 工具用量表 (仅智谱) -->
-          <template v-if="zhipuDetails && zhipuDetails.toolUsage.length > 0">
-            <div class="detail-section-title">工具用量 (近7天)</div>
-            <el-table :data="zhipuDetails.toolUsage" size="small" class="detail-table">
-              <el-table-column prop="toolName" label="工具名称" min-width="200" />
-              <el-table-column label="使用次数" width="120">
-                <template #default="{ row }">
-                  {{ row.usage }}
-                </template>
-              </el-table-column>
-            </el-table>
+            <!-- 各模型 Token 明细 -->
+            <template v-if="zhipuDetails.modelUsage.modelList.length > 0">
+              <div class="detail-section-title">各模型 Token 消耗</div>
+              <el-table :data="zhipuDetails.modelUsage.modelList" size="small" class="detail-table">
+                <el-table-column prop="modelName" label="模型" min-width="140" />
+                <el-table-column label="Token 消耗" width="140">
+                  <template #default="{ row }">
+                    {{ formatTokens(row.totalTokens) }}
+                  </template>
+                </el-table-column>
+                <el-table-column label="占比" width="100">
+                  <template #default="{ row }">
+                    {{ zhipuDetails.modelUsage.totalTokens > 0
+                      ? ((row.totalTokens / zhipuDetails.modelUsage.totalTokens) * 100).toFixed(1) + '%'
+                      : '--' }}
+                  </template>
+                </el-table-column>
+              </el-table>
+            </template>
+
+            <!-- 工具用量 -->
+            <template v-if="zhipuDetails.toolUsage.networkSearchCount > 0 || zhipuDetails.toolUsage.webReadCount > 0 || zhipuDetails.toolUsage.zreadCount > 0">
+              <div class="detail-section-title">工具用量 (近7天)</div>
+              <el-descriptions :column="3" border class="detail-descriptions">
+                <el-descriptions-item label="联网搜索">
+                  {{ zhipuDetails.toolUsage.networkSearchCount.toLocaleString() }} 次
+                </el-descriptions-item>
+                <el-descriptions-item label="网页阅读">
+                  {{ zhipuDetails.toolUsage.webReadCount.toLocaleString() }} 次
+                </el-descriptions-item>
+                <el-descriptions-item label="仓库搜索">
+                  {{ zhipuDetails.toolUsage.zreadCount.toLocaleString() }} 次
+                </el-descriptions-item>
+              </el-descriptions>
+            </template>
           </template>
 
           <!-- 智谱无详情数据 -->
           <el-empty
-            v-if="zhipuDetails && zhipuDetails.modelUsage.length === 0 && zhipuDetails.toolUsage.length === 0 && (!selectedQuota.limits || selectedQuota.limits.length === 0)"
+            v-if="!zhipuDetails && (!selectedQuota.limits || selectedQuota.limits.length === 0)"
             description="暂无用量数据"
             :image-size="64"
           />
