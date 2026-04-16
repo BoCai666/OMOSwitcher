@@ -2,7 +2,7 @@
 // 预设管理页面组件
 // 提供预设列表展示、切换、删除和保存功能
 import { ref, onMounted, computed } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Refresh } from '@element-plus/icons-vue'
 import type { Preset } from '@/types'
 import { useConfigStore } from '@/stores'
 import {
@@ -11,7 +11,8 @@ import {
   deletePreset,
   switchPreset,
   getCurrentPreset,
-  recordPresetUsage
+  recordPresetUsage,
+  invalidatePresetsCache
 } from '@/services/presetStore'
 import { showError, showSuccess, showWarning, confirm, AppError, ErrorCode } from '@/utils/errorHandler'
 import PresetDialog from '@/components/PresetDialog.vue'
@@ -43,6 +44,19 @@ const selectedPreset = computed(() => {
 const loadPresets = async () => {
   presets.value = await listPresets()
   currentPresetName.value = (await getCurrentPreset()) || null
+}
+
+// 刷新预设列表（清除缓存后重新从磁盘读取）
+const refreshing = ref(false)
+const handleRefresh = async () => {
+  refreshing.value = true
+  try {
+    invalidatePresetsCache()
+    await loadPresets()
+    showSuccess('预设列表已刷新')
+  } finally {
+    refreshing.value = false
+  }
 }
 
 // 页面加载时获取预设列表
@@ -192,10 +206,15 @@ const handleViewPreset = (preset: Preset) => {
         <div class="header-left">
           <span class="subtitle">管理配置预设，快速切换不同配置方案</span>
         </div>
-        <el-button type="primary" @click="dialogVisible = true">
-          <el-icon><Plus /></el-icon>
-          保存当前配置为新预设
-        </el-button>
+        <div class="header-right">
+          <el-button :icon="Refresh" :loading="refreshing" @click="handleRefresh">
+            刷新
+          </el-button>
+          <el-button type="primary" @click="dialogVisible = true">
+            <el-icon><Plus /></el-icon>
+            保存当前配置为新预设
+          </el-button>
+        </div>
       </div>
 
       <!-- 预设列表表格 -->
@@ -349,6 +368,32 @@ const handleViewPreset = (preset: Preset) => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 刷新按钮 - hover 时保持文字可读 */
+.header-right .el-button:not(.el-button--primary) {
+  background: transparent !important;
+  border: 1px solid var(--app-border-default) !important;
+  color: var(--app-text-primary) !important;
+  transition: all 0.3s ease !important;
+}
+
+.header-right .el-button:not(.el-button--primary):hover {
+  background: var(--app-color-primary) !important;
+  border-color: var(--app-color-primary) !important;
+  color: #ffffff !important;
+}
+
+/* 暗色模式下刷新按钮 hover 使用紫色，避免天蓝色 */
+html.dark .header-right .el-button:not(.el-button--primary):hover {
+  background: var(--app-color-purple) !important;
+  border-color: var(--app-color-purple) !important;
 }
 
 .subtitle {

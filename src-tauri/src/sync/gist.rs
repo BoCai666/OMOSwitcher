@@ -125,7 +125,7 @@ pub async fn create_gist(
     check_rate_limit(response.headers());
     
     let status = response.status();
-    println!("[Gist] create_gist 响应状态: {}", status);
+    tracing::info!("[Gist] create_gist 响应状态: {}", status);
     
     if status == StatusCode::CREATED {
         response
@@ -134,7 +134,7 @@ pub async fn create_gist(
             .map_err(|e| format!("解析 Gist 响应失败: {}", e))
     } else {
         let body = response.text().await.unwrap_or_default();
-        println!("[Gist] create_gist 失败响应体: {}", body);
+        tracing::warn!("[Gist] create_gist 失败响应体: {}", body.chars().take(500).collect::<String>());
         let error_msg = match status {
             StatusCode::UNAUTHORIZED => "GitHub Token 已过期，请重新登录".to_string(),
             StatusCode::FORBIDDEN => format!("访问被拒绝: {}", body),
@@ -201,7 +201,7 @@ pub async fn update_gist(
         .map_err(|e| format!("更新 Gist 请求失败: {}", e))?;
     
     check_rate_limit(response.headers());
-    println!("[Gist] update_gist 响应状态: {}", response.status());
+    tracing::info!("[Gist] update_gist 响应状态: {}", response.status());
     
     if response.status() == StatusCode::OK {
         response
@@ -329,21 +329,21 @@ pub async fn upload_presets(
     match gist_id {
         Some(id) if !id.is_empty() => {
             // 已有 gist_id，直接更新
-            println!("[Gist] upload_presets: 更新已有 Gist id={}", id);
+            tracing::info!("[Gist] upload_presets: 更新已有 Gist id={}", id);
             update_gist(token, id, files).await
         }
         _ => {
             // 没有 gist_id，先查找是否存在
-            println!("[Gist] upload_presets: 无 gist_id，查找已有 Gist...");
+            tracing::info!("[Gist] upload_presets: 无 gist_id，查找已有 Gist...");
             match find_omoswitcher_gist(token).await? {
                 Some(existing_gist) => {
                     // 找到现有的，更新它
-                    println!("[Gist] upload_presets: 找到已有 Gist id={}", existing_gist.id);
+                    tracing::info!("[Gist] upload_presets: 找到已有 Gist id={}", existing_gist.id);
                     update_gist(token, &existing_gist.id, files).await
                 }
                 None => {
                     // 没有现有的，创建新的
-                    println!("[Gist] upload_presets: 未找到已有 Gist，创建新的");
+                    tracing::info!("[Gist] upload_presets: 未找到已有 Gist，创建新的");
                     create_gist(token, "OMOSwitcher 预设配置", files).await
                 }
             }

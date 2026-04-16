@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { onMounted, onUnmounted, ref, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMonitorStore } from '@/stores/monitor'
 import { useSyncStore } from '@/stores/sync'
@@ -19,8 +19,12 @@ const startupAttempted = ref(false)
 
 // 等待路由就绪，避免初始渲染时 meta 未解析导致布局闪烁
 const isRouterReady = ref(false)
-router.isReady().then(() => {
+router.isReady().then(async () => {
   isRouterReady.value = true
+  // 等待 Vue 完成 DOM 更新（AppLayout + 首页组件已渲染到 DOM），
+  // 再通知 main.ts 移除预加载动画，避免出现黑屏空档
+  await nextTick()
+  window.dispatchEvent(new Event('app-content-ready'))
 })
 
 // 从路由 meta 获取页面标题

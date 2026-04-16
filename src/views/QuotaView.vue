@@ -17,6 +17,7 @@ import { Refresh, Coin, WarningFilled } from '@element-plus/icons-vue'
 import { quotaApi } from '@/services/quotaApi'
 import type { ZhipuUsageDetails } from '@/types/quota'
 import { getProviderMetadata } from '@/data/providerMetadata'
+import { log, error } from '@/utils/logger'
 
 // 数据
 const quotaData = ref<ProviderQuota[]>([])
@@ -30,6 +31,7 @@ async function fetchQuotas() {
     const all = await quotaApi.fetchAllProviderQuotas()
     // 只显示已实现查询接口的供应商，过滤掉 unsupported
     const filtered = all.filter(q => q.quotaType !== 'unsupported')
+    log('[额度加载] 供应商列表:', filtered.map(q => `${q.providerId}(${q.quotaType})`).join(', '))
     const refreshTime = new Date().toLocaleTimeString('zh-CN', {
       hour: '2-digit',
       minute: '2-digit',
@@ -42,7 +44,7 @@ async function fetchQuotas() {
     cachedRefreshTime = refreshTime
     lastFetchTimestamp = Date.now()
   } catch (e) {
-    console.error('获取额度数据失败:', e)
+    error('获取额度数据失败:', e)
   } finally {
     loading.value = false
   }
@@ -69,7 +71,7 @@ async function retryProvider(quota: ProviderQuota) {
     cachedRefreshTime = refreshTime
     lastFetchTimestamp = Date.now()
   } catch (e) {
-    console.error('重试获取额度失败:', e)
+    error('重试获取额度失败:', e)
     if (idx !== -1) {
       quotaData.value[idx] = {
         ...quotaData.value[idx],
@@ -115,10 +117,10 @@ function getProviderColor(providerId: string): string {
   return getProviderMetadata(providerId).color
 }
 
-// 判断是否为智谱供应商
+// 判断是否为智谱供应商（含 Z.ai，两者共用同一套监控 API）
 function isZhipuProvider(providerId: string): boolean {
   const id = providerId.toLowerCase()
-  return id.includes('zhipu') || id.includes('glm')
+  return id.includes('zhipu') || id.includes('glm') || id.includes('zai')
 }
 
 // 格式化重置时间为人类可读倒计时
@@ -205,13 +207,18 @@ async function openDetail(quota: ProviderQuota) {
   // 智谱供应商需要额外获取用量详情
   if (isZhipuProvider(quota.providerId)) {
     detailLoading.value = true
+    log(`[额度详情] providerId=${quota.providerId}, isZhipuProvider=true, 开始请求`)
     try {
-      zhipuDetails.value = await quotaApi.fetchZhipuUsageDetails(quota.providerId)
+      const result = await quotaApi.fetchZhipuUsageDetails(quota.providerId)
+      zhipuDetails.value = result
+      log(`[额度详情] 请求成功:`, JSON.stringify(result).substring(0, 500))
     } catch (e) {
-      console.error('获取智谱用量详情失败:', e)
+      error('[额度详情] 请求失败:', e)
     } finally {
       detailLoading.value = false
     }
+  } else {
+    log(`[额度详情] providerId=${quota.providerId}, isZhipuProvider=false, 跳过详情请求`)
   }
 }
 
@@ -560,6 +567,25 @@ onMounted(() => {
             </el-descriptions-item>
           </el-descriptions>
 
+          <!-- 周期用量与剩余额度 -->
+          <template v-if="selectedQuota.weeklyUsage != null || selectedQuota.monthlyUsage != null || selectedQuota.spendingLimit != null || selectedQuota.limitRemaining != null">
+            <div class="detail-section-title">周期用量与剩余额度</div>
+            <el-descriptions :column="2" border class="detail-descriptions">
+              <el-descriptions-item v-if="selectedQuota.weeklyUsage != null" label="周期用量">
+                {{ formatTokens(selectedQuota.weeklyUsage) }}
+              </el-descriptions-item>
+              <el-descriptions-item v-if="selectedQuota.monthlyUsage != null" label="长期用量">
+                {{ formatTokens(selectedQuota.monthlyUsage) }}
+              </el-descriptions-item>
+              <el-descriptions-item v-if="selectedQuota.spendingLimit != null" label="配额上限">
+                {{ formatTokens(selectedQuota.spendingLimit) }}
+              </el-descriptions-item>
+              <el-descriptions-item v-if="selectedQuota.limitRemaining != null" label="当前窗口剩余">
+                {{ formatTokens(selectedQuota.limitRemaining) }}
+              </el-descriptions-item>
+            </el-descriptions>
+          </template>
+
           <!-- limits 数组展示 -->
           <template v-if="selectedQuota.limits && selectedQuota.limits.length > 0">
             <div class="detail-section-title">限制详情</div>
@@ -693,6 +719,26 @@ onMounted(() => {
 .refresh-btn {
   border-radius: 10px;
   font-weight: 600;
+}
+
+/* 刷新按钮 - hover 时保持文字可读 */
+.refresh-btn:not(.el-button--primary) {
+  background: transparent !important;
+  border: 1px solid var(--app-border-default) !important;
+  color: var(--app-text-primary) !important;
+  transition: all 0.3s ease !important;
+}
+
+.refresh-btn:not(.el-button--primary):hover {
+  background: var(--app-color-primary) !important;
+  border-color: var(--app-color-primary) !important;
+  color: #ffffff !important;
+}
+
+/* 暗色模式下刷新按钮 hover 使用紫色，避免天蓝色 */
+html.dark .refresh-btn:not(.el-button--primary):hover {
+  background: var(--app-color-purple) !important;
+  border-color: var(--app-color-purple) !important;
 }
 
 /* ==================== 额度卡片 ==================== */

@@ -123,8 +123,8 @@ pub async fn prepare_oauth_flow() -> Result<(String, OAuthSession, tokio::net::T
     );
 
     // 调试：输出生成的授权 URL 以便排查 scope 问题
-    println!("[OAuth] 授权 URL: {}", auth_url);
-    println!("[OAuth] scope 参数: gist");
+    tracing::info!("[OAuth] 授权 URL: {}", auth_url);
+    tracing::info!("[OAuth] scope 参数: gist");
 
     Ok((
         auth_url,
@@ -277,7 +277,7 @@ pub async fn exchange_code_for_token(
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        println!("[OAuth] token 交换失败 HTTP {}: {}", status, body);
+        tracing::warn!("[OAuth] token 交换失败 HTTP {}: {}", status, body);
         return Err(format!(
             "换取 Access Token 失败 (HTTP {}): {}",
             status, body
@@ -288,7 +288,7 @@ pub async fn exchange_code_for_token(
         .text()
         .await
         .map_err(|e| format!("读取 Token 响应失败: {}", e))?;
-    println!("[OAuth] token 交换响应: {}", resp_text);
+    tracing::info!("[OAuth] token 交换响应: {}", resp_text.chars().take(300).collect::<String>());
 
     let json: serde_json::Value = serde_json::from_str(&resp_text)
         .map_err(|e| format!("解析 Token 响应失败: {}", e))?;

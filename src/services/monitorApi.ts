@@ -5,6 +5,7 @@
 
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { log } from '@/utils/logger'
 import type {
   RequestListItem,
   StatsSummary,
@@ -103,7 +104,7 @@ export const monitorApi = {
     // 如果已有连接，先断开
     await this.disconnectSSE()
 
-    console.log('[Monitor] Registering Tauri event listeners')
+    log('[Monitor] Registering Tauri event listeners')
 
     // 注册新请求事件
     const unlistenNewRequest = await listen<LLMRequest>('monitor:new-request', (event) => {
@@ -123,7 +124,7 @@ export const monitorApi = {
     })
     this._unlistenFns.push(unlistenMetrics)
 
-    console.log('[Monitor] Event listeners registered')
+    log('[Monitor] Event listeners registered')
 
     // 连接成功回调
     callbacks.onConnected?.(Date.now())
@@ -140,12 +141,12 @@ export const monitorApi = {
    */
   async disconnectSSE(): Promise<void> {
     if (this._unlistenFns.length > 0) {
-      console.log('[Monitor] Unregistering event listeners')
+      log('[Monitor] Unregistering event listeners')
       for (const unlisten of this._unlistenFns) {
         unlisten()
       }
       this._unlistenFns = []
-      console.log('[Monitor] Event listeners unregistered')
+      log('[Monitor] Event listeners unregistered')
     }
   },
 

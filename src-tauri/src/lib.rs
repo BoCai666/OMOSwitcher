@@ -6,8 +6,102 @@ mod monitor;
 mod quota;
 mod sync;
 
+use std::fmt;
+use tracing_subscriber::fmt::{FormatEvent, FormatFields, FmtContext};
+use tracing_subscriber::registry::LookupSpan;
+
+/// 自定义日志格式：本地时间 + 精确到秒 + 去掉 crate 名前缀
+struct CompactFormat;
+
+/// 编译时解析时间格式模板
+const TIME_FORMAT: &[time::format_description::FormatItem<'static>] =
+    time::macros::format_description!("[year]-[month]-[day] [hour]:[minute]:[second]");
+
+impl<S, N> FormatEvent<S, N> for CompactFormat
+where
+    S: tracing::Subscriber + for<'a> LookupSpan<'a>,
+    N: for<'a> FormatFields<'a> + 'static,
+{
+    fn format_event(
+        &self,
+        ctx: &FmtContext<'_, S, N>,
+        mut writer: tracing_subscriber::fmt::format::Writer<'_>,
+        event: &tracing::Event<'_>,
+    ) -> fmt::Result {
+        // 本地时间，精确到秒（灰色）
+        let now = time::OffsetDateTime::now_local()
+            .unwrap_or_else(|_| time::OffsetDateTime::now_utc());
+        if writer.has_ansi_escapes() {
+            write!(writer, "\x1b[2m{}\x1b[0m ", now.format(TIME_FORMAT).unwrap_or_default())?;
+        } else {
+            write!(writer, "{} ", now.format(TIME_FORMAT).unwrap_or_default())?;
+        }
+
+        // 日志级别（右对齐 5 字符，保留原始颜色）
+        let level = event.metadata().level();
+        if writer.has_ansi_escapes() {
+            // 与 tracing-subscriber 默认配色一致
+            let color = match *level {
+                tracing::Level::TRACE => "\x1b[35m",
+                tracing::Level::DEBUG => "\x1b[36m",
+                tracing::Level::INFO => "\x1b[32m",
+                tracing::Level::WARN => "\x1b[33m",
+                tracing::Level::ERROR => "\x1b[31m",
+            };
+            write!(writer, "{}{:>5}\x1b[0m ", color, level)?;
+        } else {
+            write!(writer, "{:>5} ", level)?;
+        }
+
+        // 模块路径（灰色，去掉 omoswitcher:: 前缀）
+        let target = event
+            .metadata()
+            .target()
+            .strip_prefix("omoswitcher::")
+            .unwrap_or(event.metadata().target());
+        if writer.has_ansi_escapes() {
+            write!(writer, "\x1b[2m{}\x1b[0m: ", target)?;
+        } else {
+            write!(writer, "{}: ", target)?;
+        }
+
+        // 日志消息
+        ctx.format_fields(writer.by_ref(), event)?;
+
+        writeln!(writer)
+    }
+}
+
+/// 初始化 tracing 日志系统
+/// - Debug 模式 (cargo tauri dev): INFO 级别，显示所有追踪日志
+/// - Release 模式 (cargo tauri build): WARN 级别，仅显示警告和错误
+/// - 环境变量 RUST_LOG 可覆盖默认级别（如 RUST_LOG=debug）
+fn init_logging() {
+    use tracing_subscriber::EnvFilter;
+
+    // 根据编译模式设置默认日志级别
+    #[cfg(debug_assertions)]
+    let default_level = "info";
+    #[cfg(not(debug_assertions))]
+    let default_level = "warn";
+
+    // 优先使用 RUST_LOG 环境变量，否则使用编译模式对应的默认级别
+    let filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new(default_level));
+
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .event_format(CompactFormat)
+        .init();
+
+    tracing::info!("[App] 日志系统初始化完成，模式={}", default_level);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // 初始化日志系统（必须在所有 tracing 调用之前）
+    init_logging();
+
     // 初始化 Monitor 状态（存储、配置、证书）
     let monitor_state = monitor::command::MonitorCommandState::new()
         .expect("Monitor 初始化失败");
@@ -112,7 +206,7 @@ pub fn run() {
         .on_window_event(|window, event| {
             // 窗口关闭时的处理
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                println!("[App] 窗口关闭...");
+                tracing::info!("[App] 窗口关闭...");
                 // Monitor 服务会在应用退出时自动清理
                 // 不再尝试在窗口关闭时执行异步操作，避免 runtime 已停止的问题
                 let _ = window;

@@ -737,6 +737,12 @@ async function handleAddProvider() {
         modelConfig.modalities = modalitiesConfig
       }
 
+      // 推理能力：勾选后写入 reasoning + options.thinking
+      if (model.reasoning) {
+        modelConfig.reasoning = true
+        modelConfig.options = { thinking: { type: 'enabled' } }
+      }
+
       // 4. variants（根据 API 格式和自定义参数值生成）
       if (model.variants && model.variants.length > 0) {
         const variants: Record<string, Record<string, unknown>> = {}
@@ -1028,6 +1034,12 @@ async function handleEditProvider() {
         modelConfig.modalities = modalitiesConfig
       }
       
+      // 推理能力：勾选后写入 reasoning + options.thinking
+      if (model.reasoning) {
+        modelConfig.reasoning = true
+        modelConfig.options = { thinking: { type: 'enabled' } }
+      }
+
       // 处理 variants
       if (model.variants && model.variants.length > 0) {
         const variants: Record<string, Record<string, unknown>> = {}
@@ -1823,6 +1835,26 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: var(--app-spacing-3);
+}
+
+/* 刷新按钮 - hover 时保持文字可读 */
+.header-right .el-button:not(.el-button--primary) {
+  background: transparent !important;
+  border: 1px solid var(--app-border-default) !important;
+  color: var(--app-text-primary) !important;
+  transition: all 0.3s ease !important;
+}
+
+.header-right .el-button:not(.el-button--primary):hover {
+  background: var(--app-color-primary) !important;
+  border-color: var(--app-color-primary) !important;
+  color: #ffffff !important;
+}
+
+/* 暗色模式下刷新按钮 hover 使用紫色，避免天蓝色 */
+html.dark .header-right .el-button:not(.el-button--primary):hover {
+  background: var(--app-color-purple) !important;
+  border-color: var(--app-color-purple) !important;
 }
 
 .stats-row {

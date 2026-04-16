@@ -3,6 +3,8 @@
  * 通过 Tauri 命令读写配置文件
  */
 
+import { warn } from '@/utils/logger'
+
 import type { OhMyOpenCodeConfig } from '@/types'
 import { createDefaultConfig, sortConfigKeys, AGENT_NAMES, CATEGORY_NAMES } from '@/types'
 
@@ -23,7 +25,7 @@ export async function readConfig(): Promise<OhMyOpenCodeConfig> {
     return JSON.parse(content) as OhMyOpenCodeConfig
   } catch (error) {
     // 配置文件不存在或解析失败，返回默认配置
-    console.warn('读取配置文件失败，使用默认配置:', error)
+    warn('读取配置文件失败，使用默认配置:', error)
     return createDefaultConfig()
   }
 }

@@ -68,12 +68,24 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 // 挂载应用
 app.mount('#app')
 
-// 立即移除预加载动画
-const preloadEl = document.getElementById('preload-loading')
-if (preloadEl) {
+// 移除预加载动画的工具函数
+function removePreload() {
+  const preloadEl = document.getElementById('preload-loading')
+  if (!preloadEl) return
   preloadEl.style.opacity = '0'
   preloadEl.style.transition = 'opacity 0.3s ease'
   setTimeout(() => {
     preloadEl.remove()
   }, 300)
 }
+
+// 等待 Vue 页面内容渲染完成后再移除预加载动画，避免中间出现黑屏
+// App.vue 会在路由就绪 + 首帧渲染完成后派发 'app-content-ready' 事件
+window.addEventListener('app-content-ready', () => {
+  removePreload()
+}, { once: true })
+
+// 安全兜底：如果 5 秒内事件未触发（如路由异常），仍然移除动画，避免永久卡住
+setTimeout(() => {
+  removePreload()
+}, 5000)

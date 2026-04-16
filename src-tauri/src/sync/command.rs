@@ -396,14 +396,14 @@ pub async fn sync_perform(app: AppHandle) -> Result<String, String> {
     let current_preset = get_current_preset_name().await.unwrap_or_default();
 
     // 执行完整同步
-    println!("[Sync:Command] 开始同步，本地预设: {} bytes", presets_json.len());
+    tracing::info!("[Sync:Command] 开始同步，本地预设: {} bytes", presets_json.len());
     let (result, downloaded_json) = match engine::full_sync(&app, &token, &presets_json, &current_preset).await {
         Ok((r, json)) => {
-            println!("[Sync:Command] 同步完成: {:?}", r);
+            tracing::info!("[Sync:Command] 同步完成: {:?}", r);
             (r, json)
         }
         Err(e) => {
-            println!("[Sync:Command] 同步失败: {}", e);
+            tracing::error!("[Sync:Command] 同步失败: {}", e);
             return Err(e);
         }
     };
@@ -497,7 +497,7 @@ pub async fn sync_start_oauth_login(
     let (auth_url, session, listener) = auth::prepare_oauth_flow().await?;
     let expected_state = session.state.clone();
     let code_verifier = session.code_verifier.clone();
-    println!("[OAuth:Command] prepare_oauth_flow 完成，等待浏览器回调");
+    tracing::info!("[OAuth:Command] prepare_oauth_flow 完成，等待浏览器回调");
 
     // 保存会话
     {
@@ -509,9 +509,9 @@ pub async fn sync_start_oauth_login(
     crate::commands::open_url_in_browser(auth_url)?;
 
     // 等待浏览器回调（最多 5 分钟）
-    println!("[OAuth:Command] 正在等待浏览器回调...");
+    tracing::info!("[OAuth:Command] 正在等待浏览器回调...");
     let callback_data = auth::wait_for_callback(listener).await?;
-    println!("[OAuth:Command] 收到回调数据: {}", callback_data);
+    tracing::info!("[OAuth:Command] 收到回调数据: {}", callback_data.chars().take(300).collect::<String>());
 
     // 解析回调数据：格式 "code||state"
     let (code, received_state) = if let Some((c, s)) = callback_data.split_once("||") {
@@ -519,7 +519,7 @@ pub async fn sync_start_oauth_login(
     } else {
         (callback_data, None)
     };
-    println!("[OAuth:Command] 解析回调 → code 长度: {}, state: {}", code.len(), received_state.as_deref().unwrap_or("无"));
+    tracing::info!("[OAuth:Command] 解析回调 → code 长度: {}, state: {}", code.len(), received_state.as_deref().unwrap_or("无"));
 
     // CSRF state 验证
     if let Some(rs) = &received_state {
@@ -528,42 +528,42 @@ pub async fn sync_start_oauth_login(
             *pending = None;
             return Err("OAuth state 不匹配，可能遭受 CSRF 攻击，请重试".to_string());
         }
-        println!("[OAuth:Command] CSRF state 验证通过");
+        tracing::info!("[OAuth:Command] CSRF state 验证通过");
     }
 
     // 用 code + code_verifier 换取 access_token
-    println!("[OAuth:Command] 正在用 code 换取 access_token...");
+    tracing::info!("[OAuth:Command] 正在用 code 换取 access_token...");
     let access_token = match auth::exchange_code_for_token(&code, &code_verifier).await {
         Ok(t) => {
-            println!("[OAuth:Command] access_token 获取成功，长度: {}", t.len());
+            tracing::info!("[OAuth:Command] access_token 获取成功，长度: {}", t.len());
             t
         }
         Err(e) => {
-            println!("[OAuth:Command] access_token 获取失败: {}", e);
+            tracing::error!("[OAuth:Command] access_token 获取失败: {}", e);
             return Err(e);
         }
     };
 
     // 验证 token 并获取用户信息
-    println!("[OAuth:Command] 正在验证 token 获取用户信息...");
+    tracing::info!("[OAuth:Command] 正在验证 token 获取用户信息...");
     let user = match auth::validate_token(&access_token).await {
         Ok(u) => {
-            println!("[OAuth:Command] 用户验证成功: {} (id: {})", u.login, u.id);
+            tracing::info!("[OAuth:Command] 用户验证成功: {} (id: {})", u.login, u.id);
             u
         }
         Err(e) => {
-            println!("[OAuth:Command] token 验证失败: {}", e);
+            tracing::warn!("[OAuth:Command] token 验证失败: {}", e);
             return Err(e);
         }
     };
 
     // 保存 token
-    println!("[OAuth:Command] 正在保存 token...");
+    tracing::info!("[OAuth:Command] 正在保存 token...");
     if let Err(e) = token::save_token(&app, &access_token) {
-        println!("[OAuth:Command] token 保存失败: {}", e);
+        tracing::error!("[OAuth:Command] token 保存失败: {}", e);
         return Err(e);
     }
-    println!("[OAuth:Command] token 保存成功");
+    tracing::info!("[OAuth:Command] token 保存成功");
 
     // 更新同步元数据中的用户信息
     let mut meta = token::get_sync_meta(&app).await.unwrap_or_default();

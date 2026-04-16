@@ -7,6 +7,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as syncApi from '@/services/syncApi'
+import { invalidatePresetsCache } from '@/services/presetStore'
 import type {
   AuthState,
   GitHubUser,
@@ -192,6 +193,10 @@ export const useSyncStore = defineStore('sync', () => {
         // UpToDate / Uploaded / Downloaded
         const meta = await syncApi.getSyncStatus()
         if (meta) syncMetadata.value = meta
+        // 远程预设已下载到本地，需使缓存失效以便 UI 刷新
+        if (result.type === 'Downloaded') {
+          invalidatePresetsCache()
+        }
       }
       return result
     } catch (e) {
@@ -241,6 +246,8 @@ export const useSyncStore = defineStore('sync', () => {
       }
       const meta = await syncApi.getSyncStatus()
       if (meta) syncMetadata.value = meta
+      // 远程预设已下载到本地，使缓存失效
+      invalidatePresetsCache()
       return result
     } catch (e) {
       lastError.value = String(e)
@@ -259,6 +266,8 @@ export const useSyncStore = defineStore('sync', () => {
     await syncApi.resolveConflict(resolution)
     pendingConflict.value = null
     syncMetadata.value = await syncApi.getSyncStatus()
+    // 冲突解决可能选择了远程版本，本地预设已变更
+    invalidatePresetsCache()
   }
 
   /**

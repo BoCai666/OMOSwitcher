@@ -230,7 +230,7 @@ pub async fn full_sync(
 ) -> Result<(SyncResult, Option<String>), String> {
     // 1. 加载同步元数据
     let meta = token::get_sync_meta(app).await?;
-    println!("[Sync:Engine] 元数据: gist_id={}, last_sync_at={}, hash={}",
+    tracing::info!("[Sync:Engine] 元数据: gist_id={}, last_sync_at={}, hash={}",
         meta.gist_id.as_deref().unwrap_or("无"),
         meta.last_sync_at.as_deref().unwrap_or("无"),
         meta.last_sync_content_hash.as_deref().unwrap_or("无"));
@@ -241,7 +241,7 @@ pub async fn full_sync(
     } else {
         compute_content_hash(local_presets_json)
     };
-    println!("[Sync:Engine] 本地内容哈希: {}", local_hash);
+    tracing::info!("[Sync:Engine] 本地内容哈希: {}", local_hash);
 
     // 记录是否需要忽略无效的 gist_id
     let mut valid_gist_id = meta.gist_id.clone();
@@ -250,27 +250,27 @@ pub async fn full_sync(
     let action = match &valid_gist_id {
         Some(gid) => {
             // 已有 Gist，获取远端信息
-            println!("[Sync:Engine] 读取远端 Gist: {}", gid);
+            tracing::info!("[Sync:Engine] 读取远端 Gist: {}", gid);
             match gist::read_gist(token, gid).await {
                 Ok(remote) => {
-                    println!("[Sync:Engine] 远端 Gist 更新时间: {}", remote.updated_at);
+                    tracing::info!("[Sync:Engine] 远端 Gist 更新时间: {}", remote.updated_at);
                     let action = detect_sync_action(
                         &local_hash,
                         meta.last_sync_content_hash.as_deref(),
                         &remote.updated_at,
                         meta.last_sync_at.as_deref(),
                     );
-                    println!("[Sync:Engine] 同步动作判定: {:?}", action);
+                    tracing::info!("[Sync:Engine] 同步动作判定: {:?}", action);
                     action
                 }
                 Err(e) if e.contains("未找到") || e.contains("not found") || e.contains("404") => {
                     // Gist 已被删除或不存在，清除无效的 gist_id，走上传流程
-                    println!("[Sync:Engine] Gist {} 不存在，将重新创建: {}", gid, e);
+                    tracing::warn!("[Sync:Engine] Gist {} 不存在，将重新创建: {}", gid, e);
                     valid_gist_id = None;
                     SyncAction::UploadNeeded
                 }
                 Err(e) => {
-                    println!("[Sync:Engine] 读取 Gist 失败: {}", e);
+                    tracing::error!("[Sync:Engine] 读取 Gist 失败: {}", e);
                     return Err(e);
                 }
             }
@@ -280,7 +280,7 @@ pub async fn full_sync(
             match gist::find_omoswitcher_gist(token).await {
                 Ok(Some(remote_gist)) => {
                     // 远端已有 Gist，记录并走正常对比流程
-                    println!(
+                    tracing::info!(
                         "[Sync:Engine] 本地无 Gist ID，但远端找到已有 Gist id={}",
                         remote_gist.id
                     );
@@ -293,7 +293,7 @@ pub async fn full_sync(
                         &remote_gist.updated_at,
                         meta.last_sync_at.as_deref(),
                     );
-                    println!("[Sync:Engine] 同步动作判定: {:?}", action);
+                    tracing::info!("[Sync:Engine] 同步动作判定: {:?}", action);
                     action
                 }
                 Ok(None) => {
@@ -303,11 +303,11 @@ pub async fn full_sync(
                     } else {
                         SyncAction::UploadNeeded
                     };
-                    println!("[Sync:Engine] 本地和远端均无 Gist，同步动作: {:?}", action);
+                    tracing::info!("[Sync:Engine] 本地和远端均无 Gist，同步动作: {:?}", action);
                     action
                 }
                 Err(e) => {
-                    println!("[Sync:Engine] 查找远端 Gist 失败: {}，回退到上传流程", e);
+                    tracing::warn!("[Sync:Engine] 查找远端 Gist 失败: {}，回退到上传流程", e);
                     if local_hash.is_empty() {
                         SyncAction::NoSync
                     } else {
@@ -323,7 +323,7 @@ pub async fn full_sync(
         let local_empty = local_presets_json.trim().is_empty()
             || count_presets(local_presets_json) == 0;
         if local_empty {
-            println!("[Sync:Engine] 本地预设为空但远端有数据，改为下载");
+            tracing::info!("[Sync:Engine] 本地预设为空但远端有数据，改为下载");
             SyncAction::DownloadNeeded
         } else {
             action

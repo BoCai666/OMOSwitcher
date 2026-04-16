@@ -182,10 +182,15 @@ struct ToolUsageItem {
 /// 查询智谱供应商的模型用量和工具用量详情
 #[tauri::command]
 pub async fn fetch_zhipu_usage_details(provider_id: String) -> Result<String, String> {
+    tracing::info!("[额度详情] 开始查询 provider_id={}", provider_id);
+
     let client = build_client().map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
 
     // 从 opencode.json 和 auth.json 查找该供应商的 apiKey 和 baseURL
     let provider = find_provider_info(&provider_id)?;
+    tracing::info!("[额度详情] 找到供应商: id={}, base_url={:?}, api_key={}...", 
+        provider.id, provider.base_url, &provider.api_key[..provider.api_key.len().min(8)]);
+
     let (base, fallback_base) = match &provider.base_url {
         Some(b) if b.contains("bigmodel") => {
             ("https://open.bigmodel.cn".to_string(), Some("https://api.z.ai".to_string()))
@@ -221,6 +226,8 @@ pub async fn fetch_zhipu_usage_details(provider_id: String) -> Result<String, St
         base, start_str, end_str
     );
 
+    tracing::info!("[额度详情] 请求模型用量: {}", model_usage_url);
+
     let model_resp = client.get(&model_usage_url)
         .header("Authorization", &auth_header)
         .send()
@@ -229,27 +236,82 @@ pub async fn fetch_zhipu_usage_details(provider_id: String) -> Result<String, St
     // 如果主 URL 失败，尝试 fallback
     let model_data = match model_resp {
         Ok(resp) if resp.status().is_success() => {
-            resp.json::<serde_json::Value>().await.ok()
+            let body = resp.text().await.unwrap_or_default();
+            tracing::info!("[额度详情] 模型用量响应 (主): {}", body.chars().take(500).collect::<String>());
+            serde_json::from_str::<serde_json::Value>(&body).ok()
         }
-        _ => {
+        Ok(resp) => {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            tracing::warn!("[额度详情] 模型用量主 URL 失败: HTTP {}, body={}", status, body.chars().take(300).collect::<String>());
+            // 尝试 fallback
             if let Some(ref fb) = fallback_base {
                 let fb_url = format!(
                     "{}/api/monitor/usage/model-usage?startTime={}&endTime={}",
                     fb, start_str, end_str
                 );
+                tracing::info!("[额度详情] 模型用量 fallback: {}", fb_url);
                 let fb_resp = client.get(&fb_url)
                     .header("Authorization", &auth_header)
                     .send()
                     .await;
                 match fb_resp {
-                    Ok(r) if r.status().is_success() => r.json::<serde_json::Value>().await.ok(),
-                    _ => None,
+                    Ok(r) if r.status().is_success() => {
+                        let body = r.text().await.unwrap_or_default();
+                        tracing::info!("[额度详情] 模型用量响应 (fallback): {}", body.chars().take(500).collect::<String>());
+                        serde_json::from_str::<serde_json::Value>(&body).ok()
+                    }
+                    Ok(r) => {
+                        let status = r.status();
+                        let body = r.text().await.unwrap_or_default();
+                        tracing::warn!("[额度详情] 模型用量 fallback 也失败: HTTP {}, body={}", status, body.chars().take(300).collect::<String>());
+                        None
+                    }
+                    Err(e) => {
+                        tracing::warn!("[额度详情] 模型用量 fallback 网络错误: {}", e);
+                        None
+                    }
+                }
+            } else {
+                None
+            }
+        }
+        Err(e) => {
+            tracing::warn!("[额度详情] 模型用量主 URL 网络错误: {}", e);
+            if let Some(ref fb) = fallback_base {
+                let fb_url = format!(
+                    "{}/api/monitor/usage/model-usage?startTime={}&endTime={}",
+                    fb, start_str, end_str
+                );
+                tracing::info!("[额度详情] 模型用量 fallback: {}", fb_url);
+                let fb_resp = client.get(&fb_url)
+                    .header("Authorization", &auth_header)
+                    .send()
+                    .await;
+                match fb_resp {
+                    Ok(r) if r.status().is_success() => {
+                        let body = r.text().await.unwrap_or_default();
+                        tracing::info!("[额度详情] 模型用量响应 (fallback): {}", body.chars().take(500).collect::<String>());
+                        serde_json::from_str::<serde_json::Value>(&body).ok()
+                    }
+                    Ok(r) => {
+                        let status = r.status();
+                        let body = r.text().await.unwrap_or_default();
+                        tracing::warn!("[额度详情] 模型用量 fallback 也失败: HTTP {}, body={}", status, body.chars().take(300).collect::<String>());
+                        None
+                    }
+                    Err(e2) => {
+                        tracing::warn!("[额度详情] 模型用量 fallback 网络错误: {}", e2);
+                        None
+                    }
                 }
             } else {
                 None
             }
         }
     };
+
+    tracing::info!("[额度详情] 请求工具用量: {}", tool_usage_url);
 
     let tool_resp = client.get(&tool_usage_url)
         .header("Authorization", &auth_header)
@@ -258,21 +320,73 @@ pub async fn fetch_zhipu_usage_details(provider_id: String) -> Result<String, St
 
     let tool_data = match tool_resp {
         Ok(resp) if resp.status().is_success() => {
-            resp.json::<serde_json::Value>().await.ok()
+            let body = resp.text().await.unwrap_or_default();
+            tracing::info!("[额度详情] 工具用量响应 (主): {}", body.chars().take(500).collect::<String>());
+            serde_json::from_str::<serde_json::Value>(&body).ok()
         }
-        _ => {
+        Ok(resp) => {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            tracing::warn!("[额度详情] 工具用量主 URL 失败: HTTP {}, body={}", status, body.chars().take(300).collect::<String>());
             if let Some(ref fb) = fallback_base {
                 let fb_url = format!(
                     "{}/api/monitor/usage/tool-usage?startTime={}&endTime={}",
                     fb, start_str, end_str
                 );
+                tracing::info!("[额度详情] 工具用量 fallback: {}", fb_url);
                 let fb_resp = client.get(&fb_url)
                     .header("Authorization", &auth_header)
                     .send()
                     .await;
                 match fb_resp {
-                    Ok(r) if r.status().is_success() => r.json::<serde_json::Value>().await.ok(),
-                    _ => None,
+                    Ok(r) if r.status().is_success() => {
+                        let body = r.text().await.unwrap_or_default();
+                        tracing::info!("[额度详情] 工具用量响应 (fallback): {}", body.chars().take(500).collect::<String>());
+                        serde_json::from_str::<serde_json::Value>(&body).ok()
+                    }
+                    Ok(r) => {
+                        let status = r.status();
+                        let body = r.text().await.unwrap_or_default();
+                        tracing::warn!("[额度详情] 工具用量 fallback 也失败: HTTP {}, body={}", status, body.chars().take(300).collect::<String>());
+                        None
+                    }
+                    Err(e) => {
+                        tracing::warn!("[额度详情] 工具用量 fallback 网络错误: {}", e);
+                        None
+                    }
+                }
+            } else {
+                None
+            }
+        }
+        Err(e) => {
+            tracing::warn!("[额度详情] 工具用量主 URL 网络错误: {}", e);
+            if let Some(ref fb) = fallback_base {
+                let fb_url = format!(
+                    "{}/api/monitor/usage/tool-usage?startTime={}&endTime={}",
+                    fb, start_str, end_str
+                );
+                tracing::info!("[额度详情] 工具用量 fallback: {}", fb_url);
+                let fb_resp = client.get(&fb_url)
+                    .header("Authorization", &auth_header)
+                    .send()
+                    .await;
+                match fb_resp {
+                    Ok(r) if r.status().is_success() => {
+                        let body = r.text().await.unwrap_or_default();
+                        tracing::info!("[额度详情] 工具用量响应 (fallback): {}", body.chars().take(500).collect::<String>());
+                        serde_json::from_str::<serde_json::Value>(&body).ok()
+                    }
+                    Ok(r) => {
+                        let status = r.status();
+                        let body = r.text().await.unwrap_or_default();
+                        tracing::warn!("[额度详情] 工具用量 fallback 也失败: HTTP {}, body={}", status, body.chars().take(300).collect::<String>());
+                        None
+                    }
+                    Err(e2) => {
+                        tracing::warn!("[额度详情] 工具用量 fallback 网络错误: {}", e2);
+                        None
+                    }
                 }
             } else {
                 None
@@ -284,14 +398,19 @@ pub async fn fetch_zhipu_usage_details(provider_id: String) -> Result<String, St
     let model_usage = parse_model_usage(&model_data);
     let tool_usage = parse_tool_usage(&tool_data);
 
+    tracing::info!("[额度详情] 解析结果: 模型 {} 条, 工具 {} 条", model_usage.len(), tool_usage.len());
+
     let details = ZhipuUsageDetails {
         provider_id: provider_id.clone(),
         model_usage,
         tool_usage,
     };
 
-    serde_json::to_string(&details)
-        .map_err(|e| format!("序列化用量详情失败: {}", e))
+    let result = serde_json::to_string(&details)
+        .map_err(|e| format!("序列化用量详情失败: {}", e))?;
+
+    tracing::info!("[额度详情] 最终返回: {}", result.chars().take(500).collect::<String>());
+    Ok(result)
 }
 
 /// 查找供应商信息（从 opencode.json + auth.json）

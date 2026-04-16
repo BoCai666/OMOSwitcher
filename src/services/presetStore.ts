@@ -307,6 +307,15 @@ export async function recordPresetUsage(name: string): Promise<void> {
 }
 
 /**
+ * 使预设缓存失效
+ * 在外部流程（如同步下载）修改了磁盘上的预设文件后调用，
+ * 确保下次读取时重新从磁盘加载
+ */
+export function invalidatePresetsCache(): void {
+  presetsCache = null
+}
+
+/**
  * 初始化预设存储
  * 在应用启动时调用
  */

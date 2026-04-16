@@ -55,7 +55,7 @@ const routes: RouteRecordRaw[] = [
     name: 'Quota',
     component: () => import('@/views/QuotaView.vue'),
     meta: {
-      title: '配额'
+      title: '额度管理'
     }
   },
   {

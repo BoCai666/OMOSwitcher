@@ -23,12 +23,8 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        /* 透明窗口需要设置背景色 */
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-      }
-      /* 玻璃拟态主题背景 */
-      html.glassmorphism, html.glassmorphism body {
-        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%);
+        /* 与 Tauri 原生窗口 backgroundColor 一致，避免白闪 */
+        background-color: #1a1a2e;
       }
       #preload-loading {
         width: 100%;
@@ -40,6 +36,12 @@
         top: 0;
         left: 0;
         z-index: 9999;
+        /* 预加载动画独占背景色，不受 global.css 覆盖影响 */
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      }
+      /* 玻璃拟态主题预加载背景 */
+      html.glassmorphism #preload-loading {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%);
       }
       .preload-content {
         display: flex;
