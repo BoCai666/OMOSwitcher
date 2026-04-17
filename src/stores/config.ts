@@ -6,7 +6,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import type { OhMyOpenCodeConfig, AgentName, CategoryName } from '@/types'
-import { readConfig, writeConfig, savePreset, getCurrentPreset, detectOpenCodeServer, hotReloadConfig } from '@/services'
+import { readConfig, writeConfig, savePreset, getCurrentPreset, detectOpenCodeServer, disposeInstance } from '@/services'
+import { log, warn, error as logError } from '@/utils/logger'
 
 // 保存状态类型
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -98,23 +99,45 @@ export const useConfigStore = defineStore('config', () => {
     }, STATUS_CLEAR_DELAY)
   }
 
-  /** 异步触发热重载（fire-and-forget，不阻塞保存流程） */
+  /** 异步触发热重载（fire-and-forget，不阻塞保存流程）
+   *  使用 POST /instance/dispose + GET /config/ 触发 OpenCode 实例重建，
+   *  重建时 OhMyOpenCode 插件会重新调用 loadPluginConfig() 读取 oh-my-opencode.json。
+   *  不再使用 PATCH /config/（存在上游 bug：写入 config.json 而非 opencode.json，
+   *  且修改的是 OpenCode 原生 agent 配置，不是 OhMyOpenCode 插件配置）。
+   */
   async function triggerHotReload(): Promise<void> {
+    log('[热重载] triggerHotReload 开始执行')
     try {
       const { getHotReloadConfig } = await import('@/services/settingsStore')
       const hotReloadSettings = await getHotReloadConfig()
+      log(`[热重载] 读取配置: enabled=${hotReloadSettings.enabled}, port=${hotReloadSettings.port}`)
       
-      if (!hotReloadSettings.enabled || !config.value) return
+      if (!hotReloadSettings.enabled) {
+        log('[热重载] 未启用热重载，跳过')
+        return
+      }
+      if (!config.value) {
+        log('[热重载] 配置为空，跳过')
+        return
+      }
       
+      log(`[热重载] 检测 OpenCode Server 端口 ${hotReloadSettings.port} ...`)
       const serverRunning = await detectOpenCodeServer(hotReloadSettings.port)
+      log(`[热重载] Server 检测结果: running=${serverRunning}`)
+      
       if (!serverRunning) {
+        warn(`[热重载] OpenCode Server 未在端口 ${hotReloadSettings.port} 运行，热重载跳过`)
         const { showWarning } = await import('@/utils/errorHandler')
         showWarning('OpenCode Server 未运行，热重载未执行。请确认 OpenCode 已启用 Server 模式。')
         return
       }
       
-      await hotReloadConfig(hotReloadSettings.port, config.value)
+      // 核心步骤：触发实例重建，让插件重新加载 oh-my-opencode.json
+      log(`[热重载] 触发实例重建 (dispose + rebuild) 端口=${hotReloadSettings.port}`)
+      await disposeInstance(hotReloadSettings.port)
+      log('[热重载] 实例重建完成，插件应已重载配置')
     } catch (e) {
+      logError('[热重载] 失败:', e)
       const { showWarning } = await import('@/utils/errorHandler')
       showWarning(`热重载失败: ${(e as Error).message}`)
     }
@@ -124,16 +147,20 @@ export const useConfigStore = defineStore('config', () => {
   async function performSave(): Promise<void> {
     if (!config.value) return
 
+    log('[配置保存] performSave 开始')
     try {
       saveStatus.value = 'saving'
       error.value = null
       clearStatusClearTimer()
       
       // 保存主配置文件
+      log('[配置保存] 写入配置文件...')
       await writeConfig(config.value)
+      log('[配置保存] 配置文件写入成功')
       
       // 如果有当前预设，同步更新预设文件
       if (currentPresetName.value) {
+        log(`[配置保存] 同步更新预设: ${currentPresetName.value}`)
         await savePreset(currentPresetName.value, config.value)
       }
       
@@ -145,11 +172,13 @@ export const useConfigStore = defineStore('config', () => {
       scheduleStatusCleanup()
 
       // 热重载：保存成功后异步推送（fire-and-forget）
+      log('[配置保存] 触发热重载...')
       triggerHotReload()
 
       // 触发保存后回调（如同步上传）
       afterSaveCallback?.()
     } catch (e) {
+      logError('[配置保存] 失败:', e)
       saveStatus.value = 'error'
       error.value = (e as Error).message
       throw e

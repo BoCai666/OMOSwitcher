@@ -12,6 +12,7 @@ import { useConfigStore } from '@/stores/config'
 import { showSuccess, showError } from '@/utils/errorHandler'
 import type { Model, AgentName, CategoryName, OhMyOpenCodeConfig } from '@/types'
 import { AGENT_NAMES, AGENT_INFO, CATEGORY_NAMES, CATEGORY_INFO, createDefaultConfig } from '@/types'
+import { log } from '@/utils/logger'
 
 // 使用共享的配置 store
 const configStore = useConfigStore()
@@ -118,9 +119,12 @@ function handleSelectModel(modelId: string) {
 
 async function handleSave() {
   try {
+    log('[ModelConfig] 用户点击保存配置')
     await configStore.saveConfig()
+    log('[ModelConfig] 保存成功')
     showSuccess('保存成功')
   } catch (error) {
+    log('[ModelConfig] 保存失败:', error)
     showError(error)
   }
 }

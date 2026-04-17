@@ -142,6 +142,7 @@ pub fn run() {
             // 热重载命令
             commands::detect_opencode_server,
             commands::hot_reload_config,
+            commands::dispose_instance,
             // 端口管理命令
             commands::kill_port_process,
             // Monitor 代理服务命令

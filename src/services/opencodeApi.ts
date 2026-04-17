@@ -4,14 +4,19 @@
  */
 import { invoke } from '@tauri-apps/api/core'
 import type { OhMyOpenCodeConfig } from '@/types'
+import { log, warn } from '@/utils/logger'
 
 /**
  * 检测 OpenCode Server 是否在指定端口运行
  */
 export async function detectOpenCodeServer(port: number): Promise<boolean> {
   try {
-    return await invoke<boolean>('detect_opencode_server', { port })
-  } catch {
+    log(`[opencodeApi] detectOpenCodeServer 端口=${port}`)
+    const result = await invoke<boolean>('detect_opencode_server', { port })
+    log(`[opencodeApi] detectOpenCodeServer 结果=${result}`)
+    return result
+  } catch (e) {
+    warn(`[opencodeApi] detectOpenCodeServer 异常:`, e)
     return false
   }
 }
@@ -31,7 +36,9 @@ export function buildOpenCodeAgentConfig(config: OhMyOpenCodeConfig): Record<str
     }
   }
   
-  return { agent: agentConfig }
+  const body = { agent: agentConfig }
+  log(`[opencodeApi] buildOpenCodeAgentConfig: agentCount=${Object.keys(agentConfig).length}`)
+  return body
 }
 
 /**
@@ -39,5 +46,18 @@ export function buildOpenCodeAgentConfig(config: OhMyOpenCodeConfig): Record<str
  */
 export async function hotReloadConfig(port: number, config: OhMyOpenCodeConfig): Promise<void> {
   const body = buildOpenCodeAgentConfig(config)
+  log(`[opencodeApi] hotReloadConfig: port=${port}, body=${JSON.stringify(body).substring(0, 300)}`)
   await invoke('hot_reload_config', { port, config: body })
+  log(`[opencodeApi] hotReloadConfig: invoke 完成`)
+}
+
+/**
+ * 触发 OpenCode 实例重建（dispose + lazy rebuild）
+ * 流程：POST /instance/dispose → GET /config/
+ * 重建时 OhMyOpenCode 插件会重新调用 loadPluginConfig() 读取更新后的 oh-my-opencode.json
+ */
+export async function disposeInstance(port: number): Promise<void> {
+  log(`[opencodeApi] disposeInstance: port=${port}`)
+  await invoke('dispose_instance', { port })
+  log(`[opencodeApi] disposeInstance: 完成`)
 }

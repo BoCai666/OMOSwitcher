@@ -4,7 +4,9 @@
  * 以可视化友好的方式展示大模型请求内容
  */
 import { computed, ref } from 'vue'
-import { User, ChatDotRound, Setting, Document, Tools, VideoPlay, ArrowRight, Cpu } from '@element-plus/icons-vue'
+import { Setting, Tools, VideoPlay, ArrowRight, Cpu } from '@element-plus/icons-vue'
+import { estimateTokens } from '@/composables/useRequestParser'
+import MessageList from './MessageList.vue'
 
 const props = defineProps<{
   visible: boolean
@@ -43,39 +45,7 @@ const parsedBody = computed(() => {
 // 模型名称
 const modelName = computed(() => parsedBody.value?.model || '-')
 
-// 估算文本的 token 数量
-function estimateTokens(text: string): number {
-  if (!text) return 0
-  
-  // 简单估算规则：
-  // - 中文字符：约 1.5 tokens/字符
-  // - 英文/数字/符号：约 0.25 tokens/字符 (4字符=1token)
-  let tokenCount = 0
-  for (const char of text) {
-    const code = char.charCodeAt(0)
-    // 中文字符范围
-    if (code >= 0x4e00 && code <= 0x9fff) {
-      tokenCount += 1.5
-    } else if (code >= 0x3400 && code <= 0x4dbf) {
-      // 扩展中文字符
-      tokenCount += 1.5
-    } else {
-      tokenCount += 0.25
-    }
-  }
-  return Math.ceil(tokenCount)
-}
-
-// 格式化 token 数量显示
-function formatTokens(tokens: number): string {
-  if (tokens >= 1000000) {
-    return (tokens / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'
-  }
-  if (tokens >= 1000) {
-    return (tokens / 1000).toFixed(1).replace(/\.0$/, '') + 'K'
-  }
-  return tokens.toString()
-}
+// estimateTokens 和 formatTokens 已提取到 useRequestParser composable
 
 // 消息列表
 const messages = computed(() => {
@@ -248,38 +218,7 @@ const thinkingParams = computed(() => {
   return params
 })
 
-// 获取角色标签类型
-function getRoleTagType(role: string): string {
-  const types: Record<string, string> = {
-    system: 'warning',
-    user: 'primary',
-    assistant: 'success',
-    tool: 'info'
-  }
-  return types[role] || 'info'
-}
-
-// 获取角色图标
-function getRoleIcon(role: string) {
-  const icons: Record<string, any> = {
-    system: Setting,
-    user: User,
-    assistant: ChatDotRound,
-    tool: Tools
-  }
-  return icons[role] || Document
-}
-
-// 获取角色显示名称
-function getRoleDisplayName(role: string): string {
-  const names: Record<string, string> = {
-    system: '系统',
-    user: '用户',
-    assistant: '助手',
-    tool: '工具'
-  }
-  return names[role] || role
-}
+// 角色工具函数已提取到 useRequestParser composable
 
 // 格式化参数值显示
 function formatParamValue(value: any, type: string): string {
@@ -289,30 +228,13 @@ function formatParamValue(value: any, type: string): string {
   return String(value)
 }
 
-// 当前展开的消息
-const expandedMessages = ref<number[]>([])
+// expandedMessages 和消息展开函数已移到 MessageList 组件内部管理
+
+// 工具/工具调用折叠状态
 const expandedToolIndexes = ref<number[]>([])
 const expandedToolCallIndexes = ref<number[]>([])
-
-// 区块折叠状态（默认折叠）
-const messagesCollapsed = ref(true)
 const toolsCollapsed = ref(true)
 const toolCallsCollapsed = ref(true)
-
-// 切换消息展开状态
-function toggleMessage(index: number) {
-  const idx = expandedMessages.value.indexOf(index)
-  if (idx > -1) {
-    expandedMessages.value.splice(idx, 1)
-  } else {
-    expandedMessages.value.push(index)
-  }
-}
-
-// 判断消息是否展开
-function isMessageExpanded(index: number): boolean {
-  return expandedMessages.value.includes(index)
-}
 </script>
 
 <template>
@@ -374,63 +296,7 @@ function isMessageExpanded(index: number): boolean {
       </div>
 
       <!-- 消息列表（可折叠） -->
-      <div v-if="messages.length > 0" class="section messages-section collapsible-section">
-        <div class="section-header clickable" @click="messagesCollapsed = !messagesCollapsed">
-          <el-icon class="section-icon"><ChatDotRound /></el-icon>
-          <span class="section-title">消息列表</span>
-          <span class="section-badge">{{ messages.length }}</span>
-          <el-icon class="collapse-arrow" :class="{ expanded: !messagesCollapsed }">
-            <ArrowRight />
-          </el-icon>
-        </div>
-        <Transition name="collapse-section">
-          <div v-show="!messagesCollapsed" class="section-body">
-            <div class="messages-list">
-              <div
-                v-for="msg in messages"
-                :key="msg.index"
-                class="message-item"
-                :class="[`role-${msg.role}`]"
-              >
-                <div class="message-header" @click="toggleMessage(msg.index)">
-                  <div class="message-role">
-                    <el-icon class="role-icon"><component :is="getRoleIcon(msg.role)" /></el-icon>
-                    <el-tag :type="getRoleTagType(msg.role)" size="small" effect="dark">
-                      {{ getRoleDisplayName(msg.role) }}
-                    </el-tag>
-                    <span v-if="msg.name" class="message-name">{{ msg.name }}</span>
-                  </div>
-                  <div class="message-meta">
-                    <span class="message-tokens">~{{ formatTokens(msg.tokens) }} token</span>
-                    <span class="message-index">#{{ msg.index }}</span>
-                    <el-icon class="expand-icon" :class="{ expanded: isMessageExpanded(msg.index) }">
-                      <ArrowRight />
-                    </el-icon>
-                  </div>
-                </div>
-                <Transition name="collapse">
-                  <div v-if="isMessageExpanded(msg.index)" class="message-content-wrapper">
-                    <!-- 思考块 -->
-                    <div v-if="msg.thinkingBlocks && msg.thinkingBlocks.length > 0" class="thinking-blocks">
-                      <div v-for="(block, blockIndex) in msg.thinkingBlocks" :key="blockIndex" class="thinking-block">
-                        <div class="thinking-header">
-                          <el-icon class="thinking-icon"><Cpu /></el-icon>
-                          <span class="thinking-label">{{ block.type === 'thinking' ? '思考过程' : '隐藏思考' }}</span>
-                        </div>
-                        <pre class="thinking-content">{{ block.text }}</pre>
-                      </div>
-                    </div>
-                    <!-- 消息内容 -->
-                    <div v-if="msg.content" class="message-content">
-                      <pre>{{ msg.content }}</pre>
-                    </div>
-                  </div>
-                </Transition>
-              </div>
-            </div>
-          </div>
-        </Transition>
-      </div>
+      <MessageList v-if="messages.length > 0" :messages="messages" />
 
       <!-- 工具调用（可折叠，放在工具定义上方） -->
       <div v-if="toolCalls.length > 0" class="section tool-calls-section collapsible-section">
@@ -692,216 +558,7 @@ function isMessageExpanded(index: number): boolean {
   font-weight: 700;
 }
 
-/* 消息列表 */
-.messages-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.message-item {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--app-border-default);
-  border-radius: 10px;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.message-item:hover {
-  border-color: rgba(0, 212, 255, 0.3);
-}
-
-.message-item.role-system {
-  border-left: 3px solid var(--app-color-warning);
-}
-
-.message-item.role-user {
-  border-left: 3px solid var(--app-color-primary);
-}
-
-.message-item.role-assistant {
-  border-left: 3px solid var(--app-color-success);
-}
-
-.message-item.role-tool {
-  border-left: 3px solid var(--app-color-info);
-}
-
-.message-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.message-header:hover {
-  background: rgba(0, 212, 255, 0.05);
-}
-
-.message-role {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.role-icon {
-  font-size: 16px;
-  color: var(--app-text-tertiary);
-}
-
-.message-name {
-  font-size: 13px;
-  color: var(--app-text-tertiary);
-  font-weight: 500;
-}
-
-.message-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.message-tokens {
-  font-size: 12px;
-  color: var(--app-color-success);
-  font-weight: 700;
-  padding: 3px 10px;
-  background: rgba(0, 245, 160, 0.1);
-  border-radius: 4px;
-}
-
-.message-index {
-  font-size: 12px;
-  color: var(--app-text-tertiary);
-  font-weight: 500;
-}
-
-.expand-icon {
-  font-size: 14px;
-  color: var(--app-text-tertiary);
-  transition: transform 0.3s ease;
-}
-
-.expand-icon.expanded {
-  transform: rotate(90deg);
-  color: var(--app-color-primary);
-}
-
-.message-content {
-  padding: 0 16px 16px;
-}
-
-/* 消息内容包装器 */
-.message-content-wrapper {
-  padding: 0 16px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* 思考块样式 */
-.thinking-blocks {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.thinking-block {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(139, 92, 246, 0.05));
-  border: 1px solid rgba(168, 85, 247, 0.3);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.thinking-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: rgba(168, 85, 247, 0.15);
-  border-bottom: 1px solid rgba(168, 85, 247, 0.2);
-}
-
-.thinking-header .thinking-icon {
-  font-size: 16px;
-  color: #a855f7;
-}
-
-.thinking-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #c084fc;
-  letter-spacing: 0.3px;
-}
-
-.thinking-content {
-  margin: 0;
-  padding: 14px;
-  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--app-text-secondary);
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-weight: 450;
-  background: rgba(168, 85, 247, 0.03);
-}
-
-.message-content pre {
-  margin: 0;
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
-  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--app-text-secondary);
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-weight: 450;
-}
-
-/* 折叠过渡动画 */
-.collapse-enter-active,
-.collapse-leave-active {
-  transition: all 0.3s ease;
-  overflow: hidden;
-}
-
-.collapse-enter-from,
-.collapse-leave-to {
-  opacity: 0;
-  max-height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-}
-
-.collapse-enter-to,
-.collapse-leave-from {
-  opacity: 1;
-  max-height: 500px;
-}
-
-/* 区块折叠过渡动画 */
-.collapse-section-enter-active,
-.collapse-section-leave-active {
-  transition: all 0.3s ease;
-  overflow: hidden;
-}
-
-.collapse-section-enter-from,
-.collapse-section-leave-to {
-  opacity: 0;
-  max-height: 0;
-}
-
-.collapse-section-enter-to,
-.collapse-section-leave-from {
-  opacity: 1;
-  max-height: 2000px;
-}
+/* 消息列表样式已迁移到 MessageList.vue */
 
 /* 工具折叠面板 */
 .tools-collapse,
@@ -1052,27 +709,23 @@ function isMessageExpanded(index: number): boolean {
 
 /* 滚动条 */
 .body-detail-content::-webkit-scrollbar,
-.message-content pre::-webkit-scrollbar,
 .code-block pre::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 .body-detail-content::-webkit-scrollbar-track,
-.message-content pre::-webkit-scrollbar-track,
 .code-block pre::-webkit-scrollbar-track {
   background: transparent;
 }
 
 .body-detail-content::-webkit-scrollbar-thumb,
-.message-content pre::-webkit-scrollbar-thumb,
 .code-block pre::-webkit-scrollbar-thumb {
   background: var(--app-border-default);
   border-radius: 3px;
 }
 
 .body-detail-content::-webkit-scrollbar-thumb:hover,
-.message-content pre::-webkit-scrollbar-thumb:hover,
 .code-block pre::-webkit-scrollbar-thumb:hover {
   background: var(--app-color-primary);
 }

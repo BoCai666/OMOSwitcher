@@ -1,13 +1,15 @@
 <script setup lang="ts">
 // 主页仪表盘组件 - 显示配置概览、快速操作和最近预设
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useConfigStore } from '@/stores/config'
 import { listPresets, loadPreset } from '@/services/presetStore'
-import { getWorkingPath, setWorkingPath, getProxyConfig, setProxyConfig, checkCaCertExists, getMonitorPorts, getHotReloadConfig, setHotReloadConfig } from '@/services/settingsStore'
+import { getWorkingPath, setWorkingPath } from '@/services/settingsStore'
 import { AGENT_NAMES, CATEGORY_NAMES, type OhMyOpenCodeConfig } from '@/types'
 import { showSuccess, showError } from '@/utils/errorHandler'
 import { useOpenCode } from '@/composables/useOpenCode'
+import { useProxyConfig } from '@/composables/useProxyConfig'
+import { useHotReloadConfig } from '@/composables/useHotReloadConfig'
 import { open } from '@tauri-apps/plugin-dialog'
 
 const router = useRouter()
@@ -16,24 +18,27 @@ const configStore = useConfigStore()
 // OpenCode 启动功能
 const { launchOpenCode, isLaunching, error } = useOpenCode()
 
-// 工作路径输入
-const workingPath = ref('')
-
 // 代理配置
-const proxyEnabled = ref(false)
-
-// 证书是否存在
-const certExists = ref<boolean | null>(null) // null 表示未检查
-
-// 代理端口
-const proxyPort = ref(7101) // 默认端口
+const {
+  proxyEnabled,
+  certExists,
+  proxyPort,
+  loadProxyConfig,
+  saveProxyConfig,
+  checkCertStatus,
+  startCertPolling
+} = useProxyConfig()
 
 // 热重载配置
-const hotReloadEnabled = ref(false)
-const hotReloadPort = ref(4096)
+const {
+  hotReloadEnabled,
+  hotReloadPort,
+  loadHotReloadConfig,
+  saveHotReloadConfig
+} = useHotReloadConfig()
 
-// 证书检查定时器
-let certCheckTimer: ReturnType<typeof setInterval> | null = null
+// 工作路径输入
+const workingPath = ref('')
 
 // 加载保存的路径
 async function loadSavedPath() {
@@ -50,78 +55,6 @@ async function savePath() {
   } else {
     await setWorkingPath('')
   }
-}
-
-// 检查证书状态
-async function checkCertStatus() {
-  const exists = await checkCaCertExists()
-  certExists.value = exists
-  
-  // 如果证书已存在，停止轮询
-  if (exists && certCheckTimer) {
-    clearInterval(certCheckTimer)
-    certCheckTimer = null
-  }
-}
-
-// 启动证书状态轮询
-function startCertPolling() {
-  // 如果已经在轮询，不重复启动
-  if (certCheckTimer) return
-  
-  // 每 2 秒检查一次证书状态
-  certCheckTimer = setInterval(async () => {
-    await checkCertStatus()
-  }, 2000)
-}
-
-// 停止证书状态轮询
-function stopCertPolling() {
-  if (certCheckTimer) {
-    clearInterval(certCheckTimer)
-    certCheckTimer = null
-  }
-}
-
-// 加载代理配置
-async function loadProxyConfig() {
-  const config = await getProxyConfig()
-  proxyEnabled.value = config.enabled
-  // 检查证书是否存在
-  await checkCertStatus()
-  // 获取代理端口配置
-  const ports = await getMonitorPorts()
-  proxyPort.value = ports.proxy
-  
-  // 如果启用了代理但证书不存在，启动轮询等待证书生成
-  if (proxyEnabled.value && certExists.value === false) {
-    startCertPolling()
-  }
-  
-  // 加载热重载配置
-  await loadHotReloadConfig()
-}
-
-// 保存代理配置
-async function saveProxyConfig() {
-  await setProxyConfig({
-    enabled: proxyEnabled.value
-  })
-}
-
-// 加载热重载配置
-async function loadHotReloadConfig() {
-  const config = await getHotReloadConfig()
-  hotReloadEnabled.value = config.enabled
-  hotReloadPort.value = config.port
-}
-
-// 保存热重载配置
-async function saveHotReloadConfig() {
-  await setHotReloadConfig({
-    enabled: hotReloadEnabled.value,
-    port: hotReloadPort.value
-  })
 }
 
 // 打开文件夹选择对话框
@@ -253,22 +186,6 @@ function createPreset() {
   router.push('/presets')
 }
 
-// 监听代理开关变化
-watch(proxyEnabled, (enabled) => {
-  // 启用代理时，检查证书状态
-  if (enabled && certExists.value === false) {
-    startCertPolling()
-  } else if (!enabled) {
-    // 关闭代理时，停止轮询
-    stopCertPolling()
-  }
-})
-
-// 监听热重载开关变化
-watch(hotReloadEnabled, () => {
-  saveHotReloadConfig()
-})
-
 onMounted(() => {
   loadRecentPresets()
   // 尝试加载配置
@@ -277,11 +194,8 @@ onMounted(() => {
   loadSavedPath()
   // 加载代理配置
   loadProxyConfig()
-})
-
-onUnmounted(() => {
-  // 清理证书检查定时器
-  stopCertPolling()
+  // 加载热重载配置
+  loadHotReloadConfig()
 })
 </script>
 

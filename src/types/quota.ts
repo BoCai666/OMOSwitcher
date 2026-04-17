@@ -107,25 +107,13 @@ export interface ModelUsageSummary {
 }
 
 /**
- * 工具用量汇总（来自 /api/monitor/usage/tool-usage 的 totalUsage）
- */
-export interface ToolUsageSummary {
-  /** 联网搜索次数 */
-  networkSearchCount: number
-  /** 网页阅读次数 */
-  webReadCount: number
-  /** 仓库搜索次数 */
-  zreadCount: number
-}
-
-/**
  * 智谱用量详情（点击卡片时查询）
  */
 export interface ZhipuUsageDetails {
   /** 供应商 ID */
   providerId: string
+  /** 今日模型用量汇总 */
+  todayModelUsage: ModelUsageSummary
   /** 模型用量汇总 (近 7 天) */
   modelUsage: ModelUsageSummary
-  /** 工具用量汇总 (近 7 天) */
-  toolUsage: ToolUsageSummary
 }

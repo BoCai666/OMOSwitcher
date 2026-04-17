@@ -1,10 +1,13 @@
 <script lang="ts">
 // 模块级缓存：跨组件实例保持，3 分钟内不重复查询
 import type { ProviderQuota } from '@/types/quota'
+import type { ZhipuUsageDetails } from '@/types/quota'
 const CACHE_DURATION = 3 * 60 * 1000
 let lastFetchTimestamp = 0
 let cachedQuotaData: ProviderQuota[] = []
 let cachedRefreshTime = ''
+// zhipu 详情缓存：按 providerId 缓存，与额度列表共享同一时间戳
+let cachedZhipuDetails: Record<string, { data: ZhipuUsageDetails; timestamp: number }> = {}
 </script>
 
 <script setup lang="ts">
@@ -13,11 +16,17 @@ let cachedRefreshTime = ''
  * 显示已接入供应商的额度/余额卡片
  */
 import { ref, onMounted, computed } from 'vue'
-import { Refresh, Coin, WarningFilled } from '@element-plus/icons-vue'
+import { Refresh, Coin } from '@element-plus/icons-vue'
 import { quotaApi } from '@/services/quotaApi'
-import type { ZhipuUsageDetails } from '@/types/quota'
-import { getProviderMetadata } from '@/data/providerMetadata'
 import { log, error } from '@/utils/logger'
+import QuotaCard from '@/components/QuotaCard.vue'
+import {
+  formatBalance,
+  formatTokens,
+  formatResetTime,
+  getBalancePercentage,
+  getProgressColor
+} from '@/composables/useQuotaFormatter'
 
 // 数据
 const quotaData = ref<ProviderQuota[]>([])
@@ -43,6 +52,8 @@ async function fetchQuotas() {
     cachedQuotaData = filtered
     cachedRefreshTime = refreshTime
     lastFetchTimestamp = Date.now()
+    // 额度列表刷新后，清除 zhipu 详情缓存
+    cachedZhipuDetails = {}
   } catch (e) {
     error('获取额度数据失败:', e)
   } finally {
@@ -70,6 +81,7 @@ async function retryProvider(quota: ProviderQuota) {
     cachedQuotaData = filtered
     cachedRefreshTime = refreshTime
     lastFetchTimestamp = Date.now()
+    cachedZhipuDetails = {}
   } catch (e) {
     error('重试获取额度失败:', e)
     if (idx !== -1) {
@@ -82,120 +94,17 @@ async function retryProvider(quota: ProviderQuota) {
   }
 }
 
-// 格式化余额显示
-function formatBalance(value: number | null | undefined, currency?: string | null): string {
-  if (value == null) return '--'
-  const prefix = currency === 'USD' ? '$' : '¥'
-  return `${prefix}${value.toFixed(2)}`
-}
-
-// 格式化 token 数量
-function formatTokens(value: number | null | undefined): string {
-  if (value == null) return '--'
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`
-  return String(value)
-}
-
-// 计算余额剩余百分比（用于进度条）
-function getBalancePercentage(quota: ProviderQuota): number {
-  if (quota.totalBalance == null || quota.totalBalance === 0) return 0
-  const used = quota.usedBalance ?? 0
-  return Math.min(100, Math.max(0, ((quota.totalBalance - used) / quota.totalBalance) * 100))
-}
-
-// 进度条颜色
-function getProgressColor(percentage: number | null | undefined): string {
-  if (percentage == null) return '#909399'
-  if (percentage > 70) return '#67c23a'
-  if (percentage > 30) return '#e6a23c'
-  return '#f56c6c'
-}
-
-// 获取供应商品牌色
-function getProviderColor(providerId: string): string {
-  return getProviderMetadata(providerId).color
-}
-
-// 获取供应商完整元数据（图标、渐变等）
-function getProviderMeta(providerId: string) {
-  return getProviderMetadata(providerId)
-}
+// ==================== 详情弹窗 ====================
+const detailDialogVisible = ref(false)
+const detailLoading = ref(false)
+const selectedQuota = ref<ProviderQuota | null>(null)
+const zhipuDetails = ref<ZhipuUsageDetails | null>(null)
 
 // 判断是否为智谱供应商（含 Z.ai，两者共用同一套监控 API）
 function isZhipuProvider(providerId: string): boolean {
   const id = providerId.toLowerCase()
   return id.includes('zhipu') || id.includes('glm') || id.includes('zai')
 }
-
-// 格式化重置时间为人类可读倒计时
-function formatResetTime(resetTime: string | number | null | undefined): string {
-  if (resetTime == null) return ''
-
-  // 如果已经是可读字符串（非数字、非ISO格式），直接返回
-  if (typeof resetTime === 'string') {
-    const trimmed = resetTime.trim()
-    // 特殊标记：滚动窗口
-    if (trimmed === '5h-rolling') return '5小时滚动窗口'
-    // 尝试解析为日期
-    const parsed = new Date(trimmed)
-    if (isNaN(parsed.getTime())) {
-      // 无法解析为日期，当作已格式化的字符串直接返回
-      return trimmed
-    }
-    // 成功解析为日期，继续走倒计时逻辑
-    return formatCountdown(parsed)
-  }
-
-  // 数字类型（毫秒时间戳）
-  if (typeof resetTime === 'number') {
-    const date = new Date(resetTime)
-    if (isNaN(date.getTime())) return ''
-    return formatCountdown(date)
-  }
-
-  return ''
-}
-
-// 将目标日期格式化为倒计时或日期字符串
-function formatCountdown(targetDate: Date): string {
-  const now = Date.now()
-  const diff = targetDate.getTime() - now
-
-  // 已过期
-  if (diff <= 0) {
-    return '已重置'
-  }
-
-  // 不到1小时
-  if (diff < 3600_000) {
-    const minutes = Math.ceil(diff / 60_000)
-    return `${minutes}分钟后重置`
-  }
-
-  // 不到24小时
-  if (diff < 86_400_000) {
-    const hours = Math.floor(diff / 3600_000)
-    const minutes = Math.ceil((diff % 3600_000) / 60_000)
-    if (minutes >= 60) {
-      return `${hours + 1}小时后重置`
-    }
-    return minutes > 0 ? `${hours}小时${minutes}分钟后重置` : `${hours}小时后重置`
-  }
-
-  // 超过24小时，显示日期
-  const month = String(targetDate.getMonth() + 1).padStart(2, '0')
-  const day = String(targetDate.getDate()).padStart(2, '0')
-  const hour = String(targetDate.getHours()).padStart(2, '0')
-  const minute = String(targetDate.getMinutes()).padStart(2, '0')
-  return `重置于 ${month}-${day} ${hour}:${minute}`
-}
-
-// ==================== 详情弹窗 ====================
-const detailDialogVisible = ref(false)
-const detailLoading = ref(false)
-const selectedQuota = ref<ProviderQuota | null>(null)
-const zhipuDetails = ref<ZhipuUsageDetails | null>(null)
 
 // 判断卡片是否可点击
 function isCardClickable(quota: ProviderQuota): boolean {
@@ -211,11 +120,21 @@ async function openDetail(quota: ProviderQuota) {
 
   // 智谱供应商需要额外获取用量详情
   if (isZhipuProvider(quota.providerId)) {
+    // 检查缓存：3 分钟内且额度列表未刷新则复用
+    const cached = cachedZhipuDetails[quota.providerId]
+    if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+      log(`[额度详情] providerId=${quota.providerId} 命中缓存，跳过请求`)
+      zhipuDetails.value = cached.data
+      return
+    }
+
     detailLoading.value = true
     log(`[额度详情] providerId=${quota.providerId}, isZhipuProvider=true, 开始请求`)
     try {
       const result = await quotaApi.fetchZhipuUsageDetails(quota.providerId)
       zhipuDetails.value = result
+      // 写入缓存
+      cachedZhipuDetails[quota.providerId] = { data: result, timestamp: Date.now() }
       log(`[额度详情] 请求成功:`, JSON.stringify(result).substring(0, 500))
     } catch (e) {
       error('[额度详情] 请求失败:', e)
@@ -295,108 +214,11 @@ onMounted(() => {
           :md="8"
           :lg="6"
         >
-          <div
-            class="quota-card"
-            :style="{
-              '--provider-color': getProviderColor(quota.providerId)
-            }"
-          >
-            <!-- 底部发光线装饰 -->
-            <div class="card-glow-line"></div>
-
-            <!-- 加载状态 -->
-            <div v-if="quota.status === 'loading'" class="card-body">
-              <el-skeleton :rows="4" animated />
-            </div>
-
-            <!-- 错误状态 -->
-            <div v-else-if="quota.status === 'error'" class="card-body error-state">
-              <div class="error-content">
-                <el-icon class="error-icon"><WarningFilled /></el-icon>
-                <p class="error-text">{{ quota.errorMessage || '查询失败' }}</p>
-                <el-button size="small" @click="retryProvider(quota)">重试</el-button>
-              </div>
-            </div>
-
-            <!-- 不支持额度查询 -->
-            <div v-else-if="quota.quotaType === 'unsupported'" class="card-body unsupported-state">
-              <div class="card-header-row">
-                <div class="provider-icon-badge" :style="{ background: getProviderMeta(quota.providerId).gradient || getProviderColor(quota.providerId) }">
-                  <svg :viewBox="getProviderMeta(quota.providerId).iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
-                    <path :d="getProviderMeta(quota.providerId).iconPath" />
-                  </svg>
-                </div>
-                <span class="provider-name">{{ quota.providerName }}</span>
-              </div>
-              <el-empty
-                description="该供应商暂不支持额度查询"
-                :image-size="64"
-                class="unsupported-empty"
-              />
-            </div>
-
-            <!-- 余额型 -->
-            <div v-else-if="quota.quotaType === 'balance'" class="card-body clickable" @click="openDetail(quota)">
-              <div class="card-header-row">
-                <div class="provider-icon-badge" :style="{ background: getProviderMeta(quota.providerId).gradient || getProviderColor(quota.providerId) }">
-                  <svg :viewBox="getProviderMeta(quota.providerId).iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
-                    <path :d="getProviderMeta(quota.providerId).iconPath" />
-                  </svg>
-                </div>
-                <span class="provider-name">{{ quota.providerName }}</span>
-              </div>
-              <div class="balance-main">
-                <span class="balance-label">配额使用</span>
-                <span class="balance-value">
-                  {{ getBalancePercentage(quota).toFixed(1) }}%
-                </span>
-                <span class="balance-detail">
-                  {{ formatBalance(quota.usedBalance, quota.currency) }} / {{ formatBalance(quota.totalBalance, quota.currency) }}
-                </span>
-              </div>
-              <el-progress
-                :percentage="getBalancePercentage(quota)"
-                :color="getProgressColor(getBalancePercentage(quota))"
-                :stroke-width="8"
-                :show-text="false"
-                class="quota-progress"
-              />
-              <div v-if="quota.resetTime" class="reset-badge">
-                {{ formatResetTime(quota.resetTime) }}
-              </div>
-            </div>
-
-            <!-- 配额型 (token_limit) -->
-            <div v-else-if="quota.quotaType === 'token_limit'" class="card-body clickable" @click="openDetail(quota)">
-              <div class="card-header-row">
-                <div class="provider-icon-badge" :style="{ background: getProviderMeta(quota.providerId).gradient || getProviderColor(quota.providerId) }">
-                  <svg :viewBox="getProviderMeta(quota.providerId).iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
-                    <path :d="getProviderMeta(quota.providerId).iconPath" />
-                  </svg>
-                </div>
-                <span class="provider-name">{{ quota.providerName }}</span>
-              </div>
-              <div class="balance-main">
-                <span class="balance-label">配额使用</span>
-                <span class="balance-value">
-                  {{ quota.quotaPercentage != null ? `${quota.quotaPercentage.toFixed(1)}%` : '--' }}
-                </span>
-                <span class="balance-detail">
-                  {{ formatTokens(quota.quotaUsed) }} / {{ formatTokens(quota.quotaLimit) }}
-                </span>
-              </div>
-              <el-progress
-                :percentage="quota.quotaPercentage ?? 0"
-                :color="getProgressColor(quota.quotaPercentage ?? 0)"
-                :stroke-width="8"
-                :show-text="false"
-                class="quota-progress"
-              />
-              <div v-if="quota.resetTime" class="reset-badge">
-                {{ formatResetTime(quota.resetTime) }}
-              </div>
-            </div>
-          </div>
+          <QuotaCard
+            :quota="quota"
+            @retry="retryProvider"
+            @detail="openDetail"
+          />
         </el-col>
       </el-row>
     </div>
@@ -418,9 +240,15 @@ onMounted(() => {
       class="detail-dialog"
       :close-on-click-modal="true"
       destroy-on-close
+      append-to=".app-main"
+      align-center
     >
+      <!-- 加载状态：保持与内容区等高，避免弹窗尺寸跳变 -->
       <div v-if="detailLoading" class="dialog-loading">
-        <el-skeleton :rows="5" animated />
+        <div class="loading-spinner-wrapper">
+          <el-icon class="loading-spinner is-loading"><Refresh /></el-icon>
+          <span class="loading-text">加载用量详情...</span>
+        </div>
       </div>
 
       <template v-else-if="selectedQuota">
@@ -491,9 +319,40 @@ onMounted(() => {
             </el-table>
           </template>
 
-          <!-- 7天用量汇总 (仅智谱) -->
+          <!-- 用量详情 (仅智谱) -->
           <template v-if="zhipuDetails">
-            <!-- 模型用量汇总 -->
+            <!-- 今日模型用量 -->
+            <div class="detail-section-title">今日模型用量</div>
+            <el-descriptions :column="2" border class="detail-descriptions">
+              <el-descriptions-item label="调用次数">
+                {{ zhipuDetails.todayModelUsage.totalCalls.toLocaleString() }}
+              </el-descriptions-item>
+              <el-descriptions-item label="Token 消耗">
+                {{ formatTokens(zhipuDetails.todayModelUsage.totalTokens) }}
+              </el-descriptions-item>
+            </el-descriptions>
+
+            <!-- 今日各模型 Token 明细 -->
+            <template v-if="zhipuDetails.todayModelUsage.modelList.length > 0">
+              <div class="detail-section-title">今日各模型 Token 消耗</div>
+              <el-table :data="zhipuDetails.todayModelUsage.modelList" size="small" class="detail-table">
+                <el-table-column prop="modelName" label="模型" min-width="140" />
+                <el-table-column label="Token 消耗" width="140">
+                  <template #default="{ row }">
+                    {{ formatTokens(row.totalTokens) }}
+                  </template>
+                </el-table-column>
+                <el-table-column label="占比" width="100">
+                  <template #default="{ row }">
+                    {{ zhipuDetails.todayModelUsage.totalTokens > 0
+                      ? ((row.totalTokens / zhipuDetails.todayModelUsage.totalTokens) * 100).toFixed(1) + '%'
+                      : '--' }}
+                  </template>
+                </el-table-column>
+              </el-table>
+            </template>
+
+            <!-- 7天模型用量汇总 -->
             <div class="detail-section-title">模型用量 (近7天)</div>
             <el-descriptions :column="2" border class="detail-descriptions">
               <el-descriptions-item label="总调用次数">
@@ -522,22 +381,6 @@ onMounted(() => {
                   </template>
                 </el-table-column>
               </el-table>
-            </template>
-
-            <!-- 工具用量 -->
-            <template v-if="zhipuDetails.toolUsage.networkSearchCount > 0 || zhipuDetails.toolUsage.webReadCount > 0 || zhipuDetails.toolUsage.zreadCount > 0">
-              <div class="detail-section-title">工具用量 (近7天)</div>
-              <el-descriptions :column="3" border class="detail-descriptions">
-                <el-descriptions-item label="联网搜索">
-                  {{ zhipuDetails.toolUsage.networkSearchCount.toLocaleString() }} 次
-                </el-descriptions-item>
-                <el-descriptions-item label="网页阅读">
-                  {{ zhipuDetails.toolUsage.webReadCount.toLocaleString() }} 次
-                </el-descriptions-item>
-                <el-descriptions-item label="仓库搜索">
-                  {{ zhipuDetails.toolUsage.zreadCount.toLocaleString() }} 次
-                </el-descriptions-item>
-              </el-descriptions>
             </template>
           </template>
 
@@ -603,10 +446,10 @@ onMounted(() => {
             <el-descriptions-item label="使用率">
               {{ selectedQuota.quotaPercentage != null ? `${selectedQuota.quotaPercentage.toFixed(1)}%` : '--' }}
             </el-descriptions-item>
-            <el-descriptions-item label="已用 Token">
+            <el-descriptions-item label="已用">
               {{ formatTokens(selectedQuota.quotaUsed) }}
             </el-descriptions-item>
-            <el-descriptions-item label="总限额">
+            <el-descriptions-item label="总量">
               {{ formatTokens(selectedQuota.quotaLimit) }}
             </el-descriptions-item>
             <el-descriptions-item v-if="selectedQuota.resetTime" label="重置时间" :span="2">
@@ -790,203 +633,6 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-/* ==================== 额度卡片 ==================== */
-.quota-card {
-  position: relative;
-  background: var(--app-bg-card);
-  border: 1px solid var(--app-border-default);
-  border-top: 3px solid var(--provider-color, var(--app-color-primary));
-  border-radius: 16px;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  box-shadow: var(--app-shadow-sm);
-  overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* 品牌色渐变背景层（真实 DOM，不走伪元素） */
-.card-brand-bg {
-  position: absolute;
-  inset: 0;
-  background: var(--provider-gradient, var(--provider-color, var(--app-color-primary)));
-  opacity: 0.08;
-  pointer-events: none;
-  z-index: 0;
-  transition: opacity 0.3s ease;
-}
-
-.quota-card:hover .card-brand-bg {
-  opacity: 0.15;
-}
-
-.quota-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--app-shadow-hover);
-  border-color: var(--provider-color, var(--app-color-primary));
-  border-top-color: var(--provider-color, var(--app-color-primary));
-}
-
-/* 底部发光线装饰 */
-.card-glow-line {
-  position: absolute;
-  bottom: 0;
-  left: 10%;
-  right: 10%;
-  height: 2px;
-  background: var(--provider-color, var(--app-color-primary));
-  border-radius: 2px;
-  opacity: 0.3;
-  pointer-events: none;
-  z-index: 2;
-  box-shadow: 0 0 8px var(--provider-color, var(--app-color-primary));
-  transition: all 0.3s ease;
-}
-
-.quota-card:hover .card-glow-line {
-  opacity: 0.7;
-  left: 5%;
-  right: 5%;
-  height: 3px;
-  box-shadow: 0 0 12px var(--provider-color, var(--app-color-primary));
-}
-
-/* ==================== 卡片内容 ==================== */
-.card-body {
-  position: relative;
-  z-index: 1;
-  padding: 20px;
-  min-height: 170px;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 供应商头部行 */
-.card-header-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.provider-icon-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  color: #ffffff;
-  flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.provider-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--app-text-primary);
-  line-height: 1.3;
-}
-
-/* 余额主区域 */
-.balance-main {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: 14px;
-  flex: 1;
-}
-
-.balance-label {
-  font-size: 11px;
-  color: var(--app-text-tertiary);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  font-weight: 500;
-}
-
-.balance-value {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--app-text-primary);
-  font-family: 'Consolas', 'Monaco', 'JetBrains Mono', monospace;
-  line-height: 1.2;
-  letter-spacing: -0.5px;
-}
-
-.balance-detail {
-  font-size: 12px;
-  color: var(--app-text-tertiary);
-  font-family: 'Consolas', 'Monaco', monospace;
-  margin-top: 2px;
-}
-
-/* 进度条 */
-.quota-progress {
-  margin-bottom: 12px;
-}
-
-.quota-progress :deep(.el-progress-bar__outer) {
-  border-radius: 6px;
-  background: var(--app-bg-hover);
-  height: 8px;
-}
-
-.quota-progress :deep(.el-progress-bar__inner) {
-  border-radius: 6px;
-  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* 重置时间徽章 */
-.reset-badge {
-  margin-top: auto;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  color: var(--app-text-tertiary);
-  background: var(--app-bg-hover);
-  display: inline-block;
-  width: fit-content;
-}
-
-/* ==================== 错误状态 ==================== */
-.error-state {
-  align-items: center;
-  justify-content: center;
-}
-
-.error-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  text-align: center;
-}
-
-.error-icon {
-  font-size: 32px;
-  color: var(--app-color-danger);
-}
-
-.error-text {
-  font-size: 13px;
-  color: var(--app-text-secondary);
-  margin: 0;
-}
-
-/* ==================== 不支持状态 ==================== */
-.unsupported-state {
-  align-items: center;
-}
-
-.unsupported-empty {
-  padding: 0;
-}
-
-.unsupported-empty :deep(.el-empty__description p) {
-  font-size: 12px;
-  color: var(--app-text-tertiary);
-}
-
 /* ==================== 空状态 ==================== */
 .empty-state {
   display: flex;
@@ -998,28 +644,29 @@ onMounted(() => {
   border-radius: 16px;
 }
 
-/* ==================== 骨架屏 ==================== */
-.card-body :deep(.el-skeleton) {
-  width: 100%;
-}
-
-/* ==================== 可点击卡片 ==================== */
-.card-body.clickable {
-  cursor: pointer;
-}
-
-.card-body.clickable:hover {
-  background: color-mix(in srgb, var(--provider-color, var(--app-color-primary)) 5%, transparent);
-}
-
-.card-body.clickable:active {
-  background: color-mix(in srgb, var(--provider-color, var(--app-color-primary)) 10%, transparent);
-  transform: scale(0.99);
-}
-
 /* ==================== 详情弹窗 ==================== */
 .detail-dialog .dialog-loading {
-  padding: 16px 0;
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dialog-loading .loading-spinner-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.dialog-loading .loading-spinner {
+  font-size: 32px;
+  color: var(--app-color-primary);
+}
+
+.dialog-loading .loading-text {
+  font-size: 14px;
+  color: var(--app-text-tertiary);
 }
 
 .detail-dialog :deep(.el-dialog) {
@@ -1162,73 +809,6 @@ html.cyberpunk .refresh-btn:not(.el-button--primary):hover {
   color: #00ffff !important;
 }
 
-/* 卡片 - 赛博朋克 */
-html.cyberpunk .quota-card {
-  background: rgba(18, 18, 31, 0.85);
-  border: 1px solid rgba(0, 255, 255, 0.1);
-  border-top: 3px solid var(--provider-color, #00ffff);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-}
-
-html.cyberpunk .card-brand-bg {
-  opacity: 0.12;
-}
-
-html.cyberpunk .quota-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--provider-color, rgba(0, 255, 255, 0.5));
-  border-top-color: var(--provider-color, #00ffff);
-  box-shadow:
-    0 8px 30px rgba(0, 0, 0, 0.5),
-    0 0 20px var(--provider-color, rgba(0, 255, 255, 0.3));
-}
-
-html.cyberpunk .quota-card:hover .card-brand-bg {
-  opacity: 0.22;
-}
-
-/* 底部发光线 - 赛博朋克增强 */
-html.cyberpunk .card-glow-line {
-  opacity: 0.5;
-  height: 2px;
-  box-shadow: 0 0 10px var(--provider-color, #00ffff);
-}
-
-html.cyberpunk .quota-card:hover .card-glow-line {
-  opacity: 1;
-  height: 3px;
-  box-shadow: 0 0 15px var(--provider-color, #00ffff);
-}
-
-/* 供应商名 - 赛博朋克 */
-html.cyberpunk .provider-name {
-  color: #e0e0ff;
-}
-
-/* 百分比数字 - 赛博朋克霓虹 */
-html.cyberpunk .balance-value {
-  color: #00ffff;
-  text-shadow: 0 0 12px rgba(0, 255, 255, 0.5);
-}
-
-/* 进度条 - 赛博朋克 */
-html.cyberpunk .quota-progress :deep(.el-progress-bar__outer) {
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-/* 重置徽章 - 赛博朋克 */
-html.cyberpunk .reset-badge {
-  background: rgba(0, 255, 255, 0.08);
-  border: 1px solid rgba(0, 255, 255, 0.15);
-  color: rgba(0, 255, 255, 0.7);
-}
-
-/* 可点击卡片悬停 - 赛博朋克 */
-html.cyberpunk .card-body.clickable:hover {
-  background: rgba(0, 255, 255, 0.04);
-}
-
 /* 弹窗 - 赛博朋克 */
 html.cyberpunk .detail-dialog :deep(.el-dialog) {
   background: rgba(18, 18, 31, 0.95);
@@ -1283,12 +863,6 @@ html.cyberpunk .empty-state {
   border: 1px solid rgba(0, 255, 255, 0.1);
 }
 
-/* 错误图标 - 赛博朋克 */
-html.cyberpunk .error-icon {
-  color: #ff3366;
-  text-shadow: 0 0 10px rgba(255, 51, 102, 0.5);
-}
-
 /* ============================================================
    玻璃拟态主题 - 毛玻璃效果
    ============================================================ */
@@ -1334,66 +908,6 @@ html.glassmorphism .refresh-btn:not(.el-button--primary):hover {
   border-color: #2563eb !important;
   color: #ffffff !important;
   box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
-}
-
-/* 卡片 - 玻璃拟态 */
-html.glassmorphism .quota-card {
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(37, 99, 235, 0.12);
-  border-top: 3px solid var(--provider-color, #2563eb);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-}
-
-html.glassmorphism .card-brand-bg {
-  opacity: 0.05;
-}
-
-html.glassmorphism .quota-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--provider-color, rgba(37, 99, 235, 0.35));
-  border-top-color: var(--provider-color, #2563eb);
-  box-shadow: 0 12px 32px rgba(37, 99, 235, 0.12);
-}
-
-html.glassmorphism .quota-card:hover .card-brand-bg {
-  opacity: 0.10;
-}
-
-/* 底部发光线 - 玻璃拟态 */
-html.glassmorphism .card-glow-line {
-  opacity: 0.2;
-}
-
-html.glassmorphism .quota-card:hover .card-glow-line {
-  opacity: 0.5;
-}
-
-/* 供应商名 - 玻璃拟态 */
-html.glassmorphism .provider-name {
-  color: #1e293b;
-}
-
-/* 百分比数字 - 玻璃拟态 */
-html.glassmorphism .balance-value {
-  color: #1e293b;
-}
-
-/* 进度条 - 玻璃拟态 */
-html.glassmorphism .quota-progress :deep(.el-progress-bar__outer) {
-  background: rgba(37, 99, 235, 0.08);
-}
-
-/* 重置徽章 - 玻璃拟态 */
-html.glassmorphism .reset-badge {
-  background: rgba(37, 99, 235, 0.06);
-  color: #475569;
-}
-
-/* 可点击卡片悬停 - 玻璃拟态 */
-html.glassmorphism .card-body.clickable:hover {
-  background: rgba(255, 255, 255, 0.4);
 }
 
 /* 弹窗 - 玻璃拟态 */
@@ -1455,18 +969,6 @@ html.dark .refresh-btn:not(.el-button--primary):hover {
   border-color: var(--app-color-purple) !important;
 }
 
-html.dark .quota-card {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-html.dark .quota-card:hover {
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
-}
-
-html.dark .card-body.clickable:hover {
-  background: color-mix(in srgb, var(--provider-color, var(--app-color-primary)) 6%, transparent);
-}
-
 /* ==================== 响应式 ==================== */
 @media (max-width: 768px) {
   .quota-page {
@@ -1484,9 +986,13 @@ html.dark .card-body.clickable:hover {
     width: 100%;
     justify-content: space-between;
   }
+}
+</style>
 
-  .balance-value {
-    font-size: 26px;
-  }
+<!-- 非 scoped：el-dialog teleport 到 body 后 scoped 选择器失效，需要全局样式 -->
+<style>
+.detail-dialog .el-dialog__body {
+  max-height: calc(100vh - 240px);
+  overflow-y: auto;
 }
 </style>

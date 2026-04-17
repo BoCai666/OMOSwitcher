@@ -72,7 +72,8 @@ export type {
 export {
   detectOpenCodeServer,
   buildOpenCodeAgentConfig,
-  hotReloadConfig
+  hotReloadConfig,
+  disposeInstance
 } from './opencodeApi'
 
 // 额度查询服务
