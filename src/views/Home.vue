@@ -343,7 +343,7 @@ onMounted(() => {
                     <div v-if="hotReloadEnabled" class="hot-reload-port-config">
                       <div class="hot-reload-info">
                         <el-icon><InfoFilled /></el-icon>
-                        <span>保存模型配置时自动推送到 OpenCode Server，无需重启。需 OpenCode 启用 Server 模式。</span>
+                        <span>保存模型配置时自动推送到 OpenCode，无需重启。</span>
                       </div>
                       <div class="port-input-row">
                         <span class="port-label">Server 端口</span>
@@ -558,7 +558,21 @@ html.glassmorphism .active-preset strong {
 }
 
 .welcome-icon {
-  opacity: 0.3;
+  opacity: 0.15;
+  color: #ffffff;
+}
+
+/* 赛博朋克主题 - 齿轮图标 */
+html.cyberpunk .welcome-icon {
+  opacity: 0.2;
+  color: var(--app-color-primary);
+  text-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+}
+
+/* 玻璃拟态主题 - 齿轮图标 */
+html.glassmorphism .welcome-icon {
+  opacity: 0.08;
+  color: var(--app-color-primary);
 }
 
 /* ==================== 霓虹文字效果 - 赛博朋克 ==================== */
