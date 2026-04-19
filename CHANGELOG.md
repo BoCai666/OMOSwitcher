@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.4] - 2026-04-19
+
+### 新增功能
+
+- **智能热重载** - 保存配置后自动等待活跃会话空闲再推送
+  - 检测 OpenCode Server 活跃会话，轮询等待（最长 60 秒）
+  - 空闲后自动执行 dispose + rebuild，插件重新加载配置
+  - 超时跳过并提示用户，避免中断工作中的会话
+  - TUI Toast 提示重载状态（等待/进行中）
+
+- **统一日志系统** - Rust 后端全面接入 tracing 框架
+  - 本地时间格式，精确到秒
+  - 彩色日志级别，去掉 crate 名前缀
+  - Debug/Release 分级输出
+
+- **额度管理改进**
+  - 智谱额度详情弹窗支持 7 日用量图表
+  - 额度管理页面主题适配和供应商图标美化
+
+- **模型推理能力写入** - 推理模型自动写入 thinking 配置
+
+- **预设缓存刷新** - 切换预设后自动刷新缓存
+
+### Bug 修复
+
+- **修复热重载不生效** - 用 dispose + lazy rebuild 替代 PATCH /config，绕过上游 bug
+- **修复 Windows 启动 opencode 失败** - cmd /C start 引号解析导致 `\\` 文件找不到
+  - 代理模式改用 cmd /C 子进程启动，环境变量通过 API 注入
+  - 直连模式使用 PowerShell -EncodedCommand (Base64) 避免引号转义
+- **修复启动黑屏** - 优化应用启动流程
+- **修复同步元数据** - last_sync_at 改用 Gist 远端更新时间
+- **修复智谱额度详情** - 7 日用量不显示的问题
+
+### 优化改进
+
+- 代理模式启动的 opencode 作为子进程管理，关闭 OMOSwitcher 时自动清理
+- 欢迎卡片齿轮图标对比度优化，多主题适配
+- 热重载提示文案精简，去掉多余的 Server 模式说明
+
+---
+
 ## [2.0.3] - 2026-04-09
 
 ### 新增功能
