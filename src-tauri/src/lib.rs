@@ -143,6 +143,9 @@ pub fn run() {
             commands::detect_opencode_server,
             commands::hot_reload_config,
             commands::dispose_instance,
+            commands::get_active_sessions,
+            commands::resume_session,
+            commands::dispose_and_resume,
             // 端口管理命令
             commands::kill_port_process,
             // Monitor 代理服务命令
@@ -208,6 +211,8 @@ pub fn run() {
             // 窗口关闭时的处理
             if let tauri::WindowEvent::CloseRequested { .. } = event {
                 tracing::info!("[App] 窗口关闭...");
+                // 清理代理模式启动的 opencode 子进程
+                commands::launch::cleanup_opencode_child();
                 // Monitor 服务会在应用退出时自动清理
                 // 不再尝试在窗口关闭时执行异步操作，避免 runtime 已停止的问题
                 let _ = window;

@@ -73,7 +73,10 @@ export {
   detectOpenCodeServer,
   buildOpenCodeAgentConfig,
   hotReloadConfig,
-  disposeInstance
+  disposeInstance,
+  getActiveSessions,
+  resumeSession,
+  disposeAndResume
 } from './opencodeApi'
 
 // 额度查询服务
