@@ -722,37 +722,37 @@ onMounted(() => {
 
 /* 用量 Tab 切换 */
 .usage-tabs {
-  display: flex;
-  gap: 0;
+  display: inline-flex;
+  gap: 4px;
   margin: 16px 0 0;
   background: var(--app-bg-hover);
-  border-radius: 8px;
-  padding: 3px;
+  border-radius: 10px;
+  padding: 4px;
   border: 1px solid var(--app-border-default);
 }
 
 .usage-tab {
-  flex: 1;
-  padding: 8px 16px;
+  padding: 6px 20px;
   border: none;
-  border-radius: 6px;
+  border-radius: 7px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   background: transparent;
   color: var(--app-text-tertiary);
+  letter-spacing: 0.3px;
 }
 
 .usage-tab:hover {
   color: var(--app-text-primary);
-  background: rgba(0, 212, 255, 0.05);
 }
 
 .usage-tab.active {
-  background: var(--app-color-primary);
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 212, 255, 0.3);
+  background: var(--app-bg-card);
+  color: var(--app-color-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--app-border-default);
 }
 
 .detail-table {
@@ -878,13 +878,13 @@ html.cyberpunk .usage-tab {
 
 html.cyberpunk .usage-tab:hover {
   color: #00ffff;
-  background: rgba(0, 255, 255, 0.08);
 }
 
 html.cyberpunk .usage-tab.active {
-  background: rgba(0, 255, 255, 0.15);
+  background: rgba(0, 255, 255, 0.12);
   color: #00ffff;
-  box-shadow: 0 0 12px rgba(0, 255, 255, 0.3);
+  border-color: rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.15);
 }
 
 html.cyberpunk .detail-descriptions :deep(.el-descriptions__label) {
@@ -999,13 +999,13 @@ html.glassmorphism .usage-tab {
 
 html.glassmorphism .usage-tab:hover {
   color: #1e293b;
-  background: rgba(37, 99, 235, 0.05);
 }
 
 html.glassmorphism .usage-tab.active {
-  background: #2563eb;
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  background: #ffffff;
+  color: #2563eb;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 html.glassmorphism .detail-descriptions :deep(.el-descriptions__label) {
@@ -1065,10 +1065,27 @@ html.dark .refresh-btn:not(.el-button--primary):hover {
 }
 </style>
 
-<!-- 非 scoped：el-dialog teleport 到 body 后 scoped 选择器失效，需要全局样式 -->
+<!-- 非 scoped：el-dialog teleport 到 .app-main 后 scoped 选择器失效，需要全局样式 -->
 <style>
 .detail-dialog .el-dialog__body {
-  max-height: calc(100vh - 240px);
-  overflow-y: auto;
+  max-height: calc(100vh - 200px) !important;
+  overflow-y: auto !important;
+}
+
+.detail-dialog .el-dialog__body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.detail-dialog .el-dialog__body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.detail-dialog .el-dialog__body::-webkit-scrollbar-thumb {
+  background: var(--app-border-default);
+  border-radius: 3px;
+}
+
+.detail-dialog .el-dialog__body::-webkit-scrollbar-thumb:hover {
+  background: var(--app-color-primary);
 }
 </style>
