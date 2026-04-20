@@ -27,6 +27,7 @@ import {
   getBalancePercentage,
   getProgressColor
 } from '@/composables/useQuotaFormatter'
+import type { ModelUsageSummary } from '@/types/quota'
 
 // 数据
 const quotaData = ref<ProviderQuota[]>([])
@@ -162,6 +163,24 @@ function formatLimitType(type: string): string {
     SESSION_LIMIT: '会话限额'
   }
   return map[type] || type
+}
+
+// 用量详情 tab 切换（今日 / 近7天）
+const usageTab = ref<'today' | 'week'>('today')
+
+// 当前 tab 对应的用量数据
+const currentUsage = computed<ModelUsageSummary | null>(() => {
+  if (!zhipuDetails.value) return null
+  return usageTab.value === 'today'
+    ? zhipuDetails.value.todayModelUsage
+    : zhipuDetails.value.modelUsage
+})
+
+// 模型占比计算
+function getModelPercentage(modelTokens: number, totalTokens: number): string {
+  return totalTokens > 0
+    ? ((modelTokens / totalTokens) * 100).toFixed(1) + '%'
+    : '--'
 }
 
 onMounted(() => {
@@ -321,66 +340,48 @@ onMounted(() => {
 
           <!-- 用量详情 (仅智谱) -->
           <template v-if="zhipuDetails">
-            <!-- 今日模型用量 -->
-            <div class="detail-section-title">今日模型用量</div>
-            <el-descriptions :column="2" border class="detail-descriptions">
-              <el-descriptions-item label="调用次数">
-                {{ zhipuDetails.todayModelUsage.totalCalls.toLocaleString() }}
-              </el-descriptions-item>
-              <el-descriptions-item label="Token 消耗">
-                {{ formatTokens(zhipuDetails.todayModelUsage.totalTokens) }}
-              </el-descriptions-item>
-            </el-descriptions>
+            <!-- Tab 切换 -->
+            <div class="usage-tabs">
+              <button
+                class="usage-tab"
+                :class="{ active: usageTab === 'today' }"
+                @click="usageTab = 'today'"
+              >今日</button>
+              <button
+                class="usage-tab"
+                :class="{ active: usageTab === 'week' }"
+                @click="usageTab = 'week'"
+              >近7天</button>
+            </div>
 
-            <!-- 今日各模型 Token 明细 -->
-            <template v-if="zhipuDetails.todayModelUsage.modelList.length > 0">
-              <div class="detail-section-title">今日各模型 Token 消耗</div>
-              <el-table :data="zhipuDetails.todayModelUsage.modelList" size="small" class="detail-table">
-                <el-table-column prop="modelName" label="模型" min-width="140" />
-                <el-table-column label="Token 消耗" width="140">
-                  <template #default="{ row }">
-                    {{ formatTokens(row.totalTokens) }}
-                  </template>
-                </el-table-column>
-                <el-table-column label="占比" width="100">
-                  <template #default="{ row }">
-                    {{ zhipuDetails.todayModelUsage.totalTokens > 0
-                      ? ((row.totalTokens / zhipuDetails.todayModelUsage.totalTokens) * 100).toFixed(1) + '%'
-                      : '--' }}
-                  </template>
-                </el-table-column>
-              </el-table>
-            </template>
+            <!-- 模型用量汇总 -->
+            <template v-if="currentUsage">
+              <el-descriptions :column="2" border class="detail-descriptions">
+                <el-descriptions-item label="调用次数">
+                  {{ currentUsage.totalCalls.toLocaleString() }}
+                </el-descriptions-item>
+                <el-descriptions-item label="Token 消耗">
+                  {{ formatTokens(currentUsage.totalTokens) }}
+                </el-descriptions-item>
+              </el-descriptions>
 
-            <!-- 7天模型用量汇总 -->
-            <div class="detail-section-title">模型用量 (近7天)</div>
-            <el-descriptions :column="2" border class="detail-descriptions">
-              <el-descriptions-item label="总调用次数">
-                {{ zhipuDetails.modelUsage.totalCalls.toLocaleString() }}
-              </el-descriptions-item>
-              <el-descriptions-item label="总 Token 消耗">
-                {{ formatTokens(zhipuDetails.modelUsage.totalTokens) }}
-              </el-descriptions-item>
-            </el-descriptions>
-
-            <!-- 各模型 Token 明细 -->
-            <template v-if="zhipuDetails.modelUsage.modelList.length > 0">
-              <div class="detail-section-title">各模型 Token 消耗</div>
-              <el-table :data="zhipuDetails.modelUsage.modelList" size="small" class="detail-table">
-                <el-table-column prop="modelName" label="模型" min-width="140" />
-                <el-table-column label="Token 消耗" width="140">
-                  <template #default="{ row }">
-                    {{ formatTokens(row.totalTokens) }}
-                  </template>
-                </el-table-column>
-                <el-table-column label="占比" width="100">
-                  <template #default="{ row }">
-                    {{ zhipuDetails.modelUsage.totalTokens > 0
-                      ? ((row.totalTokens / zhipuDetails.modelUsage.totalTokens) * 100).toFixed(1) + '%'
-                      : '--' }}
-                  </template>
-                </el-table-column>
-              </el-table>
+              <!-- 各模型 Token 明细 -->
+              <template v-if="currentUsage.modelList.length > 0">
+                <div class="detail-section-title">各模型 Token 消耗</div>
+                <el-table :data="currentUsage.modelList" size="small" class="detail-table">
+                  <el-table-column prop="modelName" label="模型" min-width="140" />
+                  <el-table-column label="Token 消耗" width="140">
+                    <template #default="{ row }">
+                      {{ formatTokens(row.totalTokens) }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="占比" width="100">
+                    <template #default="{ row }">
+                      {{ getModelPercentage(row.totalTokens, currentUsage.totalTokens) }}
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </template>
             </template>
           </template>
 
@@ -719,6 +720,41 @@ onMounted(() => {
   border-left: 3px solid var(--app-color-primary);
 }
 
+/* 用量 Tab 切换 */
+.usage-tabs {
+  display: flex;
+  gap: 0;
+  margin: 16px 0 0;
+  background: var(--app-bg-hover);
+  border-radius: 8px;
+  padding: 3px;
+  border: 1px solid var(--app-border-default);
+}
+
+.usage-tab {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: transparent;
+  color: var(--app-text-tertiary);
+}
+
+.usage-tab:hover {
+  color: var(--app-text-primary);
+  background: rgba(0, 212, 255, 0.05);
+}
+
+.usage-tab.active {
+  background: var(--app-color-primary);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 212, 255, 0.3);
+}
+
 .detail-table {
   border-radius: 8px;
   overflow: hidden;
@@ -831,6 +867,26 @@ html.cyberpunk .detail-section-title {
   text-shadow: 0 0 6px rgba(0, 255, 255, 0.2);
 }
 
+html.cyberpunk .usage-tabs {
+  background: rgba(0, 255, 255, 0.05);
+  border-color: rgba(0, 255, 255, 0.2);
+}
+
+html.cyberpunk .usage-tab {
+  color: #8080a0;
+}
+
+html.cyberpunk .usage-tab:hover {
+  color: #00ffff;
+  background: rgba(0, 255, 255, 0.08);
+}
+
+html.cyberpunk .usage-tab.active {
+  background: rgba(0, 255, 255, 0.15);
+  color: #00ffff;
+  box-shadow: 0 0 12px rgba(0, 255, 255, 0.3);
+}
+
 html.cyberpunk .detail-descriptions :deep(.el-descriptions__label) {
   background: rgba(0, 255, 255, 0.05);
   color: #8080a0;
@@ -930,6 +986,26 @@ html.glassmorphism .detail-dialog :deep(.el-dialog__title) {
 html.glassmorphism .detail-section-title {
   color: #1e293b;
   border-left-color: #2563eb;
+}
+
+html.glassmorphism .usage-tabs {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+html.glassmorphism .usage-tab {
+  color: #94a3b8;
+}
+
+html.glassmorphism .usage-tab:hover {
+  color: #1e293b;
+  background: rgba(37, 99, 235, 0.05);
+}
+
+html.glassmorphism .usage-tab.active {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
 html.glassmorphism .detail-descriptions :deep(.el-descriptions__label) {
