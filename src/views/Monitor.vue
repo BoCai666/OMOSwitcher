@@ -801,7 +801,6 @@ onUnmounted(() => {
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   max-width: 900px;
-  max-height: 90vh;
   display: flex;
   flex-direction: column;
 }
@@ -837,8 +836,7 @@ onUnmounted(() => {
 .detail-dialog :deep(.el-dialog__body) {
   padding: 16px;
   flex: 1;
-  overflow-y: auto !important;
-  max-height: calc(90vh - 60px);
+  overflow: hidden;
 }
 
 /* ==================== 响应式布局 ==================== */
@@ -1335,13 +1333,17 @@ html.light:not(.cyberpunk):not(.dark) .error-alert {
 }
 </style>
 
-<!-- 全局样式：el-dialog 被 teleport 到 body 外，scoped 无法生效 -->
+<!-- 全局样式：el-dialog 被 teleport 到 .app-main 后 scoped 无法生效 -->
 <style>
 /* 详情弹窗 */
 .detail-dialog.el-dialog {
   background: var(--app-bg-card);
   border: 1px solid var(--app-border-default);
   border-radius: 16px;
+}
+
+.detail-dialog .el-dialog__body {
+  overflow: hidden !important;
 }
 </style>
 

@@ -95,7 +95,70 @@ function isMessageExpanded(index: number): boolean {
 </template>
 
 <style scoped>
-/* 消息列表 */
+/* ========== 区块样式（与 RequestBodyDetailDialog 保持一致） ========== */
+.section {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--app-border-default);
+  border-radius: 12px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid var(--app-border-default);
+}
+
+.section-header.clickable {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.section-header.clickable:hover {
+  background: rgba(0, 212, 255, 0.08);
+}
+
+.collapse-arrow {
+  margin-left: auto;
+  font-size: 14px;
+  color: var(--app-text-tertiary);
+  transition: transform 0.3s ease;
+}
+
+.collapse-arrow.expanded {
+  transform: rotate(90deg);
+  color: var(--app-color-primary);
+}
+
+.section-icon {
+  font-size: 18px;
+  color: var(--app-color-primary);
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--app-text-primary);
+  letter-spacing: 0.3px;
+}
+
+.section-badge {
+  padding: 3px 12px;
+  background: rgba(0, 212, 255, 0.15);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--app-color-primary);
+}
+
+.section-body {
+  padding: 16px;
+}
+
+/* ========== 消息列表 ========== */
 .messages-list {
   display: flex;
   flex-direction: column;
@@ -326,6 +389,20 @@ function isMessageExpanded(index: number): boolean {
 }
 
 /* 赛博朋克主题 */
+html.cyberpunk .section {
+  border-color: rgba(0, 212, 255, 0.3);
+}
+
+html.cyberpunk .section-header {
+  background: linear-gradient(90deg, rgba(0, 212, 255, 0.1), transparent);
+  border-bottom-color: rgba(0, 212, 255, 0.2);
+}
+
+html.cyberpunk .section-badge {
+  background: rgba(0, 255, 255, 0.15);
+  border-color: rgba(0, 255, 255, 0.4);
+}
+
 html.cyberpunk .message-item:hover {
   border-color: rgba(0, 255, 255, 0.5);
   box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
@@ -368,6 +445,22 @@ html.cyberpunk .thinking-content {
 }
 
 /* 玻璃拟态主题 */
+html.glassmorphism .section {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #e5e7eb;
+}
+
+html.glassmorphism .section-header {
+  background: #f9fafb;
+  border-bottom-color: #e5e7eb;
+}
+
+html.glassmorphism .section-badge {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(37, 99, 235, 0.3);
+  color: var(--app-color-primary);
+}
+
 html.glassmorphism .message-item {
   background: #ffffff;
 }
@@ -382,6 +475,20 @@ html.glassmorphism .message-content pre {
 }
 
 /* 暗色主题 */
+html.dark .section {
+  background: rgba(26, 26, 46, 0.6);
+  border-color: var(--app-border-default);
+}
+
+html.dark .section-header {
+  background: rgba(0, 212, 255, 0.05);
+}
+
+html.dark .section-badge {
+  background: rgba(0, 212, 255, 0.12);
+  border-color: rgba(0, 212, 255, 0.35);
+}
+
 html.dark .message-item:hover {
   border-color: rgba(0, 212, 255, 0.4);
 }
@@ -425,6 +532,22 @@ html.light:not(.cyberpunk):not(.dark) .thinking-content {
 }
 
 /* 明色主题 */
+html.light:not(.cyberpunk):not(.dark) .section {
+  background: #ffffff;
+  border-color: #e5e7eb;
+}
+
+html.light:not(.cyberpunk):not(.dark) .section-header {
+  background: #f9fafb;
+  border-bottom-color: #e5e7eb;
+}
+
+html.light:not(.cyberpunk):not(.dark) .section-badge {
+  background: rgba(0, 168, 232, 0.1);
+  border-color: rgba(0, 168, 232, 0.3);
+  color: var(--app-color-primary);
+}
+
 html.light:not(.cyberpunk):not(.dark) .message-item {
   background: #ffffff;
   border-color: #e5e7eb;

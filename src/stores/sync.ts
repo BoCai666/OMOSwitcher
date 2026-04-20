@@ -7,7 +7,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as syncApi from '@/services/syncApi'
-import { invalidatePresetsCache } from '@/services/presetStore'
+import { invalidatePresetsCache, loadPreset, getCurrentPreset } from '@/services/presetStore'
 import type {
   AuthState,
   GitHubUser,
@@ -46,6 +46,32 @@ export const useSyncStore = defineStore('sync', () => {
 
   /** 最后同步时间 */
   const lastSyncTime = computed(() => syncMetadata.value?.last_sync_at)
+
+  // ========== 内部辅助方法 ==========
+
+  /**
+   * 远程同步下载后，重新应用当前激活的预设
+   * 使 oh-my-opencode.json 和内存中的配置与远程版本一致
+   */
+  async function reapplyCurrentPreset(): Promise<void> {
+    const currentName = await getCurrentPreset()
+    if (!currentName) return
+
+    // 缓存已失效，从磁盘重新加载预设
+    const preset = await loadPreset(currentName)
+    if (!preset) {
+      // 远程删除了当前预设，不自动清除，让用户自行处理
+      return
+    }
+
+    // 动态导入 configStore 避免循环依赖
+    const { useConfigStore } = await import('@/stores')
+    const configStore = useConfigStore()
+
+    // 应用预设配置并保存到主配置文件
+    configStore.applyPreset(preset.config, currentName)
+    await configStore.saveConfig()
+  }
 
   // ========== 操作 ==========
 
@@ -196,6 +222,7 @@ export const useSyncStore = defineStore('sync', () => {
         // 远程预设已下载到本地，需使缓存失效以便 UI 刷新
         if (result.type === 'Downloaded') {
           invalidatePresetsCache()
+          await reapplyCurrentPreset()
         }
       }
       return result
@@ -248,6 +275,7 @@ export const useSyncStore = defineStore('sync', () => {
       if (meta) syncMetadata.value = meta
       // 远程预设已下载到本地，使缓存失效
       invalidatePresetsCache()
+      await reapplyCurrentPreset()
       return result
     } catch (e) {
       lastError.value = String(e)
@@ -268,6 +296,9 @@ export const useSyncStore = defineStore('sync', () => {
     syncMetadata.value = await syncApi.getSyncStatus()
     // 冲突解决可能选择了远程版本，本地预设已变更
     invalidatePresetsCache()
+    if (resolution === 'KeepRemote') {
+      await reapplyCurrentPreset()
+    }
   }
 
   /**
