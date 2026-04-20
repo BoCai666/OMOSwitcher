@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.5] - 2026-04-20
+
+### 新增功能
+
+- **供应商额度查询模块** - 全新的 LLM 供应商余额/配额查询功能
+  - 支持 8 个供应商：智谱、MiniMax、DeepSeek、Moonshot、OpenRouter、SiliconFlow、Infini
+  - 并发查询，统一返回格式
+  - 智谱额度详情弹窗支持今日/近 7 天 tab 切换展示
+
+- **额度管理页面** - QuotaView.vue
+  - 供应商余额卡片展示
+  - 额度格式化组合式函数 (useQuotaFormatter)
+  - 供应商品牌色/图标元数据 (providerMetadata)
+
+- **Commands 模块拆分** - commands.rs 拆分为 7 个子模块
+  - config / launch / model / monitor_service / preset / settings
+  - pub use re-export 保持调用路径不变
+
+### Bug 修复
+
+- **修复请求详情弹窗双滚动条** - Monitor.vue 弹窗外层 overflow 修正
+- **修复消息列表样式不一致** - MessageList.vue 补全四套主题样式
+- **修复远程同步后预设不生效** - sync.ts 新增 reapplyCurrentPreset，下载/同步/冲突解决后自动重新应用当前预设
+- **移除 MCP 误判逻辑** - 删除 OpenAI Function Calling 格式的 MCP 检测，仅保留 JSON-RPC 2.0 和 URL 路径匹配
+
+### 构建改进
+
+- **OAuth Secret 编译时强制检查** - OAUTH_CLIENT_SECRET 环境变量未设置时编译失败
+- **CI 环境变量重命名** - 避免 GitHub 保留的 GITHUB_ 前缀冲突
+- **额度详情弹窗 tab 样式美化** - 修复弹窗滚动条缺失
+
+---
+
 ## [2.0.4] - 2026-04-19
 
 ### 新增功能
