@@ -12,10 +12,16 @@ use sha2::{Digest, Sha256};
 /// GitHub OAuth App Client Secret
 /// GitHub OAuth Apps 的 token 交换端点强制要求 client_secret（即使使用 PKCE）
 /// 通过编译时环境变量注入，避免明文硬编码在源码中
-/// 构建命令: GITHUB_CLIENT_SECRET=xxx cargo build
-const GITHUB_CLIENT_SECRET: &str = match option_env!("GITHUB_CLIENT_SECRET") {
-    Some(s) => s,
-    None => "", // 未设置时为空，token 交换会失败并给出明确提示
+/// 
+/// 必须设置 OAUTH_CLIENT_SECRET 环境变量，否则编译失败
+/// 构建命令: OAUTH_CLIENT_SECRET=xxx cargo build
+const OAUTH_CLIENT_SECRET: &str = {
+    match option_env!("OAUTH_CLIENT_SECRET") {
+        Some(s) if !s.is_empty() => s,
+        _ => {
+            panic!("编译失败: 必须设置 OAUTH_CLIENT_SECRET 环境变量");
+        }
+    }
 };
 
 /// OAuth 回调固定端口
@@ -253,15 +259,11 @@ pub async fn exchange_code_for_token(
     code: &str,
     code_verifier: &str,
 ) -> Result<String, String> {
-    if GITHUB_CLIENT_SECRET.is_empty() {
-        return Err("GITHUB_CLIENT_SECRET 未设置，请在构建时通过环境变量注入".to_string());
-    }
-
     let client = build_http_client();
 
     let params = [
         ("client_id", GITHUB_CLIENT_ID),
-        ("client_secret", GITHUB_CLIENT_SECRET),
+        ("client_secret", OAUTH_CLIENT_SECRET),
         ("code", code),
         ("code_verifier", code_verifier),
     ];

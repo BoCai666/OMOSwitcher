@@ -33,6 +33,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OAUTH_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'OMOSwitcher ${{ github.ref_name }}'
