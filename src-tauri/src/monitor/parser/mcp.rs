@@ -96,52 +96,7 @@ pub fn detect_mcp_call(
         }
     }
 
-    // 检测2: OpenAI Function Calling 格式
-    if body.get("tool_choice").is_some() || body.get("tools").is_some() {
-        // 尝试从 tool_choice.function 或 tools[0].function 提取
-        let func_call = body
-            .get("tool_choice")
-            .and_then(|v| v.get("function"))
-            .or_else(|| {
-                body.get("tools")
-                    .and_then(|v| v.as_array())
-                    .and_then(|a| a.first())
-                    .and_then(|t| t.get("function"))
-            });
-
-        if let Some(func) = func_call {
-            let tool_name = func
-                .get("name")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
-
-            let arguments = func.get("arguments").and_then(|v| {
-                // arguments 可能是字符串或对象
-                match v {
-                    serde_json::Value::String(s) => {
-                        serde_json::from_str::<HashMap<String, serde_json::Value>>(s).ok()
-                    }
-                    serde_json::Value::Object(obj) => Some(
-                        obj.iter()
-                            .map(|(k, val)| (k.clone(), val.clone()))
-                            .collect(),
-                    ),
-                    _ => None,
-                }
-            });
-
-            return McpDetectionResult {
-                is_mcp_call: true,
-                tool_name,
-                arguments,
-                transport_type: Some(TransportType::Http),
-                jsonrpc_version: None,
-                rpc_id: None,
-            };
-        }
-    }
-
-    // 检测3: 通过请求路径判断
+    // 检测2: 通过请求路径判断
     if url.contains("/mcp") || url.contains("/tools/call") {
         return McpDetectionResult {
             is_mcp_call: true,
