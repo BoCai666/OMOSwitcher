@@ -7,6 +7,9 @@ mod quota;
 mod sync;
 
 use std::fmt;
+use tauri::Manager;
+use tauri::menu::{MenuBuilder, MenuItem};
+use tauri::tray::TrayIconBuilder;
 use tracing_subscriber::fmt::{FormatEvent, FormatFields, FmtContext};
 use tracing_subscriber::registry::LookupSpan;
 
@@ -113,6 +116,50 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_keyring::init())
+        // 创建系统托盘
+        .setup(|app| {
+            let show_item = MenuItem::with_id(app, "show", "显示 OMOSwitcher", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
+            let menu = MenuBuilder::new(app)
+                .item(&show_item)
+                .separator()
+                .item(&quit_item)
+                .build()?;
+
+            let _tray = TrayIconBuilder::new()
+                .icon(app.default_window_icon().cloned().unwrap())
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .tooltip("OMOSwitcher")
+                .on_menu_event(|app, event| {
+                    match event.id.as_ref() {
+                        "show" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        "quit" => {
+                            commands::launch::cleanup_opencode_child();
+                            app.exit(0);
+                        }
+                        _ => {}
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    // 左键点击直接显示窗口
+                    if let tauri::tray::TrayIconEvent::Click { button: tauri::tray::MouseButton::Left, .. } = event {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+
+            Ok(())
+        })
         // 注册 Monitor 状态管理
         .manage(monitor_state)
         // 注册 Sync 状态管理

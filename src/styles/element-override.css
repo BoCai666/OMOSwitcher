@@ -2217,3 +2217,518 @@ html.glassmorphism .el-alert--info .el-alert__icon {
 html.glassmorphism .el-alert--info .el-alert__title {
   color: #1d4ed8;
 }
+
+/* ==================== MessageBox 关闭确认弹窗 ==================== */
+
+/* 基础样式 */
+.close-confirm-messagebox {
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+.close-confirm-messagebox .el-message-box__header {
+  padding: 16px 20px 12px;
+}
+
+.close-confirm-messagebox .el-message-box__title {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.close-confirm-messagebox .el-message-box__content {
+  padding: 12px 20px 20px;
+}
+
+.close-confirm-messagebox .el-message-box__message {
+  margin: 0;
+}
+
+.close-confirm-messagebox .el-message-box__btns {
+  padding: 12px 20px 20px;
+  display: flex;
+  gap: 12px;
+}
+
+.close-confirm-messagebox .el-message-box__btns .el-button {
+  min-width: 120px;
+}
+
+/* 默认主题 - 退出按钮样式 (覆盖所有非 primary 按钮) */
+.close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary) {
+  background: #fff !important;
+  border: 1px solid #fecaca !important;
+  color: #dc2626 !important;
+  box-shadow: none !important;
+}
+
+.close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary):hover,
+.close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary):focus {
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+  color: #b91c1c !important;
+  box-shadow: none !important;
+}
+
+.close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary):active {
+  background: #fecaca !important;
+  color: #991b1b !important;
+  box-shadow: none !important;
+}
+
+/* 赛博朋克主题 - MessageBox */
+html.cyberpunk .close-confirm-messagebox {
+  background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 100%) !important;
+  border: 1px solid rgba(0, 255, 255, 0.3) !important;
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+}
+
+html.cyberpunk .close-confirm-messagebox .el-message-box__header {
+  background: transparent;
+  border-bottom: none;
+}
+
+html.cyberpunk .close-confirm-messagebox .el-message-box__title {
+  color: #e0e0ff;
+  text-shadow: none;
+}
+
+html.cyberpunk .close-confirm-messagebox .el-message-box__headerbtn {
+  top: 16px;
+  right: 16px;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+html.cyberpunk .close-confirm-messagebox .el-message-box__headerbtn:hover {
+  background: rgba(0, 255, 255, 0.1);
+  border-color: rgba(0, 255, 255, 0.4);
+}
+
+html.cyberpunk .close-confirm-messagebox .el-message-box__headerbtn .el-message-box__close {
+  color: rgba(0, 255, 255, 0.6);
+  font-size: 14px;
+}
+
+html.cyberpunk .close-confirm-messagebox .el-message-box__headerbtn:hover .el-message-box__close {
+  color: #00ffff;
+}
+
+html.cyberpunk .close-confirm-messagebox .el-message-box__content {
+  color: #b0b0d0;
+}
+
+html.cyberpunk .close-confirm-messagebox .el-message-box__content p {
+  color: #c0c0e0;
+}
+
+/* 赛博朋克 - 复选框 */
+html.cyberpunk .close-confirm-messagebox .el-checkbox {
+  color: #b0b0d0;
+}
+
+html.cyberpunk .close-confirm-messagebox .el-checkbox__inner {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(0, 255, 255, 0.4);
+}
+
+html.cyberpunk .close-confirm-messagebox .el-checkbox__input.is-checked .el-checkbox__inner {
+  background: rgba(0, 255, 255, 0.2);
+  border-color: #00ffff;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+html.cyberpunk .close-confirm-messagebox .el-checkbox__label {
+  color: #a0a0c0;
+}
+
+/* 赛博朋克 - 按钮 */
+html.cyberpunk .close-confirm-messagebox .el-button--primary {
+  background: linear-gradient(135deg, #00ffff 0%, #00cccc 100%) !important;
+  border: none !important;
+  color: #0a0a1a !important;
+  font-weight: 600 !important;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.4) !important;
+}
+
+html.cyberpunk .close-confirm-messagebox .el-button--primary:hover {
+  background: linear-gradient(135deg, #00ffff 0%, #33ffff 100%) !important;
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.6) !important;
+  transform: translateY(-1px);
+}
+
+/* 赛博朋克 - 退出按钮 (非 primary) */
+html.cyberpunk .close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary) {
+  background: transparent !important;
+  border: 1px solid rgba(255, 51, 102, 0.6) !important;
+  color: #ff3366 !important;
+  box-shadow: none !important;
+}
+
+html.cyberpunk .close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary):hover,
+html.cyberpunk .close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary):focus {
+  background: rgba(255, 51, 102, 0.25) !important;
+  border-color: #ff3366 !important;
+  color: #ff6688 !important;
+  box-shadow: none !important;
+}
+
+html.cyberpunk .close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary):active {
+  background: rgba(255, 51, 102, 0.4) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* 赛博朋克 - 图标 */
+html.cyberpunk .close-confirm-messagebox .el-message-box__status.el-message-box-icon--warning {
+  color: #ffaa00;
+  filter: none;
+}
+
+/* 赛博朋克 - 遮罩层 */
+html.cyberpunk .el-overlay {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(4px);
+}
+
+/* ==================== Dark 主题 - MessageBox ==================== */
+html.dark .close-confirm-messagebox {
+  background: #1a1a2e !important;
+  border: 1px solid #3a3a5a !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.dark .close-confirm-messagebox .el-message-box__header {
+  background: transparent;
+  border-bottom: none;
+}
+
+html.dark .close-confirm-messagebox .el-message-box__title {
+  color: #e5eaf3;
+}
+
+html.dark .close-confirm-messagebox .el-message-box__headerbtn {
+  top: 16px;
+  right: 16px;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid #3a3a5a;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+html.dark .close-confirm-messagebox .el-message-box__headerbtn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+}
+
+html.dark .close-confirm-messagebox .el-message-box__headerbtn .el-message-box__close {
+  color: #a3a6ad;
+  font-size: 14px;
+}
+
+html.dark .close-confirm-messagebox .el-message-box__headerbtn:hover .el-message-box__close {
+  color: #ef4444;
+}
+
+html.dark .close-confirm-messagebox .el-message-box__content {
+  color: #cfd3dc;
+}
+
+html.dark .close-confirm-messagebox .el-message-box__content p {
+  color: #cfd3dc;
+}
+
+/* Dark - 复选框 */
+html.dark .close-confirm-messagebox .el-checkbox__inner {
+  background: #1a1a2e;
+  border-color: #3a3a5a;
+}
+
+html.dark .close-confirm-messagebox .el-checkbox__input.is-checked .el-checkbox__inner {
+  background: #00d4ff;
+  border-color: #00d4ff;
+}
+
+html.dark .close-confirm-messagebox .el-checkbox__label {
+  color: #a3a6ad;
+}
+
+/* Dark - 主按钮 */
+html.dark .close-confirm-messagebox .el-button--primary {
+  background: linear-gradient(135deg, #00d4ff 0%, #00b8e0 100%) !important;
+  border: none !important;
+  color: #0a0a0f !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3) !important;
+}
+
+html.dark .close-confirm-messagebox .el-button--primary:hover {
+  background: linear-gradient(135deg, #33ddff 0%, #00d4ff 100%) !important;
+  box-shadow: 0 6px 20px rgba(0, 212, 255, 0.4) !important;
+}
+
+/* Dark - 退出按钮 (非 primary) */
+html.dark .close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary) {
+  background: transparent !important;
+  border: 1px solid rgba(239, 68, 68, 0.5) !important;
+  color: #ef4444 !important;
+  box-shadow: none !important;
+}
+
+html.dark .close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary):hover,
+html.dark .close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary):focus {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border-color: #ef4444 !important;
+  color: #f87171 !important;
+  box-shadow: none !important;
+}
+
+html.dark .close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary):active {
+  background: rgba(239, 68, 68, 0.3) !important;
+  color: #fca5a5 !important;
+  box-shadow: none !important;
+}
+
+/* Dark - 图标 */
+html.dark .close-confirm-messagebox .el-message-box__status.el-message-box-icon--warning {
+  color: #f59e0b;
+}
+
+/* Dark - 遮罩层 */
+html.dark .el-overlay {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* ==================== Light 主题 - MessageBox ==================== */
+html.light .close-confirm-messagebox {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+}
+
+html.light .close-confirm-messagebox .el-message-box__header {
+  background: transparent;
+  border-bottom: none;
+}
+
+html.light .close-confirm-messagebox .el-message-box__title {
+  color: #303133;
+}
+
+html.light .close-confirm-messagebox .el-message-box__headerbtn {
+  top: 16px;
+  right: 16px;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+html.light .close-confirm-messagebox .el-message-box__headerbtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+html.light .close-confirm-messagebox .el-message-box__headerbtn .el-message-box__close {
+  color: #909399;
+  font-size: 14px;
+}
+
+html.light .close-confirm-messagebox .el-message-box__headerbtn:hover .el-message-box__close {
+  color: #ef4444;
+}
+
+html.light .close-confirm-messagebox .el-message-box__content {
+  color: #606266;
+}
+
+html.light .close-confirm-messagebox .el-message-box__content p {
+  color: #606266;
+}
+
+/* Light - 复选框 */
+html.light .close-confirm-messagebox .el-checkbox__inner {
+  background: #fff;
+  border-color: #dcdfe6;
+}
+
+html.light .close-confirm-messagebox .el-checkbox__input.is-checked .el-checkbox__inner {
+  background: #00a8e8;
+  border-color: #00a8e8;
+}
+
+html.light .close-confirm-messagebox .el-checkbox__label {
+  color: #606266;
+}
+
+/* Light - 主按钮 */
+html.light .close-confirm-messagebox .el-button--primary {
+  background: linear-gradient(135deg, #00a8e8 0%, #0090c8 100%) !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 500 !important;
+  box-shadow: 0 4px 12px rgba(0, 168, 232, 0.3) !important;
+}
+
+html.light .close-confirm-messagebox .el-button--primary:hover {
+  background: linear-gradient(135deg, #33b8f8 0%, #00a8e8 100%) !important;
+  box-shadow: 0 6px 20px rgba(0, 168, 232, 0.4) !important;
+}
+
+/* Light - 退出按钮 (非 primary) */
+html.light .close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary) {
+  background: #fff !important;
+  border: 1px solid #fecaca !important;
+  color: #dc2626 !important;
+  box-shadow: none !important;
+}
+
+html.light .close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary):hover,
+html.light .close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary):focus {
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+  color: #b91c1c !important;
+  box-shadow: none !important;
+}
+
+html.light .close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary):active {
+  background: #fecaca !important;
+  color: #991b1b !important;
+  box-shadow: none !important;
+}
+
+/* Light - 图标 */
+html.light .close-confirm-messagebox .el-message-box__status.el-message-box-icon--warning {
+  color: #f59e0b;
+}
+
+/* Light - 遮罩层 */
+html.light .el-overlay {
+  background-color: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* 玻璃拟态主题 - MessageBox 玻璃效果 */
+html.glassmorphism .close-confirm-messagebox {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  border-radius: 16px !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    0 2px 8px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+html.glassmorphism .close-confirm-messagebox .el-message-box__header {
+  background: transparent;
+  border-bottom: none;
+}
+
+html.glassmorphism .close-confirm-messagebox .el-message-box__title {
+  color: #1e293b;
+}
+
+html.glassmorphism .close-confirm-messagebox .el-message-box__headerbtn {
+  top: 16px;
+  right: 16px;
+  width: 28px;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.04);
+  border: none;
+  border-radius: 8px;
+  transition: all 0.25s ease;
+}
+
+html.glassmorphism .close-confirm-messagebox .el-message-box__headerbtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+html.glassmorphism .close-confirm-messagebox .el-message-box__headerbtn .el-message-box__close {
+  color: #94a3b8;
+  font-size: 14px;
+  transition: color 0.25s ease;
+}
+
+html.glassmorphism .close-confirm-messagebox .el-message-box__headerbtn:hover .el-message-box__close {
+  color: #ef4444;
+}
+
+html.glassmorphism .close-confirm-messagebox .el-message-box__content {
+  color: #334155;
+}
+
+html.glassmorphism .close-confirm-messagebox .el-message-box__content p {
+  color: #475569;
+}
+
+/* 玻璃拟态 - 复选框 */
+html.glassmorphism .close-confirm-messagebox .el-checkbox__inner {
+  background: #fff;
+  border-color: #cbd5e1;
+}
+
+html.glassmorphism .close-confirm-messagebox .el-checkbox__input.is-checked .el-checkbox__inner {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+html.glassmorphism .close-confirm-messagebox .el-checkbox__label {
+  color: #64748b;
+}
+
+/* 玻璃拟态 - 按钮 */
+html.glassmorphism .close-confirm-messagebox .el-button--primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 500 !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
+}
+
+html.glassmorphism .close-confirm-messagebox .el-button--primary:hover {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%) !important;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4) !important;
+  transform: translateY(-1px);
+}
+
+/* 玻璃拟态 - 退出按钮 (非 primary) */
+html.glassmorphism .close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary) {
+  background: #fff !important;
+  border: 1px solid #fecaca !important;
+  color: #dc2626 !important;
+  box-shadow: none !important;
+}
+
+html.glassmorphism .close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary):hover,
+html.glassmorphism .close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary):focus {
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+  color: #b91c1c !important;
+  box-shadow: none !important;
+}
+
+html.glassmorphism .close-confirm-messagebox .el-message-box__btns .el-button:not(.el-button--primary):active {
+  background: #fecaca !important;
+  color: #991b1b !important;
+  box-shadow: none !important;
+}
+
+/* 玻璃拟态 - 图标 */
+html.glassmorphism .close-confirm-messagebox .el-message-box__status.el-message-box-icon--warning {
+  color: #f59e0b;
+}
+
+/* 玻璃拟态 - 遮罩层 */
+html.glassmorphism .el-overlay {
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(8px);
+}

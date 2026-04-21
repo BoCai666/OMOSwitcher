@@ -4,9 +4,11 @@
  * 提供窗口控制、拖拽移动、双击最大化/还原功能
  * 支持主题特定视觉效果和用户头像入口
  */
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, h, onMounted, onUnmounted } from 'vue'
+import { ElMessageBox, ElCheckbox } from 'element-plus'
 import { useTheme } from '@/composables/useTheme'
 import { useSyncStore } from '@/stores/sync'
+import { getCloseBehavior, setCloseBehavior } from '@/services/settingsStore'
 import UserDrawer from '@/components/UserDrawer.vue'
 
 // 窗口最大化状态
@@ -47,7 +49,70 @@ const handleMaximize = async () => {
 
 const handleClose = async () => {
   if (!appWindow) return
-  await appWindow.close()
+
+  // 读取保存的关闭行为
+  const behavior = await getCloseBehavior()
+
+  if (behavior === 'minimize') {
+    await appWindow.hide()
+    return
+  }
+
+  if (behavior === 'exit') {
+    await appWindow.close()
+    return
+  }
+
+  // behavior === 'ask'，弹出选择对话框
+  const dontAskAgain = ref(false)
+
+  try {
+    await ElMessageBox({
+      title: '关闭确认',
+      message: () =>
+        h('div', { style: 'line-height: 1.6;' }, [
+          h('p', {
+            style: 'margin: 0 0 16px 0; font-size: 14px; color: var(--el-text-color-primary);',
+          }, '是否最小化到托盘？'),
+          h(
+            ElCheckbox,
+            {
+              modelValue: dontAskAgain.value,
+              'onUpdate:modelValue': (val: string | number | boolean) => { dontAskAgain.value = !!val },
+              style: 'color: var(--el-text-color-regular);',
+            },
+            () => '以后不再提示'
+          ),
+        ]),
+      confirmButtonText: '最小化到托盘',
+      cancelButtonText: '退出程序',
+      showCancelButton: true,
+      showClose: true,
+      closeOnClickModal: true,
+      closeOnPressEscape: true,
+      distinguishCancelAndClose: true,
+      customClass: 'close-confirm-messagebox',
+      type: 'warning',
+    })
+
+    // 用户点击了 "最小化到托盘" → 最小化到托盘
+    if (dontAskAgain.value) {
+      await setCloseBehavior('minimize')
+    }
+    await appWindow.hide()
+  } catch (action) {
+    // 区分弹窗关闭方式：
+    // - "退出程序" 按钮 → action === 'cancel' → 退出程序
+    // - X 按钮 / 点击背景 / 按 ESC → action === 'close' → 不做任何动作
+    if (action === 'cancel') {
+      // 用户点击了 "退出程序" → 退出程序
+      if (dontAskAgain.value) {
+        await setCloseBehavior('exit')
+      }
+      await appWindow.close()
+    }
+    // action === 'close' → 仅关闭弹窗，不改变窗口状态
+  }
 }
 
 // 双击标题栏最大化/还原

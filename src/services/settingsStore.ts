@@ -27,6 +27,8 @@ export interface AppSettings {
     // 代理服务端口（拦截 LLM API）
     proxy: number
   }
+  // 关闭行为：ask=每次询问, minimize=最小化到托盘, exit=直接退出
+  closeBehavior?: 'ask' | 'minimize' | 'exit'
   // 热重载配置
   hotReload: {
     // 是否启用热重载
@@ -38,6 +40,7 @@ export interface AppSettings {
 
 // 默认设置
 const DEFAULT_SETTINGS: AppSettings = {
+  closeBehavior: 'ask',
   proxy: {
     enabled: false
   },
@@ -316,5 +319,24 @@ export async function getHotReloadConfig(): Promise<{ enabled: boolean; port: nu
 export async function setHotReloadConfig(config: { enabled: boolean; port: number }): Promise<void> {
   const settings = await readSettings()
   settings.hotReload = config
+  await writeSettings(settings)
+}
+
+// ==================== 关闭行为相关函数 ====================
+
+/**
+ * 获取关闭行为设置
+ */
+export async function getCloseBehavior(): Promise<'ask' | 'minimize' | 'exit'> {
+  const settings = await readSettings()
+  return settings.closeBehavior ?? 'ask'
+}
+
+/**
+ * 设置关闭行为
+ */
+export async function setCloseBehavior(behavior: 'ask' | 'minimize' | 'exit'): Promise<void> {
+  const settings = await readSettings()
+  settings.closeBehavior = behavior
   await writeSettings(settings)
 }
