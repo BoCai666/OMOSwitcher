@@ -57,3 +57,6 @@ minimax-output/
 
 # 本地测试配置
 config.json
+
+# Playwright MCP 临时文件
+.playwright-mcp/
