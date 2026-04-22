@@ -10,7 +10,7 @@ import ModelSelectDrawer from '@/components/ModelSelectDrawer.vue'
 import { listModels } from '@/services/modelStore'
 import { useConfigStore } from '@/stores/config'
 import { showSuccess, showError } from '@/utils/errorHandler'
-import type { Model, AgentName, CategoryName, OhMyOpenCodeConfig } from '@/types'
+import type { Model, AgentName, CategoryName, OhMyOpenCodeConfig, FallbackModels, FallbackModelObject } from '@/types'
 import { AGENT_NAMES, AGENT_INFO, CATEGORY_NAMES, CATEGORY_INFO, createDefaultConfig } from '@/types'
 import { log } from '@/utils/logger'
 
@@ -33,6 +33,7 @@ const modelDrawerVisible = ref(false)
 const modelDrawerType = ref<'agent' | 'category'>('agent')
 const modelDrawerAgentName = ref<AgentName | null>(null)
 const modelDrawerCategoryName = ref<CategoryName | null>(null)
+const modelDrawerMode = ref<'primary' | 'fallback'>('primary')
 
 // 配置数据（使用 store 中的配置，如果未加载则使用默认值）
 const config = computed<OhMyOpenCodeConfig>({
@@ -104,10 +105,49 @@ function handleChangeModelFromDetail() {
     modelDrawerCategoryName.value = selectedCategoryName.value
     modelDrawerAgentName.value = null
   }
+  modelDrawerMode.value = 'primary'
+  modelDrawerVisible.value = true
+}
+
+// 处理添加备用模型事件
+function handleAddFallbackModel() {
+  // 从详情对话框触发备用模型选择
+  if (selectedAgentName.value) {
+    modelDrawerType.value = 'agent'
+    modelDrawerAgentName.value = selectedAgentName.value
+    modelDrawerCategoryName.value = null
+  } else if (selectedCategoryName.value) {
+    modelDrawerType.value = 'category'
+    modelDrawerCategoryName.value = selectedCategoryName.value
+    modelDrawerAgentName.value = null
+  }
+  modelDrawerMode.value = 'fallback'
   modelDrawerVisible.value = true
 }
 
 function handleSelectModel(modelId: string) {
+  if (modelDrawerMode.value === 'fallback') {
+    // 添加到备用模型链
+    if (modelDrawerType.value === 'agent' && modelDrawerAgentName.value) {
+      const current = config.value.agents[modelDrawerAgentName.value]?.fallback_models
+      const newChain = normalizeToArray(current)
+      if (!newChain.includes(modelId)) {
+        newChain.push(modelId)
+        configStore.updateAgentFallbackModels(modelDrawerAgentName.value, newChain)
+      }
+    } else if (modelDrawerType.value === 'category' && modelDrawerCategoryName.value) {
+      const current = config.value.categories[modelDrawerCategoryName.value]?.fallback_models
+      const newChain = normalizeToArray(current)
+      if (!newChain.includes(modelId)) {
+        newChain.push(modelId)
+        configStore.updateCategoryFallbackModels(modelDrawerCategoryName.value, newChain)
+      }
+    }
+    // 不关闭抽屉，允许继续添加多个模型
+    return
+  }
+
+  // 原有主模型选择逻辑
   if (modelDrawerType.value === 'agent' && modelDrawerAgentName.value) {
     updateAgentModel(modelDrawerAgentName.value, modelId)
   } else if (modelDrawerType.value === 'category' && modelDrawerCategoryName.value) {
@@ -148,6 +188,26 @@ const modelDrawerCurrentModel = computed(() => {
   }
   return ''
 })
+
+// ========== 备用模型相关 ==========
+
+/**
+ * 获取备用模型数量
+ */
+function getFallbackCount(fallbackModels: FallbackModels | undefined): number {
+  if (!fallbackModels) return 0
+  if (typeof fallbackModels === 'string') return 1
+  return fallbackModels.length
+}
+
+/**
+ * 将 FallbackModels 规范化为数组
+ */
+function normalizeToArray(fallback: FallbackModels | undefined): (string | FallbackModelObject)[] {
+  if (!fallback) return []
+  if (typeof fallback === 'string') return [fallback]
+  return [...fallback]
+}
 
 // 监听 store 中的错误
 watch(() => configStore.error, (newError) => {
@@ -193,6 +253,7 @@ watch(() => configStore.error, (newError) => {
               v-model="config.agents[agentName as AgentName].model"
               :models="models"
               :clickable="true"
+              :fallback-count="getFallbackCount(config.agents[agentName as AgentName]?.fallback_models)"
               @click="handleViewAgentDetail(agentName as AgentName)"
               @click-model="handleChangeAgentModel(agentName as AgentName)"
             />
@@ -213,6 +274,7 @@ watch(() => configStore.error, (newError) => {
               v-model="config.categories[name].model"
               :models="models"
               :clickable="true"
+              :fallback-count="getFallbackCount(config.categories[name]?.fallback_models)"
               @click="handleViewCategoryDetail(name)"
               @click-model="handleChangeCategoryModel(name)"
             />
@@ -228,7 +290,10 @@ watch(() => configStore.error, (newError) => {
         :name="selectedAgentName"
         :current-model="config.agents[selectedAgentName].model"
         :models="models"
+        :fallback-models="config.agents[selectedAgentName].fallback_models"
         @change-model="handleChangeModelFromDetail"
+        @update:fallback-models="(val) => selectedAgentName && configStore.updateAgentFallbackModels(selectedAgentName, val)"
+        @add-fallback-model="handleAddFallbackModel"
       />
 
       <!-- Category 详情对话框 -->
@@ -239,7 +304,10 @@ watch(() => configStore.error, (newError) => {
         :name="selectedCategoryName"
         :current-model="config.categories[selectedCategoryName].model"
         :models="models"
+        :fallback-models="config.categories[selectedCategoryName].fallback_models"
         @change-model="handleChangeModelFromDetail"
+        @update:fallback-models="(val) => selectedCategoryName && configStore.updateCategoryFallbackModels(selectedCategoryName, val)"
+        @add-fallback-model="handleAddFallbackModel"
       />
 
       <!-- 模型选择抽屉 -->

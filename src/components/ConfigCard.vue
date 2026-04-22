@@ -14,6 +14,7 @@ const props = defineProps<{
   models: Model[]
   description?: string
   clickable?: boolean
+  fallbackCount?: number
 }>()
 
 const emit = defineEmits<{
@@ -36,6 +37,9 @@ const providerName = computed(() => {
 const displayModel = computed(() => {
   return currentModelInfo.value?.name || props.modelValue.split('/').pop() || props.modelValue
 })
+
+// 备用模型计数，默认0
+const fallbackCount = computed(() => props.fallbackCount ?? 0)
 </script>
 
 <template>
@@ -72,6 +76,11 @@ const displayModel = computed(() => {
           </div>
         </div>
         <el-icon v-if="clickable" class="model-click-hint"><Edit /></el-icon>
+      </div>
+
+      <!-- 备用模型指示器 -->
+      <div v-if="fallbackCount > 0" class="fallback-indicator">
+        <el-tag type="warning" size="small">{{ fallbackCount }} 个备用模型</el-tag>
       </div>
     </div>
   </el-card>
@@ -397,6 +406,13 @@ html.glassmorphism .model-display.model-clickable:hover .model-click-hint {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* 备用模型指示器 */
+.fallback-indicator {
+  margin-top: var(--app-spacing-2);
+  padding-top: var(--app-spacing-2);
+  border-top: 1px dashed rgba(0, 168, 232, 0.15);
 }
 
 /* 卡片进入动画 */

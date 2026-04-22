@@ -7,8 +7,10 @@
 import { ref, computed, watch } from 'vue'
 import { Edit } from '@element-plus/icons-vue'
 import type { AgentName, CategoryName, Model } from '@/types'
+import type { FallbackModels } from '@/types/config'
 import { AGENT_DETAILS } from '@/data/agentDetails'
 import { CATEGORY_DETAILS } from '@/data/categoryDetails'
+import FallbackChainEditor from './FallbackChainEditor.vue'
 
 const props = defineProps<{
   visible: boolean
@@ -16,15 +18,21 @@ const props = defineProps<{
   name: AgentName | CategoryName
   currentModel: string
   models: Model[]
+  fallbackModels: FallbackModels | undefined
 }>()
 
 const emit = defineEmits<{
   'update:visible': [value: boolean]
   'change-model': []
+  'update:fallback-models': [value: FallbackModels | undefined]
+  'add-fallback-model': []
 }>()
 
 // 语言切换：'zh' | 'en'
 const promptLang = ref<'zh' | 'en'>('zh')
+
+// 内置回退链折叠状态（默认折叠）
+const builtinChainExpanded = ref(false)
 
 // 对话框可见性
 const dialogVisible = computed({
@@ -81,10 +89,22 @@ function handleChangeModel() {
   emit('change-model')
 }
 
-// 关闭对话框时重置语言
+// 回退模型 v-model 包装
+const fallbackModelsValue = computed({
+  get: () => props.fallbackModels,
+  set: (value) => emit('update:fallback-models', value)
+})
+
+// 添加回退模型 - 冒泡给父组件
+function handleAddFallbackModel() {
+  emit('add-fallback-model')
+}
+
+// 关闭对话框时重置语言和折叠状态
 watch(dialogVisible, (val) => {
   if (!val) {
     promptLang.value = 'zh'
+    builtinChainExpanded.value = false
   }
 })
 </script>
@@ -125,22 +145,44 @@ watch(dialogVisible, (val) => {
         </el-descriptions-item>
       </el-descriptions>
 
-      <!-- 回退模型链 -->
+      <!-- 自定义回退链 -->
       <div class="section">
-        <h4 class="section-title">回退模型链</h4>
-        <div class="fallback-chain">
-          <div 
-            v-for="(fallback, index) in detail.fallbackChain" 
-            :key="index" 
-            class="fallback-item"
-            :class="{ current: formatFallbackModel(fallback).isCurrent }"
-          >
-            <span class="fallback-index">{{ index + 1 }}</span>
-            <span class="fallback-model">{{ fallback.model }}</span>
-            <span v-if="fallback.variant" class="variant-badge">{{ fallback.variant }}</span>
-            <span class="providers">{{ fallback.providers.slice(0, 3).join(', ') }}{{ fallback.providers.length > 3 ? '...' : '' }}</span>
-          </div>
+        <h4 class="section-title">自定义回退链</h4>
+        <FallbackChainEditor
+          v-model:fallback-models="fallbackModelsValue"
+          :current-model="currentModel"
+          @add-model="handleAddFallbackModel"
+        />
+      </div>
+
+      <!-- 内置回退链（参考） -->
+      <div v-if="detail.fallbackChain?.length" class="section builtin-chain-section">
+        <div class="builtin-chain-toggle" @click="builtinChainExpanded = !builtinChainExpanded">
+          <el-icon class="toggle-arrow" :class="{ expanded: builtinChainExpanded }">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <path d="M9.5 7l5 5-5 5z"/>
+            </svg>
+          </el-icon>
+          <span class="toggle-text">查看内置推荐回退链</span>
+          <span class="toggle-count">{{ detail.fallbackChain.length }} 个模型</span>
         </div>
+        <el-collapse-transition>
+          <div v-show="builtinChainExpanded" class="builtin-chain-content">
+            <div class="fallback-chain">
+              <div 
+                v-for="(fallback, index) in detail.fallbackChain" 
+                :key="index" 
+                class="fallback-item builtin"
+                :class="{ current: formatFallbackModel(fallback).isCurrent }"
+              >
+                <span class="fallback-index">{{ index + 1 }}</span>
+                <span class="fallback-model">{{ fallback.model }}</span>
+                <span v-if="fallback.variant" class="variant-badge">{{ fallback.variant }}</span>
+                <span class="providers">{{ fallback.providers.slice(0, 3).join(', ') }}{{ fallback.providers.length > 3 ? '...' : '' }}</span>
+              </div>
+            </div>
+          </div>
+        </el-collapse-transition>
       </div>
 
       <!-- 使用场景 (Agent 特有) -->
@@ -422,6 +464,59 @@ watch(dialogVisible, (val) => {
   font-size: 12px;
   color: var(--app-text-tertiary);
   margin-left: auto;
+}
+
+/* 内置回退链折叠区域 */
+.builtin-chain-section {
+  opacity: 0.85;
+}
+
+.builtin-chain-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background-color: var(--app-bg-card, #12121a);
+  border: 1px dashed var(--app-color-primary, #00d4ff);
+  transition: all 0.3s;
+  user-select: none;
+}
+
+.builtin-chain-toggle:hover {
+  border-color: var(--app-color-primary, #00d4ff);
+  opacity: 1;
+  background-color: var(--app-color-primary-light, rgba(0, 212, 255, 0.1));
+}
+
+.toggle-arrow {
+  color: var(--app-color-primary, #00d4ff);
+  transition: transform 0.3s;
+  flex-shrink: 0;
+}
+
+.toggle-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.toggle-text {
+  font-size: 13px;
+  color: var(--app-text-secondary);
+}
+
+.toggle-count {
+  font-size: 11px;
+  color: var(--app-text-tertiary);
+  margin-left: auto;
+}
+
+.builtin-chain-content {
+  margin-top: 8px;
+}
+
+.fallback-item.builtin {
+  opacity: 0.6;
 }
 
 .use-when-list,
