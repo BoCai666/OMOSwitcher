@@ -5,7 +5,7 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import type { OhMyOpenCodeConfig, AgentName, CategoryName } from '@/types'
+import type { OhMyOpenCodeConfig, AgentName, CategoryName, FallbackModels } from '@/types'
 import { readConfig, writeConfig, savePreset, getCurrentPreset, detectOpenCodeServer, disposeAndResume } from '@/services'
 import { log, warn, error as logError } from '@/utils/logger'
 
@@ -254,7 +254,12 @@ export const useConfigStore = defineStore('config', () => {
       console.warn('配置未加载，无法更新 Agent')
       return
     }
+    // 保留已有的 fallback_models
+    const existingFallback = config.value.agents[agentName]?.fallback_models
     config.value.agents[agentName] = { model }
+    if (existingFallback) {
+      config.value.agents[agentName].fallback_models = existingFallback
+    }
     isDirty.value = true
     saveStatus.value = 'idle'
   }
@@ -269,9 +274,58 @@ export const useConfigStore = defineStore('config', () => {
       console.warn('配置未加载，无法更新 Category')
       return
     }
+    // 保留已有的 fallback_models
+    const existingFallback = config.value.categories[categoryName]?.fallback_models
     config.value.categories[categoryName] = { model }
+    if (existingFallback) {
+      config.value.categories[categoryName].fallback_models = existingFallback
+    }
     isDirty.value = true
     saveStatus.value = 'idle'
+  }
+
+  /**
+   * 更新指定 Agent 的回退模型链
+   * @param agentName Agent 名称
+   * @param fallbackModels 回退模型配置
+   */
+  function updateAgentFallbackModels(agentName: AgentName, fallbackModels: FallbackModels | undefined): void {
+    if (!config.value) {
+      console.warn('配置未加载，无法更新 Agent 回退链')
+      return
+    }
+    const current = config.value.agents[agentName]
+    if (current) {
+      if (fallbackModels === undefined) {
+        delete current.fallback_models
+      } else {
+        current.fallback_models = fallbackModels
+      }
+      isDirty.value = true
+      saveStatus.value = 'idle'
+    }
+  }
+
+  /**
+   * 更新指定 Category 的回退模型链
+   * @param categoryName Category 名称
+   * @param fallbackModels 回退模型配置
+   */
+  function updateCategoryFallbackModels(categoryName: CategoryName, fallbackModels: FallbackModels | undefined): void {
+    if (!config.value) {
+      console.warn('配置未加载，无法更新 Category 回退链')
+      return
+    }
+    const current = config.value.categories[categoryName]
+    if (current) {
+      if (fallbackModels === undefined) {
+        delete current.fallback_models
+      } else {
+        current.fallback_models = fallbackModels
+      }
+      isDirty.value = true
+      saveStatus.value = 'idle'
+    }
   }
 
   /**
@@ -398,6 +452,8 @@ export const useConfigStore = defineStore('config', () => {
     updateConfig,
     updateAgentModel,
     updateCategoryModel,
+    updateAgentFallbackModels,
+    updateCategoryFallbackModels,
     saveConfig,
     autoSave,
     applyPreset,

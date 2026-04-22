@@ -26,14 +26,33 @@ export type CategoryName =
   | 'unspecified-high'
   | 'writing'
 
+// 回退模型对象（参考 oh-my-openagent FallbackModelObject）
+export interface FallbackModelObject {
+  model: string
+  variant?: string
+  reasoningEffort?: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh'
+  temperature?: number
+  top_p?: number
+  maxTokens?: number
+  thinking?: {
+    type: 'enabled' | 'disabled'
+    budgetTokens?: number
+  }
+}
+
+// 回退模型配置（参考 oh-my-openagent FallbackModels）
+export type FallbackModels = string | (string | FallbackModelObject)[]
+
 // Agent 配置
 export interface AgentConfig {
   model: string
+  fallback_models?: FallbackModels
 }
 
 // Category 配置
 export interface CategoryConfig {
   model: string
+  fallback_models?: FallbackModels
 }
 
 // OhMyOpenCode 完整配置
