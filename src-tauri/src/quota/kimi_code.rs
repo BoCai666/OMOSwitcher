@@ -111,10 +111,18 @@ fn parse_kimi_code_usage(id: &str, name: &str, data: &serde_json::Value) -> Prov
     let total_limit = total_quota.and_then(|t| t.get("limit")).and_then(parse_number);
     let total_remaining = total_quota.and_then(|t| t.get("remaining")).and_then(parse_number);
 
-    // 卡片显示使用 5 小时额度
+    // 卡片显示使用 5 小时额度，5 小时 used 缺失时显示 0/limit，不回退周额度
     let display_limit = five_hour_limit.or(weekly_limit);
-    let display_used = five_hour_used.or(weekly_used);
-    let display_remaining = five_hour_remaining.or(weekly_remaining);
+    let display_used = if five_hour_limit.is_some() {
+        five_hour_used.or(Some(0.0))
+    } else {
+        Some(0.0)
+    };
+    let display_remaining = if five_hour_limit.is_some() {
+        five_hour_remaining.or(display_limit)
+    } else {
+        display_limit
+    };
     let display_reset = five_hour_reset.clone().or(weekly_reset.clone());
 
     // 计算百分比
@@ -131,11 +139,12 @@ fn parse_kimi_code_usage(id: &str, name: &str, data: &serde_json::Value) -> Prov
     // 构建完整的额度详情对象供前端使用
     let mut kimi_code_usage = serde_json::Map::new();
     
-    if let (Some(l), Some(u), Some(r)) = (five_hour_limit, five_hour_used, five_hour_remaining) {
+    // 5 小时详情：limit 存在即显示，used/remaining 缺失时补 0/limit
+    if five_hour_limit.is_some() {
         let mut five_hour = serde_json::Map::new();
-        five_hour.insert("limit".to_string(), serde_json::json!(l));
-        five_hour.insert("used".to_string(), serde_json::json!(u));
-        five_hour.insert("remaining".to_string(), serde_json::json!(r));
+        five_hour.insert("limit".to_string(), serde_json::json!(five_hour_limit.unwrap_or(0.0)));
+        five_hour.insert("used".to_string(), serde_json::json!(five_hour_used.unwrap_or(0.0)));
+        five_hour.insert("remaining".to_string(), serde_json::json!(five_hour_remaining.unwrap_or(five_hour_limit.unwrap_or(0.0))));
         if let Some(reset) = &five_hour_reset {
             five_hour.insert("resetTime".to_string(), serde_json::json!(reset));
         }
