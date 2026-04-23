@@ -107,6 +107,12 @@ function isZhipuProvider(providerId: string): boolean {
   return id.includes('zhipu') || id.includes('glm') || id.includes('zai')
 }
 
+// 判断是否为 Kimi Code 供应商
+function isKimiCodeProvider(providerId: string): boolean {
+  const id = providerId.toLowerCase()
+  return id.includes('kimicode') || id.includes('kimi-code') || id.includes('coding')
+}
+
 // 判断卡片是否可点击
 function isCardClickable(quota: ProviderQuota): boolean {
   return quota.quotaType === 'balance' || quota.quotaType === 'token_limit'
@@ -151,6 +157,13 @@ async function openDetail(quota: ProviderQuota) {
 const dialogTitle = computed(() => {
   if (!selectedQuota.value) return '额度详情'
   return `${selectedQuota.value.providerName} - 额度详情`
+})
+
+// Kimi Code 额度详情（从 limits._kimiCodeUsage 中提取）
+const kimiCodeUsage = computed(() => {
+  if (!selectedQuota.value?.limits) return null
+  const limits = selectedQuota.value.limits as any
+  return limits?._kimiCodeUsage || null
 })
 
 // 格式化限制类型名称
@@ -435,6 +448,99 @@ onMounted(() => {
                 ${{ selectedQuota.limitRemaining.toFixed(2) }}
               </el-descriptions-item>
             </el-descriptions>
+          </template>
+        </template>
+
+        <!-- Kimi Code 供应商详情 -->
+        <template v-else-if="isKimiCodeProvider(selectedQuota.providerId)">
+          <el-descriptions :column="2" border class="detail-descriptions">
+            <el-descriptions-item label="供应商">
+              {{ selectedQuota.providerName }}
+            </el-descriptions-item>
+            <el-descriptions-item label="平台">
+              Kimi Code (Coding Plan)
+            </el-descriptions-item>
+          </el-descriptions>
+
+          <!-- 5小时额度 -->
+          <template v-if="kimiCodeUsage?.fiveHour">
+            <div class="detail-section-title">5小时滚动窗口</div>
+            <el-descriptions :column="2" border class="detail-descriptions">
+              <el-descriptions-item label="限额">
+                {{ formatTokens(kimiCodeUsage.fiveHour.limit) }}
+              </el-descriptions-item>
+              <el-descriptions-item label="已用">
+                {{ formatTokens(kimiCodeUsage.fiveHour.used) }}
+              </el-descriptions-item>
+              <el-descriptions-item label="剩余">
+                {{ formatTokens(kimiCodeUsage.fiveHour.remaining) }}
+              </el-descriptions-item>
+              <el-descriptions-item label="重置时间">
+                {{ formatResetTime(kimiCodeUsage.fiveHour.resetTime) }}
+              </el-descriptions-item>
+            </el-descriptions>
+          </template>
+
+          <!-- 周额度 -->
+          <template v-if="kimiCodeUsage?.weekly">
+            <div class="detail-section-title">周额度</div>
+            <el-descriptions :column="2" border class="detail-descriptions">
+              <el-descriptions-item label="限额">
+                {{ formatTokens(kimiCodeUsage.weekly.limit) }}
+              </el-descriptions-item>
+              <el-descriptions-item label="已用">
+                {{ formatTokens(kimiCodeUsage.weekly.used) }}
+              </el-descriptions-item>
+              <el-descriptions-item label="剩余">
+                {{ formatTokens(kimiCodeUsage.weekly.remaining) }}
+              </el-descriptions-item>
+              <el-descriptions-item label="重置时间">
+                {{ formatResetTime(kimiCodeUsage.weekly.resetTime) }}
+              </el-descriptions-item>
+            </el-descriptions>
+          </template>
+
+          <!-- 月额度 -->
+          <template v-if="kimiCodeUsage?.monthly">
+            <div class="detail-section-title">月额度</div>
+            <el-descriptions :column="2" border class="detail-descriptions">
+              <el-descriptions-item label="限额">
+                {{ formatTokens(kimiCodeUsage.monthly.limit) }}
+              </el-descriptions-item>
+              <el-descriptions-item label="剩余">
+                {{ formatTokens(kimiCodeUsage.monthly.remaining) }}
+              </el-descriptions-item>
+            </el-descriptions>
+          </template>
+
+          <!-- Kimi Code limits 数组展示 -->
+          <template v-if="selectedQuota.limits && selectedQuota.limits.length > 0">
+            <div class="detail-section-title">限制详情</div>
+            <el-table :data="selectedQuota.limits" size="small" class="detail-table">
+              <el-table-column label="名称" min-width="140">
+                <template #default="{ row }">
+                  {{ row.detail?.name || '--' }}
+                </template>
+              </el-table-column>
+              <el-table-column label="限额" width="120">
+                <template #default="{ row }">
+                  {{ row.detail?.limit != null ? formatTokens(row.detail.limit) : '--' }}
+                </template>
+              </el-table-column>
+              <el-table-column label="已用" width="120">
+                <template #default="{ row }">
+                  {{ row.detail?.used != null ? formatTokens(row.detail.used) : '--' }}
+                </template>
+              </el-table-column>
+              <el-table-column label="窗口" width="140">
+                <template #default="{ row }">
+                  <span v-if="row.window">
+                    {{ row.window.duration }} {{ row.window.timeUnit?.toLowerCase() }}
+                  </span>
+                  <span v-else>--</span>
+                </template>
+              </el-table-column>
+            </el-table>
           </template>
         </template>
 

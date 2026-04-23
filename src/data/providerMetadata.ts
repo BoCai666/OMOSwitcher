@@ -68,6 +68,14 @@ export const PROVIDER_METADATA: Record<string, ProviderMetadata> = {
     iconViewBox: '0 0 24 24',
     description: '月之暗面'
   },
+  'kimi-code': {
+    displayName: 'Kimi Code',
+    color: '#00d4aa',
+    gradient: 'linear-gradient(135deg, #00d4aa 0%, #00b894 100%)',
+    iconPath: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z',
+    iconViewBox: '0 0 24 24',
+    description: 'Kimi for Coding Plan'
+  },
   ollama: {
     displayName: 'Ollama',
     color: '#00d4aa',

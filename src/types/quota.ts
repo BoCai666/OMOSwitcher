@@ -82,6 +82,32 @@ export interface ProviderQuota {
   // 智谱 (Zhipu/GLM) 专用
   /** 完整 limits 数组，供详情弹窗使用 */
   limits?: ZhipuLimitItem[] | null
+
+  // Kimi Code 专用
+  /** 是否为 Kimi Code 平台 */
+  isKimiCode?: boolean | null
+  /** Kimi Code 额度详情（5小时、周、总） */
+  kimiCodeUsage?: {
+    /** 5小时滚动窗口额度 */
+    fiveHour?: {
+      limit: number
+      used: number
+      remaining: number
+      resetTime: string
+    }
+    /** 周额度 */
+    weekly?: {
+      limit: number
+      used: number
+      remaining: number
+      resetTime: string
+    }
+    /** 总额度 */
+    total?: {
+      limit: number
+      remaining: number
+    }
+  } | null
 }
 
 /**

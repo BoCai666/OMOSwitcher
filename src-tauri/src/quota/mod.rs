@@ -8,6 +8,7 @@ pub mod zhipu;
 mod infini;
 mod minimax;
 mod moonshot;
+mod kimi_code;
 
 use serde::Serialize;
 
@@ -181,9 +182,8 @@ pub(crate) fn unsupported_quota(id: &str, name: &str) -> ProviderQuota {
 
 /// 根据 provider_id 判断供应商类型并查询额度
 async fn query_provider(provider: &ProviderInfo) -> ProviderQuota {
-    let id_lower = provider.id.to_lowercase()
-        .replace('-', "")
-        .replace('_', "");
+    let id_raw = provider.id.to_lowercase();
+    let id_lower = id_raw.replace('-', "").replace('_', "");
 
     // 同时检查 id 和 baseURL 来判断供应商类型
     let base_lower = provider.base_url
@@ -191,19 +191,37 @@ async fn query_provider(provider: &ProviderInfo) -> ProviderQuota {
         .map(|u| u.to_lowercase())
         .unwrap_or_default();
 
-    // 优先按 id 匹配
-    match id_lower.as_str() {
-        "openrouter" => return openrouter::query_openrouter(provider).await,
-        "deepseek" => return deepseek::query_deepseek(provider).await,
-        s if s.contains("silicon") => return siliconflow::query_siliconflow(provider).await,
-        s if s.contains("zhipu") || s.contains("glm") => return zhipu::query_zhipu(provider).await,
-        s if s.contains("moonshot") || s.contains("kimi") => return moonshot::query_moonshot(provider).await,
-        s if s.contains("minimax") => return minimax::query_minimax(provider).await,
-        s if s.contains("infini") || s.contains("wuwen") => return infini::query_infini(provider).await,
-        _ => {}
+    // 优先按 id 匹配 - 注意：先匹配更具体的模式
+    // Kimi Code (kimi-for-coding) 必须在 moonshot (kimi) 之前匹配
+    if id_raw == "kimi-for-coding" || id_raw.contains("kimi-code") || id_lower.contains("kimicode") {
+        return kimi_code::query_kimi_code(provider).await;
+    }
+    if id_lower == "openrouter" || id_lower.contains("openrouter") {
+        return openrouter::query_openrouter(provider).await;
+    }
+    if id_lower == "deepseek" || id_lower.contains("deepseek") {
+        return deepseek::query_deepseek(provider).await;
+    }
+    if id_lower.contains("silicon") {
+        return siliconflow::query_siliconflow(provider).await;
+    }
+    if id_lower.contains("zhipu") || id_lower.contains("glm") {
+        return zhipu::query_zhipu(provider).await;
+    }
+    if id_lower.contains("moonshot") || id_lower == "kimi" || id_lower.contains("moonshotai") {
+        return moonshot::query_moonshot(provider).await;
+    }
+    if id_lower.contains("minimax") {
+        return minimax::query_minimax(provider).await;
+    }
+    if id_lower.contains("infini") || id_lower.contains("wuwen") {
+        return infini::query_infini(provider).await;
     }
 
     // id 未匹配时，按 baseURL 匹配（自定义供应商可能 id 不含供应商名）
+    if base_lower.contains("kimi.com/coding") || base_lower.contains("api.kimi.com") {
+        return kimi_code::query_kimi_code(provider).await;
+    }
     if base_lower.contains("infini-ai.com") {
         return infini::query_infini(provider).await;
     }
@@ -370,8 +388,8 @@ pub async fn fetch_all_provider_quotas(provider_ids: Vec<String>) -> Result<Stri
     // 对每个传入的 provider_id 决定查询策略
     let mut join_set = tokio::task::JoinSet::new();
 
-    for id in provider_ids {
-        if let Some(provider) = known_providers.get(&id) {
+    for id in &provider_ids {
+        if let Some(provider) = known_providers.get(id) {
             // 找到 apiKey，执行额度查询
             let provider = provider.clone();
             join_set.spawn(async move {

@@ -129,6 +129,38 @@ const emit = defineEmits<{
         <template v-else>暂无重置时间信息</template>
       </div>
     </div>
+
+    <!-- Kimi Code 专用展示 -->
+    <div v-else-if="quota.quotaType === 'token_limit' && quota.isKimiCode" class="card-body clickable" @click="emit('detail', quota)">
+      <div class="card-header-row">
+        <div class="provider-icon-badge" :style="{ background: getProviderMeta(quota.providerId).gradient || getProviderColor(quota.providerId) }">
+          <svg :viewBox="getProviderMeta(quota.providerId).iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
+            <path :d="getProviderMeta(quota.providerId).iconPath" />
+          </svg>
+        </div>
+        <span class="provider-name">{{ quota.providerName }}</span>
+      </div>
+      <div class="balance-main">
+        <span class="balance-label">5小时额度</span>
+        <span class="balance-value">
+          {{ quota.quotaPercentage != null ? `${quota.quotaPercentage.toFixed(1)}%` : '--' }}
+        </span>
+        <span class="balance-detail">
+          {{ formatTokens(quota.quotaUsed) }} / {{ formatTokens(quota.quotaLimit) }}
+        </span>
+      </div>
+      <el-progress
+        :percentage="quota.quotaPercentage ?? 0"
+        :color="getProgressColor(quota.quotaPercentage ?? 0)"
+        :stroke-width="8"
+        :show-text="false"
+        class="quota-progress"
+      />
+      <div class="reset-badge" :class="{ 'reset-badge-placeholder': !quota.resetTime }">
+        <template v-if="quota.resetTime">{{ formatResetTime(quota.resetTime) }}</template>
+        <template v-else>暂无重置时间信息</template>
+      </div>
+    </div>
   </div>
 </template>
 
