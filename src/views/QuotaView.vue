@@ -110,7 +110,7 @@ function isZhipuProvider(providerId: string): boolean {
 // 判断是否为 Kimi Code 供应商
 function isKimiCodeProvider(providerId: string): boolean {
   const id = providerId.toLowerCase()
-  return id.includes('kimicode') || id.includes('kimi-code') || id.includes('coding')
+  return id === 'kimi-for-coding' || id.includes('kimi-code') || id.includes('kimicode')
 }
 
 // 判断卡片是否可点击
