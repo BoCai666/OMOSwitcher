@@ -92,8 +92,9 @@ const emit = defineEmits<{
         :show-text="false"
         class="quota-progress"
       />
-      <div v-if="quota.resetTime" class="reset-badge">
-        {{ formatResetTime(quota.resetTime) }}
+      <div class="reset-badge" :class="{ 'reset-badge-placeholder': !quota.resetTime }">
+        <template v-if="quota.resetTime">{{ formatResetTime(quota.resetTime) }}</template>
+        <template v-else>暂无重置时间信息</template>
       </div>
     </div>
 
@@ -123,8 +124,9 @@ const emit = defineEmits<{
         :show-text="false"
         class="quota-progress"
       />
-      <div v-if="quota.resetTime" class="reset-badge">
-        {{ formatResetTime(quota.resetTime) }}
+      <div class="reset-badge" :class="{ 'reset-badge-placeholder': !quota.resetTime }">
+        <template v-if="quota.resetTime">{{ formatResetTime(quota.resetTime) }}</template>
+        <template v-else>暂无重置时间信息</template>
       </div>
     </div>
   </div>
@@ -287,6 +289,12 @@ const emit = defineEmits<{
   background: var(--app-bg-hover);
   display: inline-block;
   width: fit-content;
+}
+
+/* 无重置时间时的占位提示 */
+.reset-badge-placeholder {
+  color: var(--app-text-quaternary);
+  font-style: italic;
 }
 
 /* ==================== 错误状态 ==================== */
