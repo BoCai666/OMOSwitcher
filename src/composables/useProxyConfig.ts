@@ -71,8 +71,10 @@ export function useProxyConfig() {
     })
   }
 
-  // 监听代理开关变化
+  // 监听代理开关变化，自动保存并管理证书轮询
   watch(proxyEnabled, (enabled) => {
+    // 切换时立即持久化
+    saveProxyConfig()
     // 启用代理时，检查证书状态
     if (enabled && certExists.value === false) {
       startCertPolling()
