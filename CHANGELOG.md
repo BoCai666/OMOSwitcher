@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.6] - 2026-04-23
+
+### 新增功能
+
+- **Kimi Code 额度查询** - 新增 Kimi for Coding Plan 供应商额度查询支持
+  - 调用 `api.kimi.com/coding/v1/usages` 接口获取额度数据
+  - 卡片展示 5 小时滚动窗口额度使用情况
+  - 详情弹窗支持三级额度展示：5 小时滚动窗口、周额度、月额度
+  - 修复 provider_id `kimi-for-coding` 与 `moonshot` 的匹配冲突
+
+### 优化改进
+
+- 清理额度查询模块调试日志，移除不必要的 `tracing::info!` 输出
+
+---
+
 ## [2.0.5] - 2026-04-20
 
 ### 新增功能
