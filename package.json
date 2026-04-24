@@ -1,6 +1,6 @@
 {
   "name": "omoswitcher",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "private": true,
   "type": "module",
   "description": "OhMyOpenCode 模型配置管理工具",

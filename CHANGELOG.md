@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.7] - 2026-04-24
+
+### Bug 修复
+
+- **修复 MiniMax 卡片详情误判** - MiniMax 额度卡片详情被错误识别为 Kimi Code 的问题
+- **修复 Kimi Code 5小时额度显示** - 5小时额度数据缺失时正确显示 0/limit，不再错误回退为周额度
+
+---
+
 ## [2.0.6] - 2026-04-23
 
 ### 新增功能
