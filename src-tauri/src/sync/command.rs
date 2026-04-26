@@ -2,6 +2,7 @@
 // 提供 GitHub Gist 同步的前端交互命令
 // 所有命令返回 JSON 字符串，遵循 Result<T, String> 模式
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use serde_json;
@@ -28,6 +29,8 @@ pub struct SyncCommandState {
     pub pending_user_code: Arc<AsyncMutex<Option<String>>>,
     /// OAuth Web Flow 进行中的会话（PKCE 参数）
     pub pending_oauth: Arc<AsyncMutex<Option<OAuthSession>>>,
+    /// OAuth 取消标志，用于中断正在进行的回调监听
+    pub oauth_cancelled: Arc<AtomicBool>,
 }
 
 // ============================================================================
@@ -489,8 +492,37 @@ pub async fn sync_start_oauth_login(
     app: AppHandle,
     state: State<'_, SyncCommandState>,
 ) -> Result<String, String> {
+    // 重置取消标志，确保新流程不受上次取消影响
+    state.oauth_cancelled.store(false, Ordering::Relaxed);
+
     // 1. 准备 OAuth 参数并启动回调服务器
-    let (auth_url, session, listener) = auth::prepare_oauth_flow().await?;
+    // 如果端口被占用，检查是否为本程序残留，是则取消并释放
+    let (auth_url, session, listener) = loop {
+        match auth::prepare_oauth_flow().await {
+            Ok(result) => break result,
+            Err(e) if e.contains("被占用") => {
+                // 检查是否为本程序的残留 listener
+                let has_pending = {
+                    let pending = state.pending_oauth.lock().await;
+                    pending.is_some()
+                };
+                
+                if has_pending {
+                    tracing::info!("[OAuth:Command] 检测到本程序占用的端口，正在取消残留流程...");
+                    state.oauth_cancelled.store(true, Ordering::Relaxed);
+                    // 等待 listener 退出释放端口
+                    tokio::time::sleep(std::time::Duration::from_millis(800)).await;
+                    state.oauth_cancelled.store(false, Ordering::Relaxed);
+                    // 继续循环重试
+                    continue;
+                }
+                
+                // 不是本程序占用，返回错误
+                return Err(e);
+            }
+            Err(e) => return Err(e),
+        }
+    };
     let expected_state = session.state.clone();
     let code_verifier = session.code_verifier.clone();
     tracing::info!("[OAuth:Command] prepare_oauth_flow 完成，等待浏览器回调");
@@ -504,9 +536,9 @@ pub async fn sync_start_oauth_login(
     // 自动打开浏览器到 GitHub 授权页面
     crate::commands::open_url_in_browser(auth_url)?;
 
-    // 等待浏览器回调（最多 5 分钟）
+    // 等待浏览器回调（最多 5 分钟），支持取消
     tracing::info!("[OAuth:Command] 正在等待浏览器回调...");
-    let callback_data = auth::wait_for_callback(listener).await?;
+    let callback_data = auth::wait_for_callback(listener, state.oauth_cancelled.clone()).await?;
     tracing::info!("[OAuth:Command] 收到回调数据: {}", callback_data.chars().take(300).collect::<String>());
 
     // 解析回调数据：格式 "code||state"
@@ -580,6 +612,8 @@ pub async fn sync_start_oauth_login(
 /// 取消 OAuth Web Flow 登录
 #[tauri::command]
 pub async fn sync_cancel_oauth_login(state: State<'_, SyncCommandState>) -> Result<(), String> {
+    // 设置取消标志，让正在进行的 accept_callback 立即释放端口
+    state.oauth_cancelled.store(true, Ordering::Relaxed);
     let mut pending = state.pending_oauth.lock().await;
     *pending = None;
     Ok(())

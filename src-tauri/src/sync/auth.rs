@@ -2,6 +2,9 @@
 // GitHub OAuth Web Flow (PKCE) + Device Flow + PAT 三通道认证
 // Web Flow 为首选方案，用户体验最好（浏览器自动打开，无需手动输入）
 
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
 use crate::sync::types::*;
 use crate::sync::token;
 
@@ -146,11 +149,14 @@ pub async fn prepare_oauth_flow() -> Result<(String, OAuthSession, tokio::net::T
 /// 等待浏览器回调并提取授权码
 ///
 /// 启动后台任务监听本地 HTTP 请求，解析回调 URL 中的 code 参数。
-/// 超时 5 分钟自动关闭。
-pub async fn wait_for_callback(listener: tokio::net::TcpListener) -> Result<String, String> {
+/// 超时 5 分钟自动关闭，支持通过 cancelled 标志提前取消。
+pub async fn wait_for_callback(
+    listener: tokio::net::TcpListener,
+    cancelled: Arc<AtomicBool>,
+) -> Result<String, String> {
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(300),
-        accept_callback(listener),
+        accept_callback(listener, cancelled),
     )
     .await;
 
@@ -162,12 +168,30 @@ pub async fn wait_for_callback(listener: tokio::net::TcpListener) -> Result<Stri
 }
 
 /// 接受回调请求，解析 code 参数
-async fn accept_callback(listener: tokio::net::TcpListener) -> Result<String, String> {
+///
+/// 定期检查 cancelled 标志，若被取消则立即释放端口并返回错误。
+async fn accept_callback(
+    listener: tokio::net::TcpListener,
+    cancelled: Arc<AtomicBool>,
+) -> Result<String, String> {
     loop {
-        let (stream, _) = listener
-            .accept()
-            .await
-            .map_err(|e| format!("接受回调连接失败: {}", e))?;
+        // 检查是否被取消
+        if cancelled.load(Ordering::Relaxed) {
+            return Err("OAuth 登录已取消".to_string());
+        }
+
+        // 使用 timeout 包装 accept，以便定期检查取消标志
+        let accept_result = tokio::time::timeout(
+            std::time::Duration::from_millis(500),
+            listener.accept(),
+        )
+        .await;
+
+        let (stream, _) = match accept_result {
+            Ok(Ok(conn)) => conn,
+            Ok(Err(e)) => return Err(format!("接受回调连接失败: {}", e)),
+            Err(_) => continue, // timeout，回到 loop 开头检查取消标志
+        };
 
         let (reader, mut writer) = tokio::io::split(stream);
         let mut buf_reader = tokio::io::BufReader::new(reader);

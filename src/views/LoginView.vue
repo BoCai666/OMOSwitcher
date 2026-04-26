@@ -155,8 +155,8 @@ function handleSkip() {
       <!-- OAuth 登录中状态 -->
       <div v-if="isLoggingIn" class="login-loading">
         <div class="loading-spinner"></div>
-        <p class="loading-text">正在等待 GitHub 授权...</p>
-        <p class="loading-hint">请在浏览器中完成授权</p>
+        <p class="loading-text">{{ syncStore.lastError || '正在等待 GitHub 授权...' }}</p>
+        <p v-if="!syncStore.lastError" class="loading-hint">请在浏览器中完成授权</p>
         <button class="cancel-login-btn" @click="handleCancelLogin">取消登录</button>
       </div>
 

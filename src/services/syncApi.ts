@@ -85,11 +85,9 @@ export async function startDeviceLogin(): Promise<{ user_code: string; verificat
  * 完成 Device Flow 登录
  * @returns 登录的 GitHub 用户信息
  */
-export async function completeDeviceLogin(): Promise<GitHubUser | null> {
-  return withErrorHandling(async () => {
-    const json = await invoke<string>('sync_complete_device_login')
-    return JSON.parse(json) as GitHubUser
-  }, '完成登录失败')
+export async function completeDeviceLogin(): Promise<GitHubUser> {
+  const json = await invoke<string>('sync_complete_device_login')
+  return JSON.parse(json) as GitHubUser
 }
 
 /**
@@ -97,11 +95,9 @@ export async function completeDeviceLogin(): Promise<GitHubUser | null> {
  * @param pat GitHub Personal Access Token
  * @returns 登录的 GitHub 用户信息
  */
-export async function loginWithPat(pat: string): Promise<GitHubUser | null> {
-  return withErrorHandling(async () => {
-    const json = await invoke<string>('sync_login_with_pat', { pat })
-    return JSON.parse(json) as GitHubUser
-  }, 'PAT 登录失败')
+export async function loginWithPat(pat: string): Promise<GitHubUser> {
+  const json = await invoke<string>('sync_login_with_pat', { pat })
+  return JSON.parse(json) as GitHubUser
 }
 
 /**
@@ -182,11 +178,9 @@ export async function cancelDeviceLogin(): Promise<void> {
  * 自动打开浏览器，等待用户授权后返回用户信息
  * @returns 登录的 GitHub 用户信息
  */
-export async function startOAuthLogin(): Promise<GitHubUser | null> {
-  return withErrorHandling(async () => {
-    const json = await invoke<string>('sync_start_oauth_login')
-    return JSON.parse(json) as GitHubUser
-  }, 'GitHub 登录失败')
+export async function startOAuthLogin(): Promise<GitHubUser> {
+  const json = await invoke<string>('sync_start_oauth_login')
+  return JSON.parse(json) as GitHubUser
 }
 
 /**

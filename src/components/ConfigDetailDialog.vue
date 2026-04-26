@@ -10,6 +10,9 @@ import type { AgentName, CategoryName, Model } from '@/types'
 import type { FallbackModels } from '@/types/config'
 import { AGENT_DETAILS } from '@/data/agentDetails'
 import { CATEGORY_DETAILS } from '@/data/categoryDetails'
+import { AGENT_INFO, CATEGORY_INFO } from '@/types/config'
+import { loadSystemPrompt } from '@/services/promptLoader'
+import type { PromptLang } from '@/services/promptLoader'
 import FallbackChainEditor from './FallbackChainEditor.vue'
 
 const props = defineProps<{
@@ -28,17 +31,33 @@ const emit = defineEmits<{
   'add-fallback-model': []
 }>()
 
-// 语言切换：'zh' | 'en'
-const promptLang = ref<'zh' | 'en'>('zh')
-
-// 内置回退链折叠状态（默认折叠）
-const builtinChainExpanded = ref(false)
-
-// 对话框可见性
+// 对话框可见性（必须最先声明，因为后面的 watch 会引用它）
 const dialogVisible = computed({
   get: () => props.visible,
   set: (value) => emit('update:visible', value)
 })
+
+// 语言切换
+const promptLang = ref<PromptLang>('zh')
+
+// 系统提示词内容（同步加载）
+const promptContent = ref<string>('')
+
+// 加载系统提示词（同步，已预加载）
+function loadPrompt() {
+  if (!props.name) return
+  promptContent.value = loadSystemPrompt(props.type, props.name, promptLang.value)
+}
+
+// 监听名称、类型和语言变化，重新加载提示词
+watch([() => props.name, () => props.type, promptLang], () => {
+  if (dialogVisible.value) {
+    loadPrompt()
+  }
+}, { immediate: true })
+
+// 内置回退链折叠状态（默认展开）
+const builtinChainExpanded = ref(true)
 
 // 获取详情数据
 const detail = computed(() => {
@@ -46,6 +65,15 @@ const detail = computed(() => {
     return AGENT_DETAILS[props.name as AgentName]
   } else {
     return CATEGORY_DETAILS[props.name as CategoryName]
+  }
+})
+
+// 中文描述（用于详情页显示）
+const descriptionZh = computed(() => {
+  if (props.type === 'agent') {
+    return AGENT_INFO[props.name as AgentName]?.description || detail.value?.description
+  } else {
+    return CATEGORY_INFO[props.name as CategoryName]?.description || detail.value?.description
   }
 })
 
@@ -64,13 +92,7 @@ const modelDisplayName = computed(() => {
   return currentModelInfo.value?.name || props.currentModel.split('/').pop() || props.currentModel
 })
 
-// 当前显示的系统提示词
-const currentPrompt = computed(() => {
-  if (!detail.value) return ''
-  return promptLang.value === 'zh' 
-    ? detail.value.systemPrompt.zh 
-    : detail.value.systemPrompt.en
-})
+// 当前显示的系统提示词（从文件动态加载）
 
 // 格式化回退链显示
 function formatFallbackModel(fallback: { model: string; variant?: string; providers: string[] }): { 
@@ -104,7 +126,7 @@ function handleAddFallbackModel() {
 watch(dialogVisible, (val) => {
   if (!val) {
     promptLang.value = 'zh'
-    builtinChainExpanded.value = false
+    builtinChainExpanded.value = true
   }
 })
 </script>
@@ -141,7 +163,7 @@ watch(dialogVisible, (val) => {
           <el-tag type="success" size="small">{{ detail.recommendedModel }}</el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="描述" :span="2">
-          <span class="description-text">{{ detail.description }}</span>
+          <span class="description-text">{{ descriptionZh }}</span>
         </el-descriptions-item>
       </el-descriptions>
 
@@ -163,7 +185,7 @@ watch(dialogVisible, (val) => {
               <path d="M9.5 7l5 5-5 5z"/>
             </svg>
           </el-icon>
-          <span class="toggle-text">查看内置推荐回退链</span>
+          <span class="toggle-text">内置推荐回退链</span>
           <span class="toggle-count">{{ detail.fallbackChain.length }} 个模型</span>
         </div>
         <el-collapse-transition>
@@ -225,7 +247,7 @@ watch(dialogVisible, (val) => {
           </el-radio-group>
         </div>
         <div class="prompt-content">
-          <pre>{{ currentPrompt }}</pre>
+          <pre>{{ promptContent }}</pre>
         </div>
       </div>
     </div>
@@ -313,6 +335,7 @@ watch(dialogVisible, (val) => {
 .basic-info :deep(.el-descriptions__label) {
   background-color: rgba(0, 212, 255, 0.05);
   color: var(--app-text-tertiary);
+  white-space: nowrap;
 }
 
 .basic-info :deep(.el-descriptions__content) {
@@ -334,13 +357,15 @@ watch(dialogVisible, (val) => {
 
 .model-info.clickable {
   cursor: pointer;
-  padding: 6px 12px;
-  margin: -4px -8px;
+  padding: 2px 6px;
+  margin: 0;
   border-radius: 6px;
   border: 1px solid transparent;
   background: linear-gradient(var(--app-bg-card, #12121a), var(--app-bg-card, #12121a)) padding-box,
               linear-gradient(135deg, var(--app-color-primary, #00d4ff), #00a8ff) border-box;
   transition: all 0.3s ease;
+  display: inline-flex;
+  width: fit-content;
 }
 
 .model-info.clickable:hover {
@@ -479,7 +504,7 @@ watch(dialogVisible, (val) => {
   padding: 8px 12px;
   border-radius: 6px;
   background-color: var(--app-bg-card, #12121a);
-  border: 1px dashed var(--app-color-primary, #00d4ff);
+  border: 1px solid var(--app-color-primary, #00d4ff);
   transition: all 0.3s;
   user-select: none;
 }

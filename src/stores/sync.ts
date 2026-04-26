@@ -120,9 +120,6 @@ export const useSyncStore = defineStore('sync', () => {
   async function completeDeviceLogin(): Promise<GitHubUser> {
     lastError.value = null
     const user = await syncApi.completeDeviceLogin()
-    if (!user) {
-      throw new Error('完成 Device Flow 登录失败，请重试')
-    }
     authState.value = { type: 'LoggedIn', user }
     // 登录成功后自动触发首次同步
     await sync()
@@ -139,16 +136,28 @@ export const useSyncStore = defineStore('sync', () => {
     authState.value = { type: 'OAuthLoggingIn' }
     let user: GitHubUser
     try {
-      const result = await syncApi.startOAuthLogin()
-      if (!result) {
-        authState.value = { type: 'LoggedOut' }
-        throw new Error('GitHub 登录失败，请重试')
-      }
-      user = result
+      user = await syncApi.startOAuthLogin()
       authState.value = { type: 'LoggedIn', user }
     } catch (e) {
-      authState.value = { type: 'LoggedOut' }
-      throw e
+      const msg = String(e)
+      // 端口仍被占用，尝试前端自动恢复
+      if (msg.includes('被占用')) {
+        lastError.value = '检测到上次登录未完全关闭，正在自动恢复...'
+        try {
+          await syncApi.cancelOAuthLogin()
+          // 等待 Rust 端释放端口
+          await new Promise(r => setTimeout(r, 1500))
+          lastError.value = null
+          user = await syncApi.startOAuthLogin()
+          authState.value = { type: 'LoggedIn', user }
+        } catch (retryErr) {
+          authState.value = { type: 'LoggedOut' }
+          throw retryErr
+        }
+      } else {
+        authState.value = { type: 'LoggedOut' }
+        throw e
+      }
     }
     // 登录成功后自动触发首次同步（失败不影响登录状态）
     try {
@@ -167,17 +176,8 @@ export const useSyncStore = defineStore('sync', () => {
    */
   async function loginWithPat(pat: string): Promise<GitHubUser> {
     lastError.value = null
-    let user: GitHubUser
-    try {
-      const result = await syncApi.loginWithPat(pat)
-      if (!result) {
-        throw new Error('PAT 登录失败，请检查 Token 是否正确')
-      }
-      user = result
-      authState.value = { type: 'LoggedIn', user }
-    } catch (e) {
-      throw e
-    }
+    const user = await syncApi.loginWithPat(pat)
+    authState.value = { type: 'LoggedIn', user }
     // 登录成功后自动触发首次同步（失败不影响登录状态）
     try {
       await sync()
