@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.8] - 2026-04-26
+
+### 新增功能
+
+- **完整系统提示词迁移** - 36 个 Agent/Category 提示词从硬编码迁移至独立 TS 文件
+  - 新增 `src/prompts/` 目录，10 Agent + 8 Category 各含中英文完整版
+  - 新增 `promptLoader.ts` 同步加载服务，编译时打包，消除语言切换闪烁
+  - 详情页显示完整提示词（原摘要版），支持中英切换
+- **详情页样式优化** - 描述改为中文，"当前模型"标题强制单行，模型外边框贴合内容
+
+---
+
 ## [2.0.7] - 2026-04-24
 
 ### Bug 修复
