@@ -3,6 +3,7 @@
  * 额度卡片组件
  * 展示单个供应商的额度/余额信息
  */
+import { computed } from 'vue'
 import { WarningFilled } from '@element-plus/icons-vue'
 import type { ProviderQuota } from '@/types/quota'
 import {
@@ -15,9 +16,22 @@ import {
   formatResetTime
 } from '@/composables/useQuotaFormatter'
 
-defineProps<{
+const props = defineProps<{
   quota: ProviderQuota
 }>()
+
+// 纯余额型供应商：只有 totalBalance，没有 usedBalance/resetTime（如 DeepSeek）
+const isPureBalance = computed(() =>
+  props.quota.quotaType === 'balance' &&
+  props.quota.usedBalance == null &&
+  props.quota.resetTime == null
+)
+
+// OpenCode Go：三维度额度（滚动/周/月）
+const isOpenCodeGo = computed(() =>
+  props.quota.providerId.toLowerCase().includes('opencode') &&
+  props.quota.providerId.toLowerCase().includes('go')
+)
 
 const emit = defineEmits<{
   retry: [quota: ProviderQuota]
@@ -77,17 +91,17 @@ const emit = defineEmits<{
         <span class="provider-name">{{ quota.providerName }}</span>
       </div>
       <div class="balance-main">
-        <span class="balance-label">配额使用</span>
+        <span class="balance-label">{{ isPureBalance ? '余额' : '配额使用' }}</span>
         <span class="balance-value">
-          {{ getBalancePercentage(quota).toFixed(1) }}%
+          {{ isPureBalance ? formatBalance(quota.totalBalance, quota.currency) : getBalancePercentage(quota).toFixed(1) + '%' }}
         </span>
         <span class="balance-detail">
-          {{ formatBalance(quota.usedBalance, quota.currency) }} / {{ formatBalance(quota.totalBalance, quota.currency) }}
+          {{ formatBalance(isPureBalance ? null : quota.usedBalance, quota.currency) }} / {{ formatBalance(quota.totalBalance, quota.currency) }}
         </span>
       </div>
       <el-progress
-        :percentage="getBalancePercentage(quota)"
-        :color="getProgressColor(getBalancePercentage(quota))"
+        :percentage="isPureBalance ? ((quota.totalBalance ?? 0) > 0 ? 100 : 0) : getBalancePercentage(quota)"
+        :color="getProgressColor(isPureBalance ? ((quota.totalBalance ?? 0) > 0 ? 100 : 0) : getBalancePercentage(quota))"
         :stroke-width="8"
         :show-text="false"
         class="quota-progress"
@@ -109,7 +123,7 @@ const emit = defineEmits<{
         <span class="provider-name">{{ quota.providerName }}</span>
       </div>
       <div class="balance-main">
-        <span class="balance-label">配额使用</span>
+        <span class="balance-label">{{ isOpenCodeGo ? '5小时滚动额度' : '配额使用' }}</span>
         <span class="balance-value">
           {{ quota.quotaPercentage != null ? `${quota.quotaPercentage.toFixed(1)}%` : '--' }}
         </span>

@@ -32,6 +32,17 @@ export interface ZhipuLimitItem {
 }
 
 /**
+ * OpenCode Go limits 数组中的单项（三维度：rolling/weekly/monthly）
+ */
+export interface OpenCodeGoLimitItem {
+  type: string
+  label: string
+  usagePercent: number
+  resetInSec: number
+  resetTime?: string
+}
+
+/**
  * 单个供应商的额度信息（统一格式）
  * 与 Rust 端 ProviderQuota 结构体一一对应
  */
@@ -79,9 +90,9 @@ export interface ProviderQuota {
   /** 剩余额度 (USD) */
   limitRemaining?: number | null
 
-  // 智谱 (Zhipu/GLM) 专用
-  /** 完整 limits 数组，供详情弹窗使用 */
-  limits?: ZhipuLimitItem[] | null
+  // 智谱 / OpenCode Go 专用
+  /** 完整 limits 数组，供详情弹窗使用（字段因供应商而异） */
+  limits?: any[] | null
 
   // Kimi Code 专用
   /** 是否为 Kimi Code 平台 */

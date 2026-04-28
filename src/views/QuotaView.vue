@@ -113,6 +113,17 @@ function isKimiCodeProvider(providerId: string): boolean {
   return id === 'kimi-for-coding' || id.includes('kimi-code') || id.includes('kimicode')
 }
 
+// 判断是否为 OpenCode Go 供应商（三维度额度：滚动/周/月）
+function isOpenCodeGoProvider(providerId: string): boolean {
+  const id = providerId.toLowerCase()
+  return id.includes('opencode') && id.includes('go')
+}
+
+// 判断是否为纯余额型供应商（无 usedBalance/resetTime，如 DeepSeek）
+function isPureBalanceProvider(quota: ProviderQuota): boolean {
+  return quota.quotaType === 'balance' && quota.usedBalance == null && quota.resetTime == null
+}
+
 // 判断卡片是否可点击
 function isCardClickable(quota: ProviderQuota): boolean {
   return quota.quotaType === 'balance' || quota.quotaType === 'token_limit'
@@ -415,21 +426,30 @@ onMounted(() => {
             <el-descriptions-item label="货币">
               {{ selectedQuota.currency === 'USD' ? '美元 (USD)' : '人民币 (CNY)' }}
             </el-descriptions-item>
-            <el-descriptions-item label="可用余额">
-              {{ formatBalance(selectedQuota.availableBalance, selectedQuota.currency) }}
-            </el-descriptions-item>
-            <el-descriptions-item label="总额度">
-              {{ formatBalance(selectedQuota.totalBalance, selectedQuota.currency) }}
-            </el-descriptions-item>
-            <el-descriptions-item label="已用额度">
-              {{ formatBalance(selectedQuota.usedBalance, selectedQuota.currency) }}
-            </el-descriptions-item>
-            <el-descriptions-item label="剩余比例">
-              {{ getBalancePercentage(selectedQuota).toFixed(1) }}%
-            </el-descriptions-item>
+            <!-- 纯余额型：只显示余额 -->
+            <template v-if="isPureBalanceProvider(selectedQuota)">
+              <el-descriptions-item label="余额" :span="2">
+                {{ formatBalance(selectedQuota.totalBalance, selectedQuota.currency) }}
+              </el-descriptions-item>
+            </template>
+            <!-- 标准余额型：显示完整字段 -->
+            <template v-else>
+              <el-descriptions-item label="可用余额">
+                {{ formatBalance(selectedQuota.availableBalance, selectedQuota.currency) }}
+              </el-descriptions-item>
+              <el-descriptions-item label="总额度">
+                {{ formatBalance(selectedQuota.totalBalance, selectedQuota.currency) }}
+              </el-descriptions-item>
+              <el-descriptions-item label="已用额度">
+                {{ formatBalance(selectedQuota.usedBalance, selectedQuota.currency) }}
+              </el-descriptions-item>
+              <el-descriptions-item label="剩余比例">
+                {{ getBalancePercentage(selectedQuota).toFixed(1) }}%
+              </el-descriptions-item>
+            </template>
           </el-descriptions>
-          <!-- OpenRouter 专用字段 -->
-          <template v-if="selectedQuota.dailyUsage != null || selectedQuota.weeklyUsage != null || selectedQuota.monthlyUsage != null">
+          <!-- OpenRouter 专用字段（纯余额型不展示） -->
+          <template v-if="!isPureBalanceProvider(selectedQuota) && (selectedQuota.dailyUsage != null || selectedQuota.weeklyUsage != null || selectedQuota.monthlyUsage != null)">
             <div class="detail-section-title">周期用量</div>
             <el-descriptions :column="2" border class="detail-descriptions">
               <el-descriptions-item v-if="selectedQuota.dailyUsage != null" label="今日用量">
@@ -541,6 +561,43 @@ onMounted(() => {
                 </template>
               </el-table-column>
             </el-table>
+          </template>
+        </template>
+
+        <!-- OpenCode Go 三维度详情 -->
+        <template v-else-if="isOpenCodeGoProvider(selectedQuota.providerId)">
+          <el-descriptions :column="2" border class="detail-descriptions">
+            <el-descriptions-item label="供应商">
+              {{ selectedQuota.providerName }}
+            </el-descriptions-item>
+            <el-descriptions-item label="计划">
+              OpenCode Go
+            </el-descriptions-item>
+          </el-descriptions>
+
+          <!-- 三维度用量 -->
+          <div class="detail-section-title">用量详情</div>
+          <template v-for="dim in ['rolling', 'weekly', 'monthly']" :key="dim">
+            <template v-if="selectedQuota.limits">
+              <template v-for="item in selectedQuota.limits.filter((l: any) => l.type === dim)" :key="dim">
+                <div style="font-size:13px;margin-top:12px;margin-bottom:4px">{{ item.label }}</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+                  <el-progress
+                    :percentage="item.usagePercent ?? 0"
+                    :color="getProgressColor(item.usagePercent ?? 0)"
+                    :stroke-width="8"
+                    :show-text="false"
+                    style="flex:1"
+                  />
+                  <span style="font-size:13px;color:var(--app-text-primary);white-space:nowrap">
+                    {{ item.usagePercent != null ? `${item.usagePercent}%` : '--' }}
+                  </span>
+                </div>
+                <div v-if="item.resetTime" style="font-size:12px;color:var(--app-text-tertiary);margin-bottom:8px">
+                  {{ item.resetTime }}
+                </div>
+              </template>
+            </template>
           </template>
         </template>
 

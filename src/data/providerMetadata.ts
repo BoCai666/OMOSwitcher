@@ -52,6 +52,14 @@ export const PROVIDER_METADATA: Record<string, ProviderMetadata> = {
     iconViewBox: '0 0 24 24',
     description: '深度求索'
   },
+  'opencode-go': {
+    displayName: 'OpenCode Go',
+    color: '#4ade80',
+    gradient: 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)',
+    iconPath: 'M4 6h16M4 12h16M4 18h12',
+    iconViewBox: '0 0 24 24',
+    description: 'OpenCode 订阅计划'
+  },
   'x-ai': {
     displayName: 'xAI',
     color: '#000000',

@@ -9,6 +9,7 @@ mod infini;
 mod minimax;
 mod moonshot;
 mod kimi_code;
+mod opencode_go;
 
 use serde::Serialize;
 
@@ -191,6 +192,10 @@ async fn query_provider(provider: &ProviderInfo) -> ProviderQuota {
         .map(|u| u.to_lowercase())
         .unwrap_or_default();
 
+    tracing::info!("[额度调度] 匹配 provider: id={}, baseURL={}",
+        provider.id,
+        provider.base_url.as_deref().unwrap_or("无"));
+
     // 优先按 id 匹配 - 注意：先匹配更具体的模式
     // Kimi Code (kimi-for-coding) 必须在 moonshot (kimi) 之前匹配
     if id_raw == "kimi-for-coding" || id_raw.contains("kimi-code") || id_lower.contains("kimicode") {
@@ -200,7 +205,12 @@ async fn query_provider(provider: &ProviderInfo) -> ProviderQuota {
         return openrouter::query_openrouter(provider).await;
     }
     if id_lower == "deepseek" || id_lower.contains("deepseek") {
+        tracing::info!("[额度调度] {} → 匹配到 DeepSeek", provider.id);
         return deepseek::query_deepseek(provider).await;
+    }
+    if id_lower.contains("opencode") && id_lower.contains("go") {
+        tracing::info!("[额度调度] {} → 匹配到 OpenCode Go", provider.id);
+        return opencode_go::query_opencode_go(provider).await;
     }
     if id_lower.contains("silicon") {
         return siliconflow::query_siliconflow(provider).await;
@@ -385,18 +395,27 @@ pub async fn fetch_all_provider_quotas(provider_ids: Vec<String>) -> Result<Stri
             });
     }
 
+    // 汇总有 apiKey 的供应商
+    let known_ids: Vec<&str> = known_providers.keys().map(|s| s.as_str()).collect();
+    tracing::info!("[额度查询] 已配置 apiKey 的供应商 ({} 个): {:?}", known_ids.len(), known_ids);
+
+    tracing::info!("[额度查询] 前端传入 provider_ids ({} 个): {:?}", provider_ids.len(), provider_ids);
+
     // 对每个传入的 provider_id 决定查询策略
     let mut join_set = tokio::task::JoinSet::new();
 
     for id in &provider_ids {
         if let Some(provider) = known_providers.get(id) {
-            // 找到 apiKey，执行额度查询
+            // 找到 apiKey（来自配置文件），执行额度查询
+            let key_len = provider.api_key.len();
+            tracing::info!("[额度查询] {} → 有 apiKey (长度={}), 开始查询", id, key_len);
             let provider = provider.clone();
             join_set.spawn(async move {
                 query_provider(&provider).await
             });
         } else {
             // 找不到 apiKey（OAuth/antigravity 来源或未配置），标记为不支持查询
+            tracing::info!("[额度查询] {} → 无 apiKey，标记为 unsupported", id);
             let id_clone = id.clone();
             join_set.spawn(async move {
                 unsupported_quota(&id_clone, &id_clone)
@@ -407,12 +426,18 @@ pub async fn fetch_all_provider_quotas(provider_ids: Vec<String>) -> Result<Stri
     let mut quotas = Vec::new();
     while let Some(result) = join_set.join_next().await {
         match result {
-            Ok(quota) => quotas.push(quota),
+            Ok(quota) => {
+                tracing::info!("[额度查询] 完成: provider={}, status={}, quotaType={}",
+                    quota.provider_id, quota.status, quota.quota_type);
+                quotas.push(quota)
+            }
             Err(e) => {
                 tracing::warn!("额度查询任务异常: {}", e);
             }
         }
     }
+
+    tracing::info!("[额度查询] 全部完成，共 {} 条结果", quotas.len());
 
     // 按 provider_id 排序保持稳定顺序
     quotas.sort_by(|a, b| a.provider_id.cmp(&b.provider_id));
