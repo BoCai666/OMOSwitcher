@@ -48,14 +48,17 @@ const loadPresets = async () => {
 
 // 刷新预设列表（清除缓存后重新从磁盘读取）
 const refreshing = ref(false)
+const spinning = ref(false)
 const handleRefresh = async () => {
   refreshing.value = true
+  spinning.value = true
   try {
     invalidatePresetsCache()
     await loadPresets()
     showSuccess('预设列表已刷新')
   } finally {
     refreshing.value = false
+    setTimeout(() => { spinning.value = false }, 600)
   }
 }
 
@@ -207,7 +210,8 @@ const handleViewPreset = (preset: Preset) => {
           <span class="subtitle">管理配置预设，快速切换不同配置方案</span>
         </div>
         <div class="header-right">
-          <el-button :icon="Refresh" :loading="refreshing" @click="handleRefresh">
+          <el-button :loading="refreshing" @click="handleRefresh">
+            <el-icon :class="{ 'spin-icon': spinning }"><Refresh /></el-icon>
             刷新
           </el-button>
           <el-button type="primary" @click="dialogVisible = true">
@@ -230,10 +234,8 @@ const handleViewPreset = (preset: Preset) => {
           <el-table-column prop="name" label="预设名称" min-width="120">
             <template #default="{ row }">
               <div class="preset-name-cell">
+                <span v-if="isCurrentPreset(row)" class="current-dot" title="当前使用的预设"></span>
                 <span class="preset-name">{{ row.name }}</span>
-                <el-tag v-if="isCurrentPreset(row)" type="success" size="small" class="current-tag">
-                  当前
-                </el-tag>
               </div>
             </template>
           </el-table-column>
@@ -376,7 +378,7 @@ const handleViewPreset = (preset: Preset) => {
   gap: 10px;
 }
 
-/* 刷新按钮 - hover 时保持文字可读 */
+/* 刷新按钮 */
 .header-right .el-button:not(.el-button--primary) {
   background: transparent !important;
   border: 1px solid var(--app-border-default) !important;
@@ -390,7 +392,7 @@ const handleViewPreset = (preset: Preset) => {
   color: #ffffff !important;
 }
 
-/* 暗色模式下刷新按钮 hover 使用紫色，避免天蓝色 */
+/* 暗色模式下刷新按钮 hover 使用紫色 */
 html.dark .header-right .el-button:not(.el-button--primary):hover {
   background: var(--app-color-purple) !important;
   border-color: var(--app-color-purple) !important;
@@ -500,10 +502,17 @@ html.dark .header-right .el-button:not(.el-button--primary):hover {
 }
 
 /* 预设名称单元格 */
+/* 预设名称列 - 允许绿点溢出 */
+:deep(.el-table__body td:first-child) {
+  overflow: visible !important;
+}
+
 .preset-name-cell {
   display: flex;
   align-items: center;
-  gap: 10px;
+  position: relative;
+  overflow: visible;
+  padding-left: 16px;
 }
 
 .preset-name {
@@ -512,13 +521,17 @@ html.dark .header-right .el-button:not(.el-button--primary):hover {
   font-size: 14px;
 }
 
-/* 当前标签 */
-:deep(.current-tag.el-tag--success) {
-  background: rgba(0, 255, 157, 0.15) !important;
-  border: 1px solid var(--app-color-success) !important;
-  color: var(--app-color-success) !important;
-  box-shadow: 0 0 10px rgba(0, 255, 157, 0.2);
-  font-weight: 600;
+/* 当前预设标识（绿色圆点，绝对定位不占空间） */
+.current-dot {
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--app-color-success);
+  box-shadow: 0 0 6px var(--app-color-success);
 }
 
 /* 描述单元格 */
@@ -938,11 +951,8 @@ html.light:not(.cyberpunk):not(.dark) .preset-name {
   text-shadow: none;
 }
 
-html.light:not(.cyberpunk):not(.dark) :deep(.current-tag.el-tag--success) {
-  background: rgba(16, 185, 129, 0.1) !important;
-  border: 1px solid rgba(16, 185, 129, 0.4) !important;
-  color: var(--app-color-success) !important;
-  box-shadow: none;
+html.light:not(.cyberpunk):not(.dark) .current-dot {
+  box-shadow: 0 0 4px var(--app-color-success);
 }
 
 /* 明色主题 - 按钮样式 */
@@ -1042,5 +1052,15 @@ html.light:not(.cyberpunk):not(.dark) .edit-actions :deep(.el-button:not(.el-but
   border-color: var(--app-color-primary) !important;
   color: var(--app-color-primary) !important;
   background: var(--app-bg-hover) !important;
+}
+
+/* ==================== 刷新动画 ==================== */
+.spin-icon {
+  animation: refresh-spin 0.6s ease-in-out;
+}
+
+@keyframes refresh-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 </style>

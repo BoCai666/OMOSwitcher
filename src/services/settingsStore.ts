@@ -36,6 +36,15 @@ export interface AppSettings {
     // OpenCode Server 端口
     port: number
   }
+  // OpenCode Go 额度查询配置（网页抓取方式需要的认证参数）
+  openCodeGo?: {
+    // 用户/订阅 ID
+    id?: string
+    // 浏览器 Cookie（登录态）
+    cookie?: string
+    // 额度查询页面 URL（可自定义，默认 https://opencode.ai/auth）
+    usageUrl?: string
+  }
 }
 
 // 默认设置
@@ -338,5 +347,28 @@ export async function getCloseBehavior(): Promise<'ask' | 'minimize' | 'exit'> {
 export async function setCloseBehavior(behavior: 'ask' | 'minimize' | 'exit'): Promise<void> {
   const settings = await readSettings()
   settings.closeBehavior = behavior
+  await writeSettings(settings)
+}
+
+// ==================== OpenCode Go 额度查询配置相关函数 ====================
+
+/**
+ * 获取 OpenCode Go 额度查询配置
+ */
+export async function getOpenCodeGoConfig(): Promise<{ id?: string; cookie?: string; usageUrl?: string }> {
+  const settings = await readSettings()
+  return {
+    id: settings.openCodeGo?.id,
+    cookie: settings.openCodeGo?.cookie,
+    usageUrl: settings.openCodeGo?.usageUrl
+  }
+}
+
+/**
+ * 设置 OpenCode Go 额度查询配置
+ */
+export async function setOpenCodeGoConfig(config: { id?: string; cookie?: string; usageUrl?: string }): Promise<void> {
+  const settings = await readSettings()
+  settings.openCodeGo = { ...settings.openCodeGo, ...config }
   await writeSettings(settings)
 }

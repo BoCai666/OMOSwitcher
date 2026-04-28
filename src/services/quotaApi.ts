@@ -8,6 +8,13 @@ import { getAvailableProviderIds } from '@/services/opencodeModels'
 
 export const quotaApi = {
   /**
+   * 获取可用供应商 ID 列表（供骨架初始化使用）
+   */
+  async getProviderIds(): Promise<string[]> {
+    return getAvailableProviderIds()
+  },
+
+  /**
    * 获取所有已接入供应商的额度信息
    * 先通过 getAvailableProviderIds 获取完整供应商列表（与模型管理页面同一数据源），
    * 再将 ID 列表传给 Rust 端进行额度查询

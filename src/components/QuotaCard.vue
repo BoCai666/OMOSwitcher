@@ -4,7 +4,7 @@
  * 展示单个供应商的额度/余额信息
  */
 import { computed } from 'vue'
-import { WarningFilled } from '@element-plus/icons-vue'
+import { WarningFilled, Setting } from '@element-plus/icons-vue'
 import type { ProviderQuota } from '@/types/quota'
 import {
   getProviderColor,
@@ -36,6 +36,7 @@ const isOpenCodeGo = computed(() =>
 const emit = defineEmits<{
   retry: [quota: ProviderQuota]
   detail: [quota: ProviderQuota]
+  settings: [quota: ProviderQuota]
 }>()
 </script>
 
@@ -56,6 +57,23 @@ const emit = defineEmits<{
 
     <!-- 错误状态 -->
     <div v-else-if="quota.status === 'error'" class="card-body error-state">
+      <!-- OpenCodeGo: 显示头部和设置按钮 -->
+      <div v-if="isOpenCodeGo" class="card-header-row error-header-row">
+        <div class="provider-icon-badge" :style="{ background: getProviderMeta(quota.providerId).gradient || getProviderColor(quota.providerId) }">
+          <svg :viewBox="getProviderMeta(quota.providerId).iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
+            <path :d="getProviderMeta(quota.providerId).iconPath" />
+          </svg>
+        </div>
+        <span class="provider-name">{{ quota.providerName }}</span>
+        <span class="header-spacer"></span>
+        <button
+          class="settings-btn"
+          title="设置额度查询参数"
+          @click.stop="emit('settings', quota)"
+        >
+          <el-icon :size="16"><Setting /></el-icon>
+        </button>
+      </div>
       <div class="error-content">
         <el-icon class="error-icon"><WarningFilled /></el-icon>
         <p class="error-text">{{ quota.errorMessage || '查询失败' }}</p>
@@ -72,6 +90,15 @@ const emit = defineEmits<{
           </svg>
         </div>
         <span class="provider-name">{{ quota.providerName }}</span>
+        <span class="header-spacer"></span>
+        <button
+          v-if="isOpenCodeGo"
+          class="settings-btn"
+          title="设置额度查询参数"
+          @click.stop="emit('settings', quota)"
+        >
+          <el-icon :size="16"><Setting /></el-icon>
+        </button>
       </div>
       <el-empty
         description="该供应商暂不支持额度查询"
@@ -89,6 +116,15 @@ const emit = defineEmits<{
           </svg>
         </div>
         <span class="provider-name">{{ quota.providerName }}</span>
+        <span class="header-spacer"></span>
+        <button
+          v-if="isOpenCodeGo"
+          class="settings-btn"
+          title="设置额度查询参数"
+          @click.stop="emit('settings', quota)"
+        >
+          <el-icon :size="16"><Setting /></el-icon>
+        </button>
       </div>
       <div class="balance-main">
         <span class="balance-label">{{ isPureBalance ? '余额' : '配额使用' }}</span>
@@ -121,9 +157,18 @@ const emit = defineEmits<{
           </svg>
         </div>
         <span class="provider-name">{{ quota.providerName }}</span>
+        <span class="header-spacer"></span>
+        <button
+          v-if="isOpenCodeGo"
+          class="settings-btn"
+          title="设置额度查询参数"
+          @click.stop="emit('settings', quota)"
+        >
+          <el-icon :size="16"><Setting /></el-icon>
+        </button>
       </div>
       <div class="balance-main">
-        <span class="balance-label">{{ isOpenCodeGo ? '5小时滚动额度' : '配额使用' }}</span>
+        <span class="balance-label">配额使用</span>
         <span class="balance-value">
           {{ quota.quotaPercentage != null ? `${quota.quotaPercentage.toFixed(1)}%` : '--' }}
         </span>
@@ -276,6 +321,38 @@ const emit = defineEmits<{
   line-height: 1.3;
 }
 
+.header-spacer {
+  flex: 1;
+}
+
+/* 设置按钮（齿轮图标） */
+.settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--app-border-default);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--app-text-tertiary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.settings-btn:hover {
+  background: var(--app-color-primary);
+  border-color: var(--app-color-primary);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.settings-btn:active {
+  transform: scale(0.95);
+}
+
 /* 余额主区域 */
 .balance-main {
   display: flex;
@@ -347,6 +424,13 @@ const emit = defineEmits<{
 .error-state {
   align-items: center;
   justify-content: center;
+}
+
+/* OpenCodeGo 错误状态头部覆盖 */
+.error-header-row {
+  width: 100%;
+  margin-bottom: 12px;
+  align-items: center;
 }
 
 .error-content {
@@ -446,6 +530,19 @@ html.cyberpunk .quota-card:hover .card-glow-line {
 /* 供应商名 - 赛博朋克 */
 html.cyberpunk .provider-name {
   color: #e0e0ff;
+}
+
+/* 设置按钮 - 赛博朋克 */
+html.cyberpunk .settings-btn {
+  border-color: rgba(0, 255, 255, 0.25);
+  color: rgba(0, 255, 255, 0.5);
+}
+
+html.cyberpunk .settings-btn:hover {
+  background: rgba(0, 255, 255, 0.15);
+  border-color: rgba(0, 255, 255, 0.5);
+  color: #00ffff;
+  box-shadow: 0 0 12px rgba(0, 255, 255, 0.2);
 }
 
 /* 百分比数字 - 赛博朋克霓虹 */

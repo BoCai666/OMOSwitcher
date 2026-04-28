@@ -219,30 +219,25 @@ watch(() => configStore.error, (newError) => {
 
 <template>
   <div class="model-config">
-      <!-- 页面头部 -->
-      <div class="page-header">
-        <div class="header-left">
-          <el-tag v-if="configStore.hasUnsavedChanges" type="warning" size="small">
-            未保存
-          </el-tag>
-        </div>
-        <div class="header-right">
-          <el-button
-            type="primary"
-            :loading="configStore.isSaving"
-            @click="handleSave"
-          >
-            保存配置
-          </el-button>
-        </div>
-      </div>
-
       <!-- Tab 切换 -->
       <el-tabs v-model="activeTab" class="config-tabs">
         <!-- Agent 配置 -->
         <el-tab-pane label="Agent 配置" name="agents">
           <div class="tab-header">
             <span class="subtitle">共 {{ AGENT_NAMES.length }} 个 Agent</span>
+            <div class="tab-header-right">
+              <el-tag v-if="configStore.hasUnsavedChanges" type="warning" size="small">
+                未保存
+              </el-tag>
+              <el-button
+                type="primary"
+                size="small"
+                :loading="configStore.isSaving"
+                @click="handleSave"
+              >
+                保存配置
+              </el-button>
+            </div>
           </div>
           <div class="config-grid">
             <ConfigCard
@@ -264,6 +259,19 @@ watch(() => configStore.error, (newError) => {
         <el-tab-pane label="Category 配置" name="categories">
           <div class="tab-header">
             <span class="subtitle">共 {{ CATEGORY_NAMES.length }} 个 Category</span>
+            <div class="tab-header-right">
+              <el-tag v-if="configStore.hasUnsavedChanges" type="warning" size="small">
+                未保存
+              </el-tag>
+              <el-button
+                type="primary"
+                size="small"
+                :loading="configStore.isSaving"
+                @click="handleSave"
+              >
+                保存配置
+              </el-button>
+            </div>
           </div>
           <div class="config-grid">
             <ConfigCard
@@ -325,26 +333,16 @@ watch(() => configStore.error, (newError) => {
 .model-config {
   max-width: 1200px;
   margin: 0 auto;
-  padding: var(--app-spacing-4);
+  padding: 0 var(--app-spacing-4) var(--app-spacing-4);
 }
 
-/* ==================== 页面头部 ==================== */
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+/* ==================== Tab 切换 ==================== */
+.config-tabs {
   margin-bottom: var(--app-spacing-5);
-  padding: var(--app-spacing-4) 0;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: var(--app-spacing-3);
 }
 
 /* ==================== 赛博朋克主题 - 未保存标签 ==================== */
-html.cyberpunk .page-header :deep(.el-tag--warning) {
+html.cyberpunk .tab-header-right :deep(.el-tag--warning) {
   background: rgba(255, 170, 0, 0.15);
   border: 1px solid rgba(255, 170, 0, 0.4);
   color: var(--app-color-warning);
@@ -353,20 +351,20 @@ html.cyberpunk .page-header :deep(.el-tag--warning) {
   transition: all 0.3s ease;
 }
 
-html.cyberpunk .page-header :deep(.el-tag--warning:hover) {
+html.cyberpunk .tab-header-right :deep(.el-tag--warning:hover) {
   box-shadow: 0 0 16px rgba(255, 170, 0, 0.4);
   border-color: rgba(255, 170, 0, 0.6);
 }
 
 /* ==================== 玻璃拟态主题 - 未保存标签 ==================== */
-html.glassmorphism .page-header :deep(.el-tag--warning) {
+html.glassmorphism .tab-header-right :deep(.el-tag--warning) {
   background: rgba(245, 158, 11, 0.12);
   border: 1px solid rgba(245, 158, 11, 0.3);
   color: var(--app-color-warning);
 }
 
 /* ==================== 赛博朋克主题 - 保存按钮 ==================== */
-html.cyberpunk .page-header :deep(.el-button--primary) {
+html.cyberpunk .tab-header-right :deep(.el-button--primary) {
   background: linear-gradient(135deg, rgba(0, 255, 255, 0.2) 0%, rgba(255, 0, 255, 0.15) 100%);
   border: 1px solid rgba(0, 255, 255, 0.4);
   color: var(--app-color-primary);
@@ -381,7 +379,7 @@ html.cyberpunk .page-header :deep(.el-button--primary) {
   overflow: hidden;
 }
 
-html.cyberpunk .page-header :deep(.el-button--primary::before) {
+html.cyberpunk .tab-header-right :deep(.el-button--primary::before) {
   content: '';
   position: absolute;
   top: 0;
@@ -392,7 +390,7 @@ html.cyberpunk .page-header :deep(.el-button--primary::before) {
   transition: left 0.5s;
 }
 
-html.cyberpunk .page-header :deep(.el-button--primary:hover) {
+html.cyberpunk .tab-header-right :deep(.el-button--primary:hover) {
   box-shadow:
     0 0 25px rgba(0, 255, 255, 0.5),
     0 0 50px rgba(0, 255, 255, 0.2),
@@ -401,11 +399,11 @@ html.cyberpunk .page-header :deep(.el-button--primary:hover) {
   border-color: rgba(0, 255, 255, 0.6);
 }
 
-html.cyberpunk .page-header :deep(.el-button--primary:hover::before) {
+html.cyberpunk .tab-header-right :deep(.el-button--primary:hover::before) {
   left: 100%;
 }
 
-html.cyberpunk .page-header :deep(.el-button--primary:active) {
+html.cyberpunk .tab-header-right :deep(.el-button--primary:active) {
   transform: translateY(0);
   box-shadow:
     0 0 10px rgba(0, 255, 255, 0.3),
@@ -413,7 +411,7 @@ html.cyberpunk .page-header :deep(.el-button--primary:active) {
 }
 
 /* ==================== 玻璃拟态主题 - 保存按钮 ==================== */
-html.glassmorphism .page-header :deep(.el-button--primary) {
+html.glassmorphism .tab-header-right :deep(.el-button--primary) {
   background: linear-gradient(135deg, var(--app-color-primary) 0%, var(--app-color-secondary) 100%);
   border: none;
   color: white;
@@ -424,7 +422,7 @@ html.glassmorphism .page-header :deep(.el-button--primary) {
   transition: all 0.3s ease;
 }
 
-html.glassmorphism .page-header :deep(.el-button--primary:hover) {
+html.glassmorphism .tab-header-right :deep(.el-button--primary:hover) {
   box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
   transform: translateY(-1px);
 }
@@ -492,12 +490,21 @@ html.glassmorphism .config-tabs :deep(.el-tabs__active-bar) {
 
 /* ==================== Tab 内容区域 ==================== */
 .tab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: var(--app-spacing-5);
   padding: var(--app-spacing-3) var(--app-spacing-4);
   background: var(--app-bg-card);
   border-radius: var(--app-radius-md);
   border: 1px solid var(--app-border-default);
   transition: all 0.3s ease;
+}
+
+.tab-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--app-spacing-3);
 }
 
 /* 赛博朋克主题 - Tab 头部 */

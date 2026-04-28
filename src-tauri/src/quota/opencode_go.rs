@@ -1,22 +1,21 @@
 // OpenCode Go 额度查询（网页抓取）
-// OpenCode Go 无官方 API，通过抓取 Dashboard 页面获取月度用量
-// apiKey 格式: workspaceId|authCookie（用 | 分隔）
-// authCookie 来源: 浏览器 F12 → Application → Cookies → opencode.ai → auth
+// OpenCode Go 无官方 API，通过抓取 Dashboard 页面获取用量
+// 凭证保存在 ~/.config/omoswitcher/settings.json 的 openCodeGo 字段中
+// 格式: { "openCodeGo": { "id": "workspace_id", "cookie": "auth_cookie_value" } }
 
-use super::{ProviderInfo, ProviderQuota, build_client, error_quota};
+use super::{ProviderInfo, ProviderQuota, error_quota};
 use regex::Regex;
 
 /// 查询 OpenCode Go 额度
-/// apiKey 格式: workspace_id|auth_cookie
+/// 从 settings.json 读取 workspaceId 和 cookie
 pub(crate) async fn query_opencode_go(provider: &ProviderInfo) -> ProviderQuota {
-    // 从配置文件中解析凭证
-    let parts: Vec<&str> = provider.api_key.splitn(2, '|').collect();
-    let (workspace_id, auth_cookie) = match parts.as_slice() {
-        [wid, cookie] if !wid.is_empty() && !cookie.is_empty() => (*wid, *cookie),
+    // 从 OMOSwitcher 的 settings.json 读取凭证
+    let (workspace_id, auth_cookie) = match read_opencode_go_settings() {
+        Some((id, cookie)) if !id.is_empty() && !cookie.is_empty() => (id, cookie),
         _ => {
             return error_quota(
                 &provider.id, &provider.name,
-                "apiKey 格式需为 workspaceId|authCookie",
+                "请点击卡片上的齿轮图标设置 Workspace ID 和 Cookie",
             );
         }
     };
@@ -27,11 +26,16 @@ pub(crate) async fn query_opencode_go(provider: &ProviderInfo) -> ProviderQuota 
         auth_cookie.chars().take(8).collect::<String>()
     );
 
-    let client = match build_client() {
+    let client = match reqwest::Client::builder()
+        .no_proxy()                         // 绕过系统代理（Tauri 环境避免代理干扰）
+        .timeout(std::time::Duration::from_secs(30))  // 网页抓取允许更长超时
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .build()
+    {
         Ok(c) => c,
         Err(e) => {
             tracing::error!("[OpenCode Go] 创建 HTTP 客户端失败: {}", e);
-            return error_quota(&provider.id, &provider.name, &e);
+            return error_quota(&provider.id, &provider.name, &e.to_string());
         }
     };
 
@@ -39,11 +43,6 @@ pub(crate) async fn query_opencode_go(provider: &ProviderInfo) -> ProviderQuota 
 
     let result = client
         .get(&url)
-        .header(
-            "User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-        )
-        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
         .header("Cookie", format!("auth={}", auth_cookie))
         .send()
         .await;
@@ -170,6 +169,28 @@ pub(crate) async fn query_opencode_go(provider: &ProviderInfo) -> ProviderQuota 
             error_quota(&provider.id, &provider.name, &format!("请求失败: {}", e))
         }
     }
+}
+
+/// 从 OMOSwitcher settings.json 读取 OpenCode Go 凭证
+/// settings.json 路径: ~/.config/omoswitcher/settings.json
+/// 字段: openCodeGo.id (workspaceId), openCodeGo.cookie (auth cookie)
+fn read_opencode_go_settings() -> Option<(String, String)> {
+    let home = dirs::home_dir()?;
+    let settings_path = home.join(".config").join("omoswitcher").join("settings.json");
+    if !settings_path.exists() {
+        tracing::info!("[OpenCode Go] settings.json 不存在");
+        return None;
+    }
+    let content = std::fs::read_to_string(&settings_path).ok()?;
+    let json: serde_json::Value = serde_json::from_str(&content).ok()?;
+    let ocg = json.get("openCodeGo")?;
+    let id = ocg.get("id")?.as_str()?.to_string();
+    let cookie = ocg.get("cookie")?.as_str()?.to_string();
+    if id.is_empty() || cookie.is_empty() {
+        return None;
+    }
+    tracing::info!("[OpenCode Go] 从 settings.json 读到 id={}, cookie长度={}", id, cookie.len());
+    Some((id, cookie))
 }
 
 /// 将重置秒数格式化为中文倒计时

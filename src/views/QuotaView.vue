@@ -15,11 +15,13 @@ let cachedZhipuDetails: Record<string, { data: ZhipuUsageDetails; timestamp: num
  * 模型额度仪表盘
  * 显示已接入供应商的额度/余额卡片
  */
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { Refresh, Coin } from '@element-plus/icons-vue'
+import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { quotaApi } from '@/services/quotaApi'
 import { log, error } from '@/utils/logger'
 import QuotaCard from '@/components/QuotaCard.vue'
+import OpenCodeGoSettingsDialog from '@/components/OpenCodeGoSettingsDialog.vue'
 import {
   formatBalance,
   formatTokens,
@@ -34,65 +36,83 @@ const quotaData = ref<ProviderQuota[]>([])
 const loading = ref(false)
 const lastRefreshTime = ref<string>('')
 
+// 判断是否为 OpenCodeGo（需要保留卡片以便显示设置按钮）
+function isOpenCodeGoProvider(providerId: string): boolean {
+  const id = providerId.toLowerCase()
+  return id.includes('opencode') && id.includes('go')
+}
+
 // 获取所有供应商额度
+// Rust 端并发查询，每完成一个就通过 "quota-progress" 事件实时推送到前端
+let quotaUnlisten: UnlistenFn | null = null
+
 async function fetchQuotas() {
   loading.value = true
+
+  // 1. 先获取供应商 ID 列表，立即显示 loading 骨架卡片
+  const providerIds = await quotaApi.getProviderIds()
+  if (providerIds.length === 0) {
+    quotaData.value = []
+    loading.value = false
+    return
+  }
+
+  // 保留已有数据（非首次刷新时），无数据的卡片显示 loading
+  const existingMap = new Map(quotaData.value.map(q => [q.providerId, q]))
+  quotaData.value = providerIds.map(id =>
+    existingMap.get(id) || { providerId: id, providerName: id, quotaType: 'unsupported' as const, status: 'loading' as const }
+  )
+
+  // 2. 设置事件监听，Rust 每完成一个查询就实时更新卡片
+  if (quotaUnlisten) { quotaUnlisten(); quotaUnlisten = null }
+  quotaUnlisten = await listen<ProviderQuota>('quota-progress', (event) => {
+    const q = event.payload
+    const idx = quotaData.value.findIndex(item => item.providerId === q.providerId)
+    if (idx !== -1) quotaData.value[idx] = q
+  })
+
   try {
+    // 3. 全并发查询（Rust JoinSet），事件逐步更新卡片内容
     const all = await quotaApi.fetchAllProviderQuotas()
-    // 只显示已实现查询接口的供应商，过滤掉 unsupported
-    const filtered = all.filter(q => q.quotaType !== 'unsupported')
-    log('[额度加载] 供应商列表:', filtered.map(q => `${q.providerId}(${q.quotaType})`).join(', '))
-    const refreshTime = new Date().toLocaleTimeString('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-    quotaData.value = filtered
+
+    // 4. 最终整理：在事件已更新的 quotaData 基础上过滤并排序
+    //    保留：balance/token_limit + OpenCodeGo（可设置参数）+ error（需展示错误）
+    //    注意：不在 all 中的卡片说明 Rust 未返回，移除
+    const allIds = new Set(all.map(q => q.providerId))
+    quotaData.value = quotaData.value
+      .filter(q =>
+        allIds.has(q.providerId) && (
+          q.quotaType !== 'unsupported' ||
+          isOpenCodeGoProvider(q.providerId) ||
+          q.status === 'error'
+        )
+      )
+      .sort((a, b) => a.providerId.localeCompare(b.providerId))
+
+    const refreshTime = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     lastRefreshTime.value = refreshTime
-    // 写入模块级缓存
-    cachedQuotaData = filtered
+    cachedQuotaData = [...quotaData.value]
     cachedRefreshTime = refreshTime
     lastFetchTimestamp = Date.now()
-    // 额度列表刷新后，清除 zhipu 详情缓存
     cachedZhipuDetails = {}
+    log('[额度加载] 供应商列表:', quotaData.value.map(q => `${q.providerId}(${q.quotaType})`).join(', '))
   } catch (e) {
     error('获取额度数据失败:', e)
   } finally {
     loading.value = false
+    quotaUnlisten?.()
+    quotaUnlisten = null
   }
 }
 
 // 重试单个供应商
 async function retryProvider(quota: ProviderQuota) {
-  // 将该供应商状态设为 loading，再整体刷新
   const idx = quotaData.value.findIndex(q => q.providerId === quota.providerId)
   if (idx !== -1) {
     quotaData.value[idx] = { ...quotaData.value[idx], status: 'loading' }
   }
-  try {
-    const all = await quotaApi.fetchAllProviderQuotas()
-    const filtered = all.filter(q => q.quotaType !== 'unsupported')
-    const refreshTime = new Date().toLocaleTimeString('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-    quotaData.value = filtered
-    lastRefreshTime.value = refreshTime
-    cachedQuotaData = filtered
-    cachedRefreshTime = refreshTime
-    lastFetchTimestamp = Date.now()
-    cachedZhipuDetails = {}
-  } catch (e) {
-    error('重试获取额度失败:', e)
-    if (idx !== -1) {
-      quotaData.value[idx] = {
-        ...quotaData.value[idx],
-        status: 'error',
-        errorMessage: '重试失败'
-      }
-    }
-  }
+  // 直接复用 fetchQuotas（含事件监听，支持渐进更新）
+  await fetchQuotas()
 }
 
 // ==================== 详情弹窗 ====================
@@ -111,12 +131,6 @@ function isZhipuProvider(providerId: string): boolean {
 function isKimiCodeProvider(providerId: string): boolean {
   const id = providerId.toLowerCase()
   return id === 'kimi-for-coding' || id.includes('kimi-code') || id.includes('kimicode')
-}
-
-// 判断是否为 OpenCode Go 供应商（三维度额度：滚动/周/月）
-function isOpenCodeGoProvider(providerId: string): boolean {
-  const id = providerId.toLowerCase()
-  return id.includes('opencode') && id.includes('go')
 }
 
 // 判断是否为纯余额型供应商（无 usedBalance/resetTime，如 DeepSeek）
@@ -170,6 +184,18 @@ const dialogTitle = computed(() => {
   return `${selectedQuota.value.providerName} - 额度详情`
 })
 
+// ==================== OpenCode Go 设置弹窗 ====================
+const settingsDialogVisible = ref(false)
+
+function openSettings(_quota: ProviderQuota) {
+  settingsDialogVisible.value = true
+}
+
+function onSettingsSaved() {
+  settingsDialogVisible.value = false
+  setTimeout(() => fetchQuotas(), 500)
+}
+
 // Kimi Code 额度详情（从 limits._kimiCodeUsage 中提取）
 const kimiCodeUsage = computed(() => {
   if (!selectedQuota.value?.limits) return null
@@ -210,12 +236,16 @@ function getModelPercentage(modelTokens: number, totalTokens: number): string {
 onMounted(() => {
   const now = Date.now()
   if (now - lastFetchTimestamp < CACHE_DURATION && cachedQuotaData.length > 0) {
-    // 缓存命中，恢复数据，不发请求
     quotaData.value = cachedQuotaData
     lastRefreshTime.value = cachedRefreshTime
   } else {
     fetchQuotas()
   }
+})
+
+onUnmounted(() => {
+  quotaUnlisten?.()
+  quotaUnlisten = null
 })
 </script>
 
@@ -261,6 +291,7 @@ onMounted(() => {
             :quota="quota"
             @retry="retryProvider"
             @detail="openDetail"
+            @settings="openSettings"
           />
         </el-col>
       </el-row>
@@ -688,6 +719,13 @@ onMounted(() => {
         </template>
       </template>
     </el-dialog>
+
+    <!-- OpenCode Go 设置弹窗 -->
+    <OpenCodeGoSettingsDialog
+      :visible="settingsDialogVisible"
+      @update:visible="settingsDialogVisible = $event"
+      @saved="onSettingsSaved"
+    />
   </div>
 </template>
 

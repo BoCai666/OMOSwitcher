@@ -20,6 +20,7 @@ import EditProviderDialog from '@/components/EditProviderDialog.vue'
 // 加载状态
 const loading = ref(true)
 const errorMsg = ref('')
+const spinning = ref(false)
 
 // 供应商卡片列表
 const providers = ref<ProviderWithAvailability[]>([])
@@ -166,8 +167,10 @@ function showModelDetail(model: RegistryModel, providerId: string) {
 
 // 刷新数据（静默刷新，不触发 loading 遮罩）
 async function refreshData() {
+  spinning.value = true
   clearRegistryCache()
   await loadData(true)
+  setTimeout(() => { spinning.value = false }, 600)
 }
 
 // 删除自定义供应商
@@ -231,7 +234,7 @@ onMounted(() => {
           <span>添加供应商</span>
         </el-button>
         <el-button @click="refreshData" :loading="loading">
-          <el-icon><Refresh /></el-icon>
+          <el-icon :class="{ 'spin-icon': spinning }"><Refresh /></el-icon>
         </el-button>
       </div>
     </div>
@@ -1413,5 +1416,15 @@ html.dark .el-loading-mask {
 
 html.dark .el-loading-text {
   color: #a0a0a0 !important;
+}
+
+/* ==================== 刷新动画 ==================== */
+.spin-icon {
+  animation: refresh-spin 0.6s ease-in-out;
+}
+
+@keyframes refresh-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 </style>

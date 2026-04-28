@@ -1,6 +1,8 @@
 // 供应商额度查询模块
 // 并发查询各供应商 API 获取账户余额/配额信息
 
+use tauri::Emitter;
+
 mod openrouter;
 mod deepseek;
 mod siliconflow;
@@ -303,7 +305,10 @@ pub(crate) fn read_auth_providers() -> Vec<ProviderInfo> {
 /// Rust 端从 opencode.json 和 auth.json 查找 apiKey 进行额度查询，
 /// 找不到 apiKey 的供应商标记为 unsupported。
 #[tauri::command]
-pub async fn fetch_all_provider_quotas(provider_ids: Vec<String>) -> Result<String, String> {
+pub async fn fetch_all_provider_quotas(
+    app: tauri::AppHandle,
+    provider_ids: Vec<String>,
+) -> Result<String, String> {
     if provider_ids.is_empty() {
         return Ok("[]".to_string());
     }
@@ -429,6 +434,8 @@ pub async fn fetch_all_provider_quotas(provider_ids: Vec<String>) -> Result<Stri
             Ok(quota) => {
                 tracing::info!("[额度查询] 完成: provider={}, status={}, quotaType={}",
                     quota.provider_id, quota.status, quota.quota_type);
+                // 实时推送单个结果到前端
+                let _ = app.emit("quota-progress", &quota);
                 quotas.push(quota)
             }
             Err(e) => {
