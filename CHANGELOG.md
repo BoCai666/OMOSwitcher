@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.9] - 2026-04-29
+
+### 新增功能
+
+- **OpenCode Go 额度查询** - 新增 OpenCode Go 供应商额度查询支持
+  - 网页抓取 Dashboard HTML + SolidJS SSR 水合数据解析
+  - 三维度用量展示：5 小时滚动窗口、周额度、月额度
+  - 凭证存储于 `settings.json`（非 `opencode.json`），支持 workspaceId/cookie 配置
+  - QuotaCard 上新增齿轮按钮，独立弹窗配置参数
+
+### 优化改进
+
+- **额度页渐进式刷新** - 首次加载不再预填充骨架卡片，查询成功的卡片逐个弹出，无需等待全部完成
+- **DeepSeek 纯余额卡片优化** - 修复 API 返回字符串数值解析失败，卡片显示余额/100% 进度条，详情弹窗精简
+- **模型配置页布局对齐** - tab-header 高度 48px 与 tab 页签对齐，max-width 缩小至 1000px 减少右侧留白
+- **额度查询过滤逻辑** - 查询失败/error 卡片不再被隐藏，unsupported 供应商自动跳过
+
+### Bug 修复
+
+- **修复预设页刷新按钮紫色溢出** - 移除 `overflow: hidden`，暗色模式下点击刷新不再出现紫色向左溢出
+- **修复预设页刷新按钮转圈动画** - 使用 `:deep()` + `@keyframes` 自定义旋转动画，保证至少 600ms 可见时长
+
+---
+
 ## [2.0.8] - 2026-04-26
 
 ### 新增功能
