@@ -64,7 +64,7 @@ function handleClose() { emit('update:visible', false) }
     :model-value="visible"
     title="OpenCode Go 额度查询设置"
     width="560px"
-    :close-on-click-modal="false"
+    :close-on-click-modal="true"
     append-to=".app-main"
     align-center
     class="opencode-go-settings-dialog"
@@ -110,7 +110,13 @@ function handleClose() { emit('update:visible', false) }
 </style>
 
 <style>
-.opencode-go-settings-dialog .el-dialog { background: var(--app-bg-card); border: 1px solid var(--app-border-default); border-radius: 16px; }
+.opencode-go-settings-dialog .el-dialog {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-default);
+  border-radius: 16px;
+  min-width: 360px;
+  min-height: 400px;
+}
 .opencode-go-settings-dialog .el-dialog__header { border-bottom: 1px solid var(--app-border-default); padding: 16px 20px; margin: 0; }
 .opencode-go-settings-dialog .el-dialog__title { color: var(--app-text-primary); font-weight: 600; font-size: 15px; }
 .opencode-go-settings-dialog .el-dialog__body { padding: 20px; }
