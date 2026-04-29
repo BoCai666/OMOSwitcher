@@ -331,7 +331,7 @@ watch(() => configStore.error, (newError) => {
 <style scoped>
 /* ==================== 基础布局 ==================== */
 .model-config {
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 0 var(--app-spacing-4) var(--app-spacing-4);
 }
@@ -493,8 +493,9 @@ html.glassmorphism .config-tabs :deep(.el-tabs__active-bar) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  height: 48px;
   margin-bottom: var(--app-spacing-5);
-  padding: var(--app-spacing-3) var(--app-spacing-4);
+  padding: 0 var(--app-spacing-4);
   background: var(--app-bg-card);
   border-radius: var(--app-radius-md);
   border: 1px solid var(--app-border-default);

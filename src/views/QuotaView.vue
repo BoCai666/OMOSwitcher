@@ -49,33 +49,26 @@ let quotaUnlisten: UnlistenFn | null = null
 async function fetchQuotas() {
   loading.value = true
 
-  // 1. 先获取供应商 ID 列表，立即显示 loading 骨架卡片
-  const providerIds = await quotaApi.getProviderIds()
-  if (providerIds.length === 0) {
-    quotaData.value = []
-    loading.value = false
-    return
-  }
-
-  // 保留已有数据（非首次刷新时），无数据的卡片显示 loading
-  const existingMap = new Map(quotaData.value.map(q => [q.providerId, q]))
-  quotaData.value = providerIds.map(id =>
-    existingMap.get(id) || { providerId: id, providerName: id, quotaType: 'unsupported' as const, status: 'loading' as const }
-  )
-
-  // 2. 设置事件监听，Rust 每完成一个查询就实时更新卡片
+  // 1. 设置事件监听，Rust 每完成一个查询就实时更新卡片
+  //    首次刷新时不预填充骨架卡片，查询成功的卡片逐个出现
   if (quotaUnlisten) { quotaUnlisten(); quotaUnlisten = null }
   quotaUnlisten = await listen<ProviderQuota>('quota-progress', (event) => {
     const q = event.payload
+    // 跳过无需展示的供应商：unsupported 且非 OpenCodeGo 且非 error
+    if (q.quotaType === 'unsupported' && !isOpenCodeGoProvider(q.providerId) && q.status !== 'error') return
     const idx = quotaData.value.findIndex(item => item.providerId === q.providerId)
-    if (idx !== -1) quotaData.value[idx] = q
+    if (idx !== -1) {
+      quotaData.value[idx] = q  // 更新已有卡片（非首次刷新）
+    } else {
+      quotaData.value.push(q)  // 首次刷新：查询成功的卡片逐个弹出
+    }
   })
 
   try {
-    // 3. 全并发查询（Rust JoinSet），事件逐步更新卡片内容
+    // 2. 全并发查询（Rust JoinSet），事件逐步更新卡片内容
     const all = await quotaApi.fetchAllProviderQuotas()
 
-    // 4. 最终整理：在事件已更新的 quotaData 基础上过滤并排序
+    // 3. 最终整理：在事件已更新的 quotaData 基础上过滤并排序
     //    保留：balance/token_limit + OpenCodeGo（可设置参数）+ error（需展示错误）
     //    注意：不在 all 中的卡片说明 Rust 未返回，移除
     const allIds = new Set(all.map(q => q.providerId))

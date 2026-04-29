@@ -48,17 +48,15 @@ const loadPresets = async () => {
 
 // 刷新预设列表（清除缓存后重新从磁盘读取）
 const refreshing = ref(false)
-const spinning = ref(false)
 const handleRefresh = async () => {
   refreshing.value = true
-  spinning.value = true
   try {
     invalidatePresetsCache()
     await loadPresets()
     showSuccess('预设列表已刷新')
   } finally {
-    refreshing.value = false
-    setTimeout(() => { spinning.value = false }, 600)
+    // 保证旋转动画至少显示 600ms，避免操作太快导致动画不可见
+    setTimeout(() => { refreshing.value = false }, 600)
   }
 }
 
@@ -210,8 +208,8 @@ const handleViewPreset = (preset: Preset) => {
           <span class="subtitle">管理配置预设，快速切换不同配置方案</span>
         </div>
         <div class="header-right">
-          <el-button :loading="refreshing" @click="handleRefresh">
-            <el-icon :class="{ 'spin-icon': spinning }"><Refresh /></el-icon>
+          <el-button class="refresh-btn" :disabled="refreshing" @click="handleRefresh">
+            <el-icon :class="{ 'refresh-spin': refreshing }"><Refresh /></el-icon>
             刷新
           </el-button>
           <el-button type="primary" @click="dialogVisible = true">
@@ -383,7 +381,17 @@ const handleViewPreset = (preset: Preset) => {
   background: transparent !important;
   border: 1px solid var(--app-border-default) !important;
   color: var(--app-text-primary) !important;
-  transition: all 0.3s ease !important;
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease !important;
+}
+
+/* 刷新按钮旋转动画 */
+:deep(.refresh-spin) {
+  animation: refresh-spin-anim 1s linear infinite;
+}
+
+@keyframes refresh-spin-anim {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .header-right .el-button:not(.el-button--primary):hover {
