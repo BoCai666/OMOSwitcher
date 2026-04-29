@@ -46,18 +46,18 @@ export const PROVIDER_METADATA: Record<string, ProviderMetadata> = {
   },
   deepseek: {
     displayName: 'DeepSeek',
-    color: '#0066ff',
-    gradient: 'linear-gradient(135deg, #0066ff 0%, #0052cc 100%)',
-    iconPath: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
-    iconViewBox: '0 0 24 24',
+    color: '#4d6bfe',
+    gradient: 'linear-gradient(135deg, #4d6bfe 0%, #3a56e0 100%)',
+    iconPath: 'M55.61 10.89c-0.6-0.29-0.85 0.26-1.2 0.55-0.12 0.09-0.22 0.21-0.32 0.32-0.87 0.93-1.89 1.54-3.21 1.47-1.94-0.11-3.6 0.5-5.07 1.99-0.31-1.83-1.35-2.92-2.92-3.63-0.82-0.36-1.66-0.73-2.23-1.52-0.4-0.56-0.51-1.19-0.71-1.81-0.13-0.37-0.26-0.76-0.69-0.82-0.47-0.07-0.65 0.32-0.83 0.65-0.73 1.34-1.02 2.82-0.99 4.31 0.06 3.36 1.48 6.04 4.3 7.94 0.32 0.22 0.4 0.44 0.3 0.76-0.19 0.66-0.42 1.29-0.62 1.95-0.13 0.42-0.32 0.51-0.77 0.33-1.55-0.65-2.89-1.6-4.07-2.76-2.01-1.94-3.82-4.08-6.08-5.76-0.53-0.39-1.06-0.76-1.61-1.1-2.31-2.24 0.3-4.08 0.91-4.3 0.63-0.23 0.22-1.01-1.82-1-2.04 0.01-3.91 0.69-6.29 1.6-0.35 0.14-0.71 0.24-1.09 0.32-2.16-0.41-4.41-0.5-6.75-0.24C6.07 12.08 2.55 14.16 0 17.73c-3.11 4.28-3.85 9.15-2.95 14.22 0.94 5.35 3.67 9.78 7.87 13.24 4.35 3.59 9.36 5.35 15.08 5.01 3.47-0.2 7.34-0.67 11.7-4.36 1.1 0.55 2.25 0.77 4.17 0.93 1.47 0.14 2.89-0.07 3.99-0.3 1.72-0.36 1.6-1.96 0.98-2.25-5.05-2.35-3.94-1.39-4.95-2.17 2.56-3.03 6.43-6.19 7.94-16.4 0.12-0.81 0.02-1.32 0-1.98-0.01-0.4 0.08-0.56 0.54-0.6 1.26-0.15 2.49-0.49 3.62-1.11 3.27-1.79 4.59-4.72 4.9-8.24 0.05-0.54-0.01-1.09-0.58-1.38zM27.12 42.54c-4.89-3.84-7.26-5.11-8.24-5.06-0.92 0.05-0.75 1.1-0.55 1.79 0.21 0.67 0.49 1.14 0.87 1.73 0.27 0.39 0.45 0.97-0.27 1.41-1.58 0.97-4.31-0.33-4.44-0.39-3.19-1.88-5.85-4.36-7.73-7.74-1.81-3.26-2.87-6.76-3.04-10.5-0.05-0.9 0.22-1.22 1.12-1.38 1.18-0.22 2.4-0.26 3.58-0.09 4.99 0.73 9.24 2.96 12.8 6.5 2.03 2.01 3.57 4.42 5.16 6.77 1.69 2.5 3.5 4.87 5.81 6.82 0.82 0.68 1.47 1.2 2.09 1.59-1.88 0.21-5.01 0.26-7.15-1.44zm2.34-15.08c0-0.4 0.32-0.72 0.72-0.72 0.09 0 0.17 0.02 0.25 0.05 0.1 0.04 0.19 0.09 0.27 0.17 0.13 0.13 0.2 0.31 0.2 0.5 0 0.4-0.32 0.72-0.72 0.72-0.4 0-0.71-0.32-0.71-0.72zm7.28 3.74c-0.47 0.19-0.93 0.36-1.38 0.37-0.7 0.04-1.46-0.25-1.87-0.59-0.64-0.54-1.1-0.84-1.29-1.78-0.08-0.4-0.04-1.02 0.04-1.38 0.16-0.77-0.02-1.26-0.56-1.7-0.44-0.36-1-0.46-1.61-0.46-0.23 0-0.44-0.1-0.6-0.18-0.26-0.13-0.47-0.45-0.27-0.84 0.06-0.13 0.38-0.44 0.45-0.49 0.83-0.47 1.8-0.32 2.68 0.04 0.82 0.34 1.45 0.96 2.34 1.83 0.92 1.06 1.08 1.35 1.6 2.14 0.41 0.62 0.79 1.26 1.04 1.99 0.16 0.46-0.05 0.83-0.59 1.06z',
+    iconViewBox: '0 0 56.2 56.2',
     description: '深度求索'
   },
   'opencode-go': {
     displayName: 'OpenCode Go',
-    color: '#4ade80',
-    gradient: 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)',
-    iconPath: 'M4 6h16M4 12h16M4 18h12',
-    iconViewBox: '0 0 24 24',
+    color: '#211E1E',
+    gradient: 'linear-gradient(135deg, #2d2a2a 0%, #211E1E 100%)',
+    iconPath: 'M210 60H90V240H210V60Z M270 300H30V0H270V300Z',
+    iconViewBox: '0 0 300 300',
     description: 'OpenCode 订阅计划'
   },
   'x-ai': {
@@ -70,18 +70,18 @@ export const PROVIDER_METADATA: Record<string, ProviderMetadata> = {
   },
   moonshotai: {
     displayName: 'Moonshot',
-    color: '#6366f1',
-    gradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-    iconPath: 'M12 3L1 9l11 6 9-4.91V17h2V9L12 3z',
-    iconViewBox: '0 0 24 24',
+    color: '#1a1a1a',
+    gradient: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)',
+    iconPath: 'M21.72.94C22.95.94 23.95 1.94 23.95 3.17C23.95 4.4 22.95 5.4 21.72 5.4H19.75C19.6 5.4 19.49 5.28 19.49 5.14V3.17C19.49 1.94 20.49.94 21.72.94ZM9.39 13.95L17.82 5.59C17.98 5.43 17.89 5.12 17.68 5.12H13.14C13.04 5.14 13 5.18 13 5.18L3.92 14.19C3.78 14.33 3.57 14.21 3.57 13.98V5.39C3.57 5.24 3.47 5.12 3.35 5.12H.22C.1 5.12 0 5.24 0 5.39V23.92C0 24.07.1 24.19.22 24.19H3.35C3.47 24.19 3.57 24.07 3.57 23.92V20.14C3.57 20.06 3.6 19.98 3.65 19.93L6.47 17.14C6.54 17.07 6.63 17.06 6.71 17.11L14.24 22.65C15.47 23.48 16.85 23.99 18.25 24.14C18.37 24.15 18.48 24.03 18.48 23.87V20.31C18.48 20.17 18.4 20.06 18.29 20.05C17.47 19.92 16.66 19.6 15.94 19.11L9.42 14.39C9.28 14.3 9.27 14.07 9.39 13.95Z',
+    iconViewBox: '0 0 24 25',
     description: '月之暗面'
   },
   'kimi-code': {
     displayName: 'Kimi Code',
-    color: '#00d4aa',
-    gradient: 'linear-gradient(135deg, #00d4aa 0%, #00b894 100%)',
-    iconPath: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z',
-    iconViewBox: '0 0 24 24',
+    color: '#1a1a1a',
+    gradient: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)',
+    iconPath: 'M21.72.94C22.95.94 23.95 1.94 23.95 3.17C23.95 4.4 22.95 5.4 21.72 5.4H19.75C19.6 5.4 19.49 5.28 19.49 5.14V3.17C19.49 1.94 20.49.94 21.72.94ZM9.39 13.95L17.82 5.59C17.98 5.43 17.89 5.12 17.68 5.12H13.14C13.04 5.14 13 5.18 13 5.18L3.92 14.19C3.78 14.33 3.57 14.21 3.57 13.98V5.39C3.57 5.24 3.47 5.12 3.35 5.12H.22C.1 5.12 0 5.24 0 5.39V23.92C0 24.07.1 24.19.22 24.19H3.35C3.47 24.19 3.57 24.07 3.57 23.92V20.14C3.57 20.06 3.6 19.98 3.65 19.93L6.47 17.14C6.54 17.07 6.63 17.06 6.71 17.11L14.24 22.65C15.47 23.48 16.85 23.99 18.25 24.14C18.37 24.15 18.48 24.03 18.48 23.87V20.31C18.48 20.17 18.4 20.06 18.29 20.05C17.47 19.92 16.66 19.6 15.94 19.11L9.42 14.39C9.28 14.3 9.27 14.07 9.39 13.95Z',
+    iconViewBox: '0 0 24 25',
     description: 'Kimi for Coding Plan'
   },
   ollama: {
@@ -104,8 +104,8 @@ export const PROVIDER_METADATA: Record<string, ProviderMetadata> = {
     displayName: '智谱AI',
     color: '#3370ff',
     gradient: 'linear-gradient(135deg, #3370ff 0%, #2860e1 100%)',
-    iconPath: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
-    iconViewBox: '0 0 24 24',
+    iconPath: 'M15.47 7.1l-1.3 1.85c-0.2 0.29-0.54 0.47-0.9 0.47h-7.1V7.09ZM24.3 7.1L13.14 22.91L5.7 22.91L16.86 7.1ZM14.53 22.91l1.31-1.86c0.2-0.29 0.54-0.47 0.9-0.47h7.09v2.33Z',
+    iconViewBox: '0 0 30 30',
     description: 'GLM 模型'
   },
   qianfan: {
@@ -166,10 +166,10 @@ export const PROVIDER_METADATA: Record<string, ProviderMetadata> = {
   },
   minimax: {
     displayName: 'MiniMax',
-    color: '#2563eb',
-    gradient: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-    iconPath: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z',
-    iconViewBox: '0 0 24 24',
+    color: '#E4659A',
+    gradient: 'linear-gradient(135deg, #E4659A 0%, #DB2ED7 100%)',
+    iconPath: 'M17.58 3.08C17.58 2.35 16.99 1.76 16.26 1.76C15.53 1.76 14.94 2.35 14.94 3.08V25.03C14.94 26.73 13.56 28.12 11.86 28.12C10.17 28.12 8.79 26.73 8.79 25.03V10.95C8.79 10.22 8.2 9.63 7.47 9.63C6.74 9.63 6.15 10.22 6.15 10.95V16.92C6.15 18.62 4.77 20 3.07 20C1.38 20 0 18.62 0 16.92V14.76C0 14.27.39 13.88.88 13.88C1.36 13.88 1.75 14.27 1.75 14.76V16.92C1.75 17.65 2.35 18.24 3.07 18.24C3.8 18.24 4.4 17.65 4.4 16.92V10.95C4.4 9.25 5.77 7.87 7.47 7.87C9.16 7.87 10.54 9.25 10.54 10.95V25.03C10.54 25.77 11.14 26.36 11.86 26.36C12.59 26.36 13.19 25.76 13.19 25.03V16.42V3.08C13.19 1.38 14.56 0 16.26 0C17.95 0 19.33 1.38 19.33 3.08V21.26C19.33 21.75 18.94 22.14 18.46 22.14C17.97 22.14 17.58 21.75 17.58 21.26V3.08ZM33.84 7.87C32.15 7.87 30.77 9.25 30.77 10.95V22.72C30.77 23.45 30.17 24.04 29.45 24.04C28.72 24.04 28.12 23.45 28.12 22.72V3.08C28.12 1.38 26.75 0 25.05 0C23.36 0 21.98 1.38 21.98 3.08V28C21.98 28.74 21.38 29.33 20.66 29.33C19.93 29.33 19.33 28.73 19.33 28V24.92C19.33 24.43 18.94 24.04 18.46 24.04C17.97 24.04 17.58 24.43 17.58 24.92V28C17.58 29.7 18.96 31.09 20.66 31.09C22.35 31.09 23.73 29.7 23.73 28V3.08C23.73 2.35 24.32 1.76 25.05 1.76C25.78 1.76 26.37 2.35 26.37 3.08V22.72C26.37 24.41 27.75 25.8 29.45 25.8C31.14 25.8 32.52 24.41 32.52 22.72V10.95C32.52 10.22 33.11 9.63 33.84 9.63C34.57 9.63 35.16 10.22 35.16 10.95V21.26C35.16 21.75 35.55 22.14 36.04 22.14C36.52 22.14 36.91 21.75 36.91 21.26V10.95C36.91 9.25 35.54 7.87 33.84 7.87Z',
+    iconViewBox: '0 0 37 31.5',
     description: 'MiniMax AI'
   }
 }
@@ -183,26 +183,64 @@ const DEFAULT_METADATA: ProviderMetadata = {
   iconViewBox: '0 0 24 24'
 }
 
+// 供应商关键词 → metadata key 的映射（处理 provider id 变体）
+// opencode.json 中用户配置的 provider id 可能是 minimax-token-plan、zhipu-z1-flash 等变体
+const PROVIDER_KEYWORD_MAP: Record<string, string[]> = {
+  'kimi-code': ['kimi-for-coding', 'kimi-code', 'kimicode'],
+  openrouter: ['openrouter'],
+  deepseek: ['deepseek'],
+  'opencode-go': ['opencode-go'],
+  siliconflow: ['silicon'],
+  zhipu: ['zhipu', 'glm'],
+  moonshotai: ['moonshot', 'kimi'],
+  minimax: ['minimax'],
+  infini: ['infini', 'wuwen'],
+  anthropic: ['anthropic', 'claude'],
+  openai: ['openai'],
+  google: ['google', 'gemini'],
+  'x-ai': ['xai', 'x-ai', 'grok'],
+  ollama: ['ollama'],
+  'github-copilot': ['github-copilot'],
+  mistral: ['mistral'],
+  qianfan: ['qianfan', 'baidu'],
+  aliyun: ['aliyun', 'dashscope'],
+  'aws-bedrock': ['bedrock', 'aws'],
+  azure: ['azure'],
+  cohere: ['cohere'],
+}
+
 /**
  * 获取供应商元数据
  * @param providerId 供应商 ID
  * @returns 供应商元数据
  */
 export function getProviderMetadata(providerId: string): ProviderMetadata {
-  // 直接匹配
+  // 1. 直接匹配
   if (PROVIDER_METADATA[providerId]) {
     return PROVIDER_METADATA[providerId]
   }
-  
-  // 模糊匹配（处理 kebab-case 变体）
+
+  // 2. 模糊匹配（处理 kebab-case 变体，如 minimax → MiniMax）
   const normalizedId = providerId.toLowerCase().replace(/[_\s]/g, '-')
   for (const [key, value] of Object.entries(PROVIDER_METADATA)) {
     if (key.toLowerCase().replace(/[_\s]/g, '-') === normalizedId) {
       return value
     }
   }
-  
-  // 返回默认值，displayName 使用 providerId
+
+  // 3. 关键词包含匹配（处理带后缀的变体，如 minimax-token-plan → minimax）
+  //    注意：kimi-for-coding 必须在 moonshot/kimi 之前匹配
+  const idLower = normalizedId.replace(/-/g, '')
+  for (const [metaKey, keywords] of Object.entries(PROVIDER_KEYWORD_MAP)) {
+    for (const keyword of keywords) {
+      const keywordNorm = keyword.replace(/-/g, '')
+      if (idLower === keywordNorm || idLower.includes(keywordNorm)) {
+        return PROVIDER_METADATA[metaKey] || DEFAULT_METADATA
+      }
+    }
+  }
+
+  // 4. 兜底：返回默认值，displayName 使用 providerId
   return {
     ...DEFAULT_METADATA,
     displayName: providerId.charAt(0).toUpperCase() + providerId.slice(1).replace(/-/g, ' ')
