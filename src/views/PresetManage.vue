@@ -231,10 +231,7 @@ const handleViewPreset = (preset: Preset) => {
           <!-- 预设名称列 -->
           <el-table-column prop="name" label="预设名称" min-width="120">
             <template #default="{ row }">
-              <div class="preset-name-cell">
-                <span v-if="isCurrentPreset(row)" class="current-dot" title="当前使用的预设"></span>
-                <span class="preset-name">{{ row.name }}</span>
-              </div>
+              <span class="preset-name">{{ row.name }}</span>
             </template>
           </el-table-column>
 
@@ -491,55 +488,23 @@ html.dark .header-right .el-button:not(.el-button--primary):hover {
   box-shadow: inset 0 0 30px rgba(0, 212, 255, 0.05);
 }
 
-/* 当前预设高亮 - 改进版 */
+/* 当前预设高亮 - 左侧竖线 + 背景渐变 */
 :deep(.el-table__body tr.is-current-preset td.el-table__cell) {
   background: linear-gradient(90deg, rgba(0, 212, 255, 0.12), rgba(0, 212, 255, 0.05)) !important;
   border-left: 3px solid var(--app-color-primary) !important;
-  position: relative;
 }
 
-/* 高亮行的过渡效果 */
-:deep(.el-table__body tr.is-current-preset) {
-  position: relative;
-}
-
-/* 当前预设的预设名称加粗 */
+/* 当前预设的预设名称加粗高亮 */
 :deep(.el-table__body tr.is-current-preset .preset-name) {
   font-weight: 600;
   color: var(--app-color-primary);
 }
 
-/* 预设名称单元格 */
-/* 预设名称列 - 允许绿点溢出 */
-:deep(.el-table__body td:first-child) {
-  overflow: visible !important;
-}
-
-.preset-name-cell {
-  display: flex;
-  align-items: center;
-  position: relative;
-  overflow: visible;
-  padding-left: 16px;
-}
-
+/* 预设名称 */
 .preset-name {
   font-weight: 500;
   color: var(--app-text-primary);
   font-size: 14px;
-}
-
-/* 当前预设标识（绿色圆点，绝对定位不占空间） */
-.current-dot {
-  position: absolute;
-  left: -12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--app-color-success);
-  box-shadow: 0 0 6px var(--app-color-success);
 }
 
 /* 描述单元格 */
