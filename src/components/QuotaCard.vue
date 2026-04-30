@@ -7,7 +7,6 @@ import { computed } from 'vue'
 import { WarningFilled, Setting } from '@element-plus/icons-vue'
 import type { ProviderQuota } from '@/types/quota'
 import {
-  getProviderColor,
   getProviderMeta,
   getBalancePercentage,
   getProgressColor,
@@ -15,10 +14,21 @@ import {
   formatTokens,
   formatResetTime
 } from '@/composables/useQuotaFormatter'
+import { useTheme } from '@/composables/useTheme'
 
 const props = defineProps<{
   quota: ProviderQuota
 }>()
+
+// 供应商元数据（缓存，避免重复调用）
+const providerMeta = computed(() => getProviderMeta(props.quota.providerId))
+
+// 暗色模式下，暗色品牌供应商使用灰色替代色
+const { isDark } = useTheme()
+const providerEffectiveColor = computed(() => {
+  if (isDark.value && providerMeta.value.darkColor) return providerMeta.value.darkColor
+  return providerMeta.value.color
+})
 
 // 纯余额型供应商：只有 totalBalance，没有 usedBalance/resetTime（如 DeepSeek）
 const isPureBalance = computed(() =>
@@ -44,7 +54,7 @@ const emit = defineEmits<{
   <div
     class="quota-card"
     :style="{
-      '--provider-color': getProviderColor(quota.providerId)
+      '--provider-color': providerEffectiveColor
     }"
   >
     <!-- 底部发光线装饰 -->
@@ -59,9 +69,9 @@ const emit = defineEmits<{
     <div v-else-if="quota.status === 'error'" class="card-body error-state">
       <!-- OpenCodeGo: 显示头部和设置按钮 -->
       <div v-if="isOpenCodeGo" class="card-header-row error-header-row">
-        <div class="provider-icon-badge" :style="{ background: getProviderMeta(quota.providerId).gradient || getProviderColor(quota.providerId) }">
-          <svg :viewBox="getProviderMeta(quota.providerId).iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
-            <path :d="getProviderMeta(quota.providerId).iconPath" />
+        <div class="provider-icon-badge" :style="{ background: providerMeta.gradient || providerEffectiveColor }">
+          <svg :viewBox="providerMeta.iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
+            <path :d="providerMeta.iconPath" />
           </svg>
         </div>
         <span class="provider-name">{{ quota.providerName }}</span>
@@ -84,9 +94,9 @@ const emit = defineEmits<{
     <!-- 不支持额度查询 -->
     <div v-else-if="quota.quotaType === 'unsupported'" class="card-body unsupported-state">
       <div class="card-header-row">
-        <div class="provider-icon-badge" :style="{ background: getProviderMeta(quota.providerId).gradient || getProviderColor(quota.providerId) }">
-          <svg :viewBox="getProviderMeta(quota.providerId).iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
-            <path :d="getProviderMeta(quota.providerId).iconPath" />
+        <div class="provider-icon-badge" :style="{ background: providerMeta.gradient || providerEffectiveColor }">
+          <svg :viewBox="providerMeta.iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
+            <path :d="providerMeta.iconPath" />
           </svg>
         </div>
         <span class="provider-name">{{ quota.providerName }}</span>
@@ -110,9 +120,9 @@ const emit = defineEmits<{
     <!-- 余额型 -->
     <div v-else-if="quota.quotaType === 'balance'" class="card-body clickable" @click="emit('detail', quota)">
       <div class="card-header-row">
-        <div class="provider-icon-badge" :style="{ background: getProviderMeta(quota.providerId).gradient || getProviderColor(quota.providerId) }">
-          <svg :viewBox="getProviderMeta(quota.providerId).iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
-            <path :d="getProviderMeta(quota.providerId).iconPath" />
+        <div class="provider-icon-badge" :style="{ background: providerMeta.gradient || providerEffectiveColor }">
+          <svg :viewBox="providerMeta.iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
+            <path :d="providerMeta.iconPath" />
           </svg>
         </div>
         <span class="provider-name">{{ quota.providerName }}</span>
@@ -151,9 +161,9 @@ const emit = defineEmits<{
     <!-- 配额型 (token_limit) -->
     <div v-else-if="quota.quotaType === 'token_limit'" class="card-body clickable" @click="emit('detail', quota)">
       <div class="card-header-row">
-        <div class="provider-icon-badge" :style="{ background: getProviderMeta(quota.providerId).gradient || getProviderColor(quota.providerId) }">
-          <svg :viewBox="getProviderMeta(quota.providerId).iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
-            <path :d="getProviderMeta(quota.providerId).iconPath" />
+        <div class="provider-icon-badge" :style="{ background: providerMeta.gradient || providerEffectiveColor }">
+          <svg :viewBox="providerMeta.iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
+            <path :d="providerMeta.iconPath" />
           </svg>
         </div>
         <span class="provider-name">{{ quota.providerName }}</span>
