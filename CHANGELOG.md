@@ -22,6 +22,10 @@ All notable changes to this project will be documented in this file.
 - **预设管理页当前预设标识优化** - 移除绿点标识，改用左侧 3px 主题色竖线 + 背景渐变 + 名称加粗变色，不占表格内容空间
 - **OpenCode Go 设置弹窗交互优化** - 支持点击背景关闭 + 最小尺寸适配
 
+### Bug 修复
+
+- **修复 Kimi Code 卡片类型错误** - 模板中遗留的 `getProviderColor` 未定义引用导致 TypeScript 编译失败
+
 ---
 
 ## [2.0.9] - 2026-04-29
