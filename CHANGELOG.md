@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.10] - 2026-04-30
+
+### 新增功能
+
+- **供应商品牌图标全面更新** - 7 家供应商官方 Logo 和品牌色更新
+  - Kimi / Moonshot / Kimi Code：官方 K mark 黑色 logo
+  - MiniMax：官方 abstract M mark，粉红→洋红渐变
+  - DeepSeek：官方鲸鱼 logo，品牌色 #4d6bfe
+  - 智谱 AI：官方 Z mark logo
+  - OpenCode Go：官方 O 框架 logo，深炭黑 #211E1E
+  - 新增三层供应商匹配逻辑（精确 → kebab-case → 关键词包含）
+
+- **新增无问芯穹供应商元数据** - 品牌色 #7018E0，7 叶放射花瓣图标
+
+### 优化改进
+
+- **暗色品牌供应商主题适配** - ProviderMetadata 新增 darkColor 字段，暗色模式下暗色品牌供应商卡片使用灰色替代色，QuotaCard 新增 providerEffectiveColor 主题感知颜色
+- **预设管理页当前预设标识优化** - 移除绿点标识，改用左侧 3px 主题色竖线 + 背景渐变 + 名称加粗变色，不占表格内容空间
+- **OpenCode Go 设置弹窗交互优化** - 支持点击背景关闭 + 最小尺寸适配
+
+---
+
 ## [2.0.9] - 2026-04-29
 
 ### 新增功能
