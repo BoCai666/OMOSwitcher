@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ### 新增功能
 
+- **应用自动更新** - 集成 Tauri 2 官方 Updater 插件，基于 GitHub Releases 分发
+  - Ed25519 数字签名验证，保障更新包完整性
+  - 启动时自动检查更新，首页支持手动检查
+  - 更新弹窗显示版本号、下载进度条
+  - 更新前自动停止 Monitor 代理释放文件锁
+  - Windows passive 安装模式（显示进度条，无需用户交互）
+  - CI 自动签名构建，Release 自动发布
+
 - **供应商品牌图标全面更新** - 7 家供应商官方 Logo 和品牌色更新
   - Kimi / Moonshot / Kimi Code：官方 K mark 黑色 logo
   - MiniMax：官方 abstract M mark，粉红→洋红渐变
