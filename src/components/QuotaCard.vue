@@ -202,9 +202,9 @@ const emit = defineEmits<{
     <!-- Kimi Code 专用展示 -->
     <div v-else-if="quota.quotaType === 'token_limit' && quota.isKimiCode" class="card-body clickable" @click="emit('detail', quota)">
       <div class="card-header-row">
-        <div class="provider-icon-badge" :style="{ background: getProviderMeta(quota.providerId).gradient || getProviderColor(quota.providerId) }">
-          <svg :viewBox="getProviderMeta(quota.providerId).iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
-            <path :d="getProviderMeta(quota.providerId).iconPath" />
+        <div class="provider-icon-badge" :style="{ background: providerMeta.gradient || providerEffectiveColor }">
+          <svg :viewBox="providerMeta.iconViewBox || '0 0 24 24'" fill="currentColor" width="18" height="18">
+            <path :d="providerMeta.iconPath" />
           </svg>
         </div>
         <span class="provider-name">{{ quota.providerName }}</span>
