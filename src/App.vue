@@ -10,11 +10,14 @@ import { ElMessage } from 'element-plus'
 import { invoke } from '@tauri-apps/api/core'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import SyncConflictDialog from '@/components/SyncConflictDialog.vue'
+import { useUpdateStore } from '@/stores/update'
+import UpdateDialog from '@/components/UpdateDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
 const monitorStore = useMonitorStore()
 const syncStore = useSyncStore()
+const updateStore = useUpdateStore()
 const startupAttempted = ref(false)
 
 // 等待路由就绪，避免初始渲染时 meta 未解析导致布局闪烁
@@ -94,6 +97,14 @@ onMounted(async () => {
         console.warn('[App] Auto sync failed:', e)
       }
     })(),
+    // 检查更新（静默，不阻塞启动）
+    (async () => {
+      try {
+        await updateStore.check()
+      } catch {
+        // 更新检查失败静默处理
+      }
+    })(),
   ])
 })
 
@@ -137,6 +148,9 @@ onUnmounted(async () => {
 
     <!-- 全局同步冲突对话框 -->
     <SyncConflictDialog />
+
+    <!-- 全局更新对话框 -->
+    <UpdateDialog />
   </template>
 </template>
 

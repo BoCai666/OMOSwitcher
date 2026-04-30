@@ -3,6 +3,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useConfigStore } from '@/stores/config'
+import { useUpdateStore } from '@/stores/update'
 import { listPresets, loadPreset } from '@/services/presetStore'
 import { getWorkingPath, setWorkingPath } from '@/services/settingsStore'
 import { AGENT_NAMES, CATEGORY_NAMES, type OhMyOpenCodeConfig } from '@/types'
@@ -14,6 +15,8 @@ import { open } from '@tauri-apps/plugin-dialog'
 
 const router = useRouter()
 const configStore = useConfigStore()
+const updateStore = useUpdateStore()
+const isCheckingUpdate = ref(false)
 
 // OpenCode 启动功能
 const { launchOpenCode, isLaunching, error } = useOpenCode()
@@ -179,6 +182,17 @@ function goToPresets() {
 async function saveConfig() {
   await configStore.saveConfig()
   showSuccess('配置已保存')
+}
+
+/** 手动检查更新 */
+async function handleCheckUpdate() {
+  isCheckingUpdate.value = true
+  await updateStore.check()
+  if (!updateStore.hasUpdate) {
+    showSuccess('当前已是最新版本')
+  }
+  // 如果有更新，UpdateDialog 会自动弹出（App.vue 中处理）
+  isCheckingUpdate.value = false
 }
 
 // 快速创建新预设
@@ -377,14 +391,23 @@ onMounted(() => {
                  <el-icon><Collection /></el-icon>
                  管理预设
                </el-button>
-               <el-button 
-                 class="action-btn neon-btn-warning" 
-                 size="large" 
+               <el-button
+                 class="action-btn neon-btn-warning"
+                 size="large"
                  :disabled="!configStore.hasUnsavedChanges"
                  @click="saveConfig"
                >
                  <el-icon><DocumentChecked /></el-icon>
                  保存配置
+               </el-button>
+               <el-button
+                 class="action-btn neon-btn-info"
+                 size="large"
+                 :loading="isCheckingUpdate"
+                 @click="handleCheckUpdate"
+               >
+                 <el-icon><Refresh /></el-icon>
+                 检查更新
                </el-button>
              </div>
           </el-card>

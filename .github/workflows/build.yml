@@ -34,6 +34,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OAUTH_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'OMOSwitcher ${{ github.ref_name }}'
@@ -47,5 +49,5 @@ jobs:
             | 平台 | 文件 |
             |------|------|
             | Windows | `.exe` 安装包 / `.msi` |
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false

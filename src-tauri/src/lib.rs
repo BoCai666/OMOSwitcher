@@ -116,6 +116,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_keyring::init())
+        .plugin(tauri_plugin_process::init())
         // 创建系统托盘
         .setup(|app| {
             let show_item = MenuItem::with_id(app, "show", "显示 OMOSwitcher", true, None::<&str>)?;
@@ -157,6 +158,9 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+
+            #[cfg(desktop)]
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
 
             Ok(())
         })

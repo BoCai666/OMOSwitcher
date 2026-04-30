@@ -17,7 +17,8 @@
       "icons/128x128@2x.png",
       "icons/icon.ico"
     ],
-    "active": true
+    "active": true,
+    "createUpdaterArtifacts": true
   },
   "app": {
     "security": {
@@ -40,5 +41,16 @@
       }
     ]
   },
-  "version": "2.0.10"
+  "version": "2.0.10",
+  "plugins": {
+    "updater": {
+      "pubkey": "RWSD6HPEQ7N0FBF9fgFLpqQ2+0MMMEQ6DkENnwVGNitn/YhzlO/gNyC1",
+      "endpoints": [
+        "https://github.com/BoCai666/OMOSwitcher/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
 }
