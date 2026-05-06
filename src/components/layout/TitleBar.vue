@@ -8,7 +8,7 @@ import { ref, h, onMounted, onUnmounted } from 'vue'
 import { ElMessageBox, ElCheckbox } from 'element-plus'
 import { useTheme } from '@/composables/useTheme'
 import { useSyncStore } from '@/stores/sync'
-import { getCloseBehavior, setCloseBehavior } from '@/services/settingsStore'
+import { getCloseBehavior, setCloseConfirmDismissed } from '@/services/settingsStore'
 import UserDrawer from '@/components/UserDrawer.vue'
 
 // 窗口最大化状态
@@ -64,7 +64,7 @@ const handleClose = async () => {
   }
 
   // behavior === 'ask'，弹出选择对话框
-  const dontAskAgain = ref(false)
+  const dontShowToday = ref(false)
 
   try {
     await ElMessageBox({
@@ -77,11 +77,11 @@ const handleClose = async () => {
           h(
             ElCheckbox,
             {
-              modelValue: dontAskAgain.value,
-              'onUpdate:modelValue': (val: string | number | boolean) => { dontAskAgain.value = !!val },
+              modelValue: dontShowToday.value,
+              'onUpdate:modelValue': (val: string | number | boolean) => { dontShowToday.value = !!val },
               style: 'color: var(--el-text-color-regular);',
             },
-            () => '以后不再提示'
+            () => '今日不显示'
           ),
         ]),
       confirmButtonText: '最小化到托盘',
@@ -96,8 +96,8 @@ const handleClose = async () => {
     })
 
     // 用户点击了 "最小化到托盘" → 最小化到托盘
-    if (dontAskAgain.value) {
-      await setCloseBehavior('minimize')
+    if (dontShowToday.value) {
+      await setCloseConfirmDismissed('minimize')
     }
     await appWindow.hide()
   } catch (action) {
@@ -106,8 +106,8 @@ const handleClose = async () => {
     // - X 按钮 / 点击背景 / 按 ESC → action === 'close' → 不做任何动作
     if (action === 'cancel') {
       // 用户点击了 "退出程序" → 退出程序
-      if (dontAskAgain.value) {
-        await setCloseBehavior('exit')
+      if (dontShowToday.value) {
+        await setCloseConfirmDismissed('exit')
       }
       await appWindow.close()
     }

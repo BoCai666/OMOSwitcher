@@ -5,16 +5,22 @@ import { useRoute, useRouter } from 'vue-router'
 import { computed, ref, onMounted } from 'vue'
 import { Sunny, Moon } from '@element-plus/icons-vue'
 import { useTheme } from '@/composables/useTheme'
+import { getVersion } from '@tauri-apps/api/app'
 
 const route = useRoute()
 const router = useRouter()
 const { isDark, toggleTheme } = useTheme()
+
+// 应用版本号
+const appVersion = ref('')
 
 // 控制入场动画是否已播放完成
 const animationReady = ref(false)
 
 // 组件挂载后标记动画已准备好，禁用后续的入场动画
 onMounted(() => {
+  // 获取应用版本号
+  getVersion().then(v => { appVersion.value = v }).catch(() => {})
   // 等待入场动画完成后禁用动画
   setTimeout(() => {
     animationReady.value = true
@@ -76,12 +82,15 @@ const handleSelect = (index: string) => {
 
     <!-- 底部状态区域 -->
     <div class="sidebar-footer">
-      <div class="theme-toggle-placeholder" @click="toggleTheme">
-        <el-icon :size="16">
-          <Sunny v-if="isDark" />
-          <Moon v-else />
-        </el-icon>
-        <span>{{ isDark ? '切换明色' : '切换暗色' }}</span>
+      <div class="footer-row">
+        <div class="theme-toggle-placeholder" @click="toggleTheme">
+          <el-icon :size="16">
+            <Sunny v-if="isDark" />
+            <Moon v-else />
+          </el-icon>
+          <span>{{ isDark ? '切换明色' : '切换暗色' }}</span>
+        </div>
+        <span v-if="appVersion" class="version-text">v{{ appVersion }}</span>
       </div>
     </div>
   </div>
@@ -204,12 +213,29 @@ const handleSelect = (index: string) => {
   border-top: 1px solid var(--app-border-default);
 }
 
+/* 明色主题下增强分隔线可见性 */
+html.light .sidebar .sidebar-footer {
+  border-top-color: var(--app-border-hover);
+}
+
+.footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .theme-toggle-placeholder {
   display: flex;
   align-items: center;
   gap: var(--app-spacing-2);
   font-size: 12px;
   cursor: pointer;
+  transition: var(--sidebar-transition);
+}
+
+.version-text {
+  font-size: 11px;
+  color: var(--app-text-tertiary);
   transition: var(--sidebar-transition);
 }
 
@@ -543,6 +569,7 @@ html.theme-transitioning .active-indicator,
 html.theme-transitioning .menu-icon,
 html.theme-transitioning .menu-title,
 html.theme-transitioning .theme-toggle-placeholder,
+html.theme-transitioning .version-text,
 html.theme-transitioning .logo-text,
 html.theme-transitioning .logo-icon {
   transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;

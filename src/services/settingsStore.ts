@@ -29,6 +29,10 @@ export interface AppSettings {
   }
   // 关闭行为：ask=每次询问, minimize=最小化到托盘, exit=直接退出
   closeBehavior?: 'ask' | 'minimize' | 'exit'
+  // 关闭确认弹窗今日不显示的日期（YYYY-MM-DD）
+  closeConfirmDismissedDate?: string
+  // 上次关闭时选择的操作（配合 closeConfirmDismissedDate 使用）
+  lastCloseAction?: 'minimize' | 'exit'
   // 热重载配置
   hotReload: {
     // 是否启用热重载
@@ -334,19 +338,62 @@ export async function setHotReloadConfig(config: { enabled: boolean; port: numbe
 // ==================== 关闭行为相关函数 ====================
 
 /**
- * 获取关闭行为设置
+ * 获取今日日期字符串（YYYY-MM-DD）
  */
-export async function getCloseBehavior(): Promise<'ask' | 'minimize' | 'exit'> {
-  const settings = await readSettings()
-  return settings.closeBehavior ?? 'ask'
+function getTodayString(): string {
+  return new Date().toISOString().split('T')[0]
 }
 
 /**
- * 设置关闭行为
+ * 获取关闭行为设置
+ * 优先返回永久设置；若永久设置为 ask，则检查"今日不显示"
+ */
+export async function getCloseBehavior(): Promise<'ask' | 'minimize' | 'exit'> {
+  const settings = await readSettings()
+
+  // 永久设置（非 ask）优先
+  if (settings.closeBehavior && settings.closeBehavior !== 'ask') {
+    return settings.closeBehavior
+  }
+
+  // 检查是否今日已选择"今日不显示"
+  if (settings.closeConfirmDismissedDate && settings.lastCloseAction) {
+    const today = getTodayString()
+    if (settings.closeConfirmDismissedDate === today) {
+      return settings.lastCloseAction
+    }
+  }
+
+  return 'ask'
+}
+
+/**
+ * 设置关闭行为（永久设置）
  */
 export async function setCloseBehavior(behavior: 'ask' | 'minimize' | 'exit'): Promise<void> {
   const settings = await readSettings()
   settings.closeBehavior = behavior
+  await writeSettings(settings)
+}
+
+/**
+ * 设置"今日不显示"关闭确认弹窗
+ * @param action 用户本次选择的操作
+ */
+export async function setCloseConfirmDismissed(action: 'minimize' | 'exit'): Promise<void> {
+  const settings = await readSettings()
+  settings.closeConfirmDismissedDate = getTodayString()
+  settings.lastCloseAction = action
+  await writeSettings(settings)
+}
+
+/**
+ * 清除"今日不显示"设置
+ */
+export async function clearCloseConfirmDismissed(): Promise<void> {
+  const settings = await readSettings()
+  delete settings.closeConfirmDismissedDate
+  delete settings.lastCloseAction
   await writeSettings(settings)
 }
 
