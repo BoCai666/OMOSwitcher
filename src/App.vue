@@ -12,6 +12,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import SyncConflictDialog from '@/components/SyncConflictDialog.vue'
 import { useUpdateStore } from '@/stores/update'
 import UpdateDialog from '@/components/UpdateDialog.vue'
+import UpdateChangelogDialog from '@/components/UpdateChangelogDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -151,6 +152,9 @@ onUnmounted(async () => {
 
     <!-- 全局更新对话框 -->
     <UpdateDialog />
+
+    <!-- 更新完成后显示的更新日志 -->
+    <UpdateChangelogDialog />
   </template>
 </template>
 

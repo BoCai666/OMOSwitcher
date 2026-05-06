@@ -7,6 +7,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { checkForUpdate, downloadAndInstallUpdate, restartApp, type UpdateInfo, type DownloadProgress } from '@/services/updateService'
+import { savePendingChangelog } from '@/services/settingsStore'
 import { useMonitorStore } from '@/stores/monitor'
 
 export const useUpdateStore = defineStore('update', () => {
@@ -97,7 +98,14 @@ export const useUpdateStore = defineStore('update', () => {
         }
       })
 
-      // 下载完成，重启应用
+      // 下载完成，保存更新日志后重启
+      if (updateInfo.value) {
+        await savePendingChangelog({
+          version: updateInfo.value.version,
+          date: updateInfo.value.date,
+          body: updateInfo.value.body
+        })
+      }
       await restartApp()
     } catch (e) {
       error.value = String(e)

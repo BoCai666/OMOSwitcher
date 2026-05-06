@@ -49,6 +49,12 @@ export interface AppSettings {
     // 额度查询页面 URL（可自定义，默认 https://opencode.ai/auth）
     usageUrl?: string
   }
+  // 待显示的更新日志（更新完成后重启时显示）
+  pendingChangelog?: {
+    version: string
+    date?: string
+    body?: string
+  }
 }
 
 // 默认设置
@@ -394,6 +400,34 @@ export async function clearCloseConfirmDismissed(): Promise<void> {
   const settings = await readSettings()
   delete settings.closeConfirmDismissedDate
   delete settings.lastCloseAction
+  await writeSettings(settings)
+}
+
+// ==================== 更新日志相关函数 ====================
+
+/**
+ * 保存待显示的更新日志
+ */
+export async function savePendingChangelog(changelog: { version: string; date?: string; body?: string }): Promise<void> {
+  const settings = await readSettings()
+  settings.pendingChangelog = changelog
+  await writeSettings(settings)
+}
+
+/**
+ * 获取待显示的更新日志
+ */
+export async function getPendingChangelog(): Promise<{ version: string; date?: string; body?: string } | undefined> {
+  const settings = await readSettings()
+  return settings.pendingChangelog
+}
+
+/**
+ * 清除待显示的更新日志
+ */
+export async function clearPendingChangelog(): Promise<void> {
+  const settings = await readSettings()
+  delete settings.pendingChangelog
   await writeSettings(settings)
 }
 

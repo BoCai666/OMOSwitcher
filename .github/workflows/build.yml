@@ -49,5 +49,5 @@ jobs:
             | 平台 | 文件 |
             |------|------|
             | Windows | `.exe` 安装包 / `.msi` |
-          releaseDraft: false
+          releaseDraft: true
           prerelease: false
