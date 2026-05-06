@@ -39,15 +39,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: '${{ github.ref_name }}'
-          releaseBody: |
-            ## 更新内容
-            
-            请查看 [CHANGELOG](./CHANGELOG.md) 获取详细更新信息。
-            
-            ## 下载
-            
-            | 平台 | 文件 |
-            |------|------|
-            | Windows | `.exe` 安装包 / `.msi` |
           releaseDraft: true
           prerelease: false
+          generateReleaseNotes: true
