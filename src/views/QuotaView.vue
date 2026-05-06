@@ -308,7 +308,7 @@ onUnmounted(() => {
       :close-on-click-modal="true"
       destroy-on-close
       append-to=".app-main"
-      align-center
+      top="8vh"
     >
       <!-- 加载状态：保持与内容区等高，避免弹窗尺寸跳变 -->
       <div v-if="detailLoading" class="dialog-loading">
@@ -894,15 +894,23 @@ onUnmounted(() => {
   margin-bottom: 16px;
 }
 
+/* 固定表格布局，防止数值变化导致列宽抖动 */
+.detail-descriptions :deep(.el-descriptions__table) {
+  table-layout: fixed;
+  width: 100%;
+}
+
 .detail-descriptions :deep(.el-descriptions__label) {
   color: var(--app-text-tertiary);
   background: var(--app-bg-hover);
   font-size: 13px;
+  width: 120px;
 }
 
 .detail-descriptions :deep(.el-descriptions__content) {
   color: var(--app-text-primary);
   font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .detail-section-title {
@@ -927,7 +935,7 @@ onUnmounted(() => {
 
 .usage-tab {
   padding: 6px 20px;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 7px;
   font-size: 13px;
   font-weight: 600;
@@ -946,7 +954,7 @@ onUnmounted(() => {
   background: var(--app-bg-card);
   color: var(--app-color-primary);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-  border: 1px solid var(--app-border-default);
+  border-color: var(--app-border-default);
 }
 
 .detail-table {
