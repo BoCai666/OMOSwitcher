@@ -107,6 +107,18 @@ onMounted(async () => {
       }
     })(),
   ])
+
+  // 空闲时预加载常用页面 chunk，减少导航延迟
+  setTimeout(() => {
+    const pages = [
+      () => import('@/views/ModelConfig.vue'),
+      () => import('@/views/ModelManage.vue'),
+      () => import('@/views/PresetManage.vue'),
+      () => import('@/views/QuotaView.vue'),
+    ]
+    pages.forEach((loader) => loader().catch(() => {}))
+    console.log('[App] Page chunks preloaded')
+  }, 3000)
 })
 
 // 应用关闭时停止监控服务
