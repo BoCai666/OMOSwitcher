@@ -186,13 +186,19 @@ async function saveConfig() {
 
 /** 手动检查更新 */
 async function handleCheckUpdate() {
+  if (isCheckingUpdate.value) return
   isCheckingUpdate.value = true
-  await updateStore.check()
-  if (!updateStore.hasUpdate) {
-    showSuccess('当前已是最新版本')
+  try {
+    await updateStore.check()
+    if (!updateStore.hasUpdate) {
+      showSuccess('当前已是最新版本')
+    }
+    // 如果有更新，UpdateDialog 会自动弹出（App.vue 中处理）
+  } catch (e) {
+    showError(String(e))
+  } finally {
+    isCheckingUpdate.value = false
   }
-  // 如果有更新，UpdateDialog 会自动弹出（App.vue 中处理）
-  isCheckingUpdate.value = false
 }
 
 // 快速创建新预设
@@ -400,16 +406,15 @@ onMounted(() => {
                  <el-icon><DocumentChecked /></el-icon>
                  保存配置
                </el-button>
-               <el-button
-                 class="action-btn neon-btn-info"
-                 size="large"
-                 :loading="isCheckingUpdate"
-                 @click="handleCheckUpdate"
-               >
-                 <el-icon><Refresh /></el-icon>
-                 检查更新
-               </el-button>
-             </div>
+                <el-button
+                   class="action-btn neon-btn-info"
+                   size="large"
+                   @click="handleCheckUpdate"
+                 >
+                    <el-icon :class="{ 'is-loading': isCheckingUpdate }"><Refresh /></el-icon>
+                    检查更新
+                   </el-button>
+                </div>
           </el-card>
         </el-col>
       </el-row>
@@ -1134,6 +1139,20 @@ html.glassmorphism .active-badge {
   background: rgba(16, 185, 129, 0.15) !important;
   border: 1px solid rgba(16, 185, 129, 0.3) !important;
   color: var(--app-color-success) !important;
+}
+
+/* 检查更新按钮 Refresh 图标旋转动画 */
+.is-loading {
+  animation: rotating 1s linear infinite;
+}
+
+@keyframes rotating {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 空状态 */

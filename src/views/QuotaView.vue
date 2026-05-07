@@ -308,7 +308,7 @@ onUnmounted(() => {
       :close-on-click-modal="true"
       destroy-on-close
       append-to=".app-main"
-      top="8vh"
+      align-center
     >
       <!-- 加载状态：保持与内容区等高，避免弹窗尺寸跳变 -->
       <div v-if="detailLoading" class="dialog-loading">
