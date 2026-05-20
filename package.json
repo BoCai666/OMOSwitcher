@@ -1,6 +1,6 @@
 {
   "name": "omoswitcher",
-  "version": "2.0.11",
+  "version": "2.0.12",
   "private": true,
   "type": "module",
   "description": "OhMyOpenCode 模型配置管理工具",
@@ -23,7 +23,7 @@
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-updater": "^2.10.1",
     "element-plus": "^2.5.0",
-    "marked": "^18.0.3",
+    "marked": "^18.0.4",
     "pinia": "^2.1.7",
     "vue": "^3.4.0",
     "vue-router": "^4.2.5"

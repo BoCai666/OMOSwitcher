@@ -197,7 +197,7 @@ const kimiCodeUsage = computed(() => {
 })
 
 // 格式化限制类型名称（智谱根据 type+unit 显示具体周期）
-function formatLimitType(type: string, unit?: number, number?: number): string {
+function formatLimitType(type: string, unit?: number, _number?: number): string {
   if (type === 'TOKENS_LIMIT') {
     if (unit === 3) return '五小时限额'
     if (unit === 6) return '周限额'
