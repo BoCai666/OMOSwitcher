@@ -24,6 +24,7 @@ pub async fn read_opencode_config() -> Result<String, String> {
 }
 
 /// 写入主配置文件（异步）
+/// 同时写入 oh-my-opencode.json 和 oh-my-openagent.json
 #[tauri::command]
 pub async fn write_config(content: String) -> Result<(), String> {
     let path = get_config_path()?;
@@ -33,7 +34,16 @@ pub async fn write_config(content: String) -> Result<(), String> {
             .await
             .map_err(|e| format!("创建配置目录失败: {}", e))?;
     }
-    async_fs::write(&path, content)
+    async_fs::write(&path, content.clone())
         .await
-        .map_err(|e| format!("写入配置失败: {}", e))
+        .map_err(|e| format!("写入配置失败: {}", e))?;
+
+    // 同步写入 oh-my-openagent.json
+    let agent_path = get_config_path()?
+        .parent()
+        .map(|p| p.join("oh-my-openagent.json"))
+        .ok_or_else(|| "无法获取配置目录路径".to_string())?;
+    async_fs::write(&agent_path, content)
+        .await
+        .map_err(|e| format!("写入 agent 配置失败: {}", e))
 }
