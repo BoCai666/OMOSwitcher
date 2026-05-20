@@ -196,11 +196,19 @@ const kimiCodeUsage = computed(() => {
   return limits?._kimiCodeUsage || null
 })
 
-// 格式化限制类型名称
-function formatLimitType(type: string): string {
+// 格式化限制类型名称（智谱根据 type+unit 显示具体周期）
+function formatLimitType(type: string, unit?: number, number?: number): string {
+  if (type === 'TOKENS_LIMIT') {
+    if (unit === 3) return '五小时限额'
+    if (unit === 6) return '周限额'
+    if (unit === 4) return '日限额'
+    return 'Token 限额'
+  }
+  if (type === 'TIME_LIMIT') {
+    if (unit === 5) return '月限额'
+    return '时间限额'
+  }
   const map: Record<string, string> = {
-    TOKENS_LIMIT: 'Token 限额',
-    TIME_LIMIT: '时间限额',
     RATE_LIMIT: '频率限额',
     TIMES_LIMIT: '次数限额',
     SESSION_LIMIT: '会话限额'
@@ -346,7 +354,7 @@ onUnmounted(() => {
             <el-table :data="selectedQuota.limits" size="small" class="detail-table">
               <el-table-column prop="type" label="类型" width="120">
                 <template #default="{ row }">
-                  {{ formatLimitType(row.type) }}
+                  {{ formatLimitType(row.type, row.unit, row.number) }}
                 </template>
               </el-table-column>
               <el-table-column label="使用率" width="140">
@@ -670,7 +678,7 @@ onUnmounted(() => {
             <el-table :data="selectedQuota.limits" size="small" class="detail-table">
               <el-table-column prop="type" label="类型" width="120">
                 <template #default="{ row }">
-                  {{ formatLimitType(row.type) }}
+                  {{ formatLimitType(row.type, row.unit, row.number) }}
                 </template>
               </el-table-column>
               <el-table-column label="使用率" width="140">

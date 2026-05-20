@@ -80,7 +80,12 @@ pub(crate) async fn query_zhipu_url(client: &reqwest::Client, provider: &Provide
 /// z.ai 和 bigmodel.cn 使用统一的 /api/monitor/usage/quota/limit 接口
 /// 响应格式: { success: true, data: { level: "lite|standard|pro", limits: [{ type, percentage, nextResetTime }] } }
 pub(crate) async fn parse_zhipu_response(provider: &ProviderInfo, resp: reqwest::Response) -> ProviderQuota {
-    match resp.json::<serde_json::Value>().await {
+    let raw = match resp.text().await {
+        Ok(t) => t,
+        Err(e) => return error_quota(&provider.id, &provider.name, &format!("读取响应失败: {}", e)),
+    };
+    tracing::info!("[智谱额度] 原始响应: {}", &raw[..raw.len().min(2000)]);
+    match serde_json::from_str::<serde_json::Value>(&raw) {
         Ok(data) => {
             let data_obj = match data.get("data") {
                 Some(d) => d,
@@ -134,6 +139,11 @@ pub(crate) async fn parse_zhipu_response(provider: &ProviderInfo, resp: reqwest:
                     }
                 }
             }
+
+            tracing::info!(
+                "[智谱额度] 解析结果: percentage={:?}, used={:?}, limit={:?}, reset_time={:?}",
+                quota_percentage, quota_used, quota_limit, reset_time
+            );
 
             ProviderQuota {
                 provider_id: provider.id.clone(),

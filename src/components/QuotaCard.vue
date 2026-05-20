@@ -183,7 +183,7 @@ const emit = defineEmits<{
           {{ quota.quotaPercentage != null ? `${quota.quotaPercentage.toFixed(1)}%` : '--' }}
         </span>
         <span class="balance-detail">
-          {{ formatTokens(quota.quotaUsed) }} / {{ formatTokens(quota.quotaLimit) }}
+          {{ quota.quotaUsed != null && quota.quotaLimit != null ? `${formatTokens(quota.quotaUsed)} / ${formatTokens(quota.quotaLimit)}` : '--/--' }}
         </span>
       </div>
       <el-progress
@@ -195,7 +195,7 @@ const emit = defineEmits<{
       />
       <div class="reset-badge" :class="{ 'reset-badge-placeholder': !quota.resetTime }">
         <template v-if="quota.resetTime">{{ formatResetTime(quota.resetTime) }}</template>
-        <template v-else>暂无重置时间信息</template>
+        <template v-else>5小时滚动窗口</template>
       </div>
     </div>
 
