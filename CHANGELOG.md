@@ -18,6 +18,22 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.0.13] - 2026-06-02
+
+### 优化改进
+
+- **同步 v2.0.12 lockfile** - `package-lock.json` 同步 marked 18.0.4 + version 2.0.11；`Cargo.lock` 同步 omoswitcher 2.0.12
+- **忽略 .omo/ 内部目录** - OhMyOpenCode agent 工作目录加入 .gitignore，避免误提交
+
+### Bug 修复
+
+- **修复 MiniMax 额度解析选错模型** - 之前实现选中 video 专项模型而非用户主订阅的 general/chat 模型，导致 5h 使用率、reset_time、quotaLimit 全部错位。改为优先选聊天类模型（排除 video/speech/image/audio/tts/asr/music/embedding）
+- **修复 MiniMax 5h 使用率为 0%** - 直接用 API 的 `current_interval_remaining_percent` 反推，不限量模型也能正确展示
+- **修复不限量模型显示 0/0** - 不限量模型（total=0）时 `quota_limit`/`weekly_usage`/`spending_limit` 设为 None；前端 token_limit 卡片加 `quotaLimit > 0` 防御，统一显示 `--/--`
+- **修复 minimax 详情弹窗 limits 字段不匹配** - 前端 `QuotaView.vue` 详情弹窗的限制详情段加 minimax 排除（minimax 的 limits 字段结构与模板字段不匹配）
+
+---
+
 ## [2.0.11] - 2026-05-20
 
 ### 新增功能
