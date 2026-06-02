@@ -183,7 +183,7 @@ const emit = defineEmits<{
           {{ quota.quotaPercentage != null ? `${quota.quotaPercentage.toFixed(1)}%` : '--' }}
         </span>
         <span class="balance-detail">
-          {{ quota.quotaUsed != null && quota.quotaLimit != null ? `${formatTokens(quota.quotaUsed)} / ${formatTokens(quota.quotaLimit)}` : '--/--' }}
+          {{ quota.quotaUsed != null && quota.quotaLimit != null && quota.quotaLimit > 0 ? `${formatTokens(quota.quotaUsed)} / ${formatTokens(quota.quotaLimit)}` : '--/--' }}
         </span>
       </div>
       <el-progress
@@ -215,7 +215,7 @@ const emit = defineEmits<{
           {{ quota.quotaPercentage != null ? `${quota.quotaPercentage.toFixed(1)}%` : '--' }}
         </span>
         <span class="balance-detail">
-          {{ formatTokens(quota.quotaUsed) }} / {{ formatTokens(quota.quotaLimit) }}
+          {{ quota.quotaUsed != null && quota.quotaLimit != null && quota.quotaLimit > 0 ? `${formatTokens(quota.quotaUsed)} / ${formatTokens(quota.quotaLimit)}` : '--/--' }}
         </span>
       </div>
       <el-progress

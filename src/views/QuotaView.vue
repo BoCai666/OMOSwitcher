@@ -126,6 +126,11 @@ function isKimiCodeProvider(providerId: string): boolean {
   return id === 'kimi-for-coding' || id.includes('kimi-code') || id.includes('kimicode')
 }
 
+// 判断是否为 MiniMax 供应商
+function isMinimaxProvider(providerId: string): boolean {
+  return providerId.toLowerCase().includes('minimax')
+}
+
 // 判断是否为纯余额型供应商（无 usedBalance/resetTime，如 DeepSeek）
 function isPureBalanceProvider(quota: ProviderQuota): boolean {
   return quota.quotaType === 'balance' && quota.usedBalance == null && quota.resetTime == null
@@ -672,8 +677,8 @@ onUnmounted(() => {
             </el-descriptions>
           </template>
 
-          <!-- limits 数组展示 -->
-          <template v-if="selectedQuota.limits && selectedQuota.limits.length > 0">
+          <!-- limits 数组展示（minimax 不展示，原因：minimax 的 limits 字段（usagePercent/resetTime）与本模板字段（percentage/nextResetTime）不一致） -->
+          <template v-if="selectedQuota.limits && selectedQuota.limits.length > 0 && !isMinimaxProvider(selectedQuota.providerId)">
             <div class="detail-section-title">限制详情</div>
             <el-table :data="selectedQuota.limits" size="small" class="detail-table">
               <el-table-column prop="type" label="类型" width="120">
