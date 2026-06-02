@@ -40,8 +40,9 @@ tmp/
 .env.local
 .env.*.local
 
-# OpenCode 工作目录
+# OpenCode / OhMyOpenCode 工作目录
 .opencode/
+.omo/
 
 # AI Agent 知识库文件
 AGENTS.md
