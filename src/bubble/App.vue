@@ -32,31 +32,36 @@ function measureTextWidth(text: string, fontSize: number, fontWeight: string): n
 async function measureAndResize() {
   await nextTick()
   if (quotas.value.length === 0) return
-  
-  // 通过实际文字测量最宽内容：
-  // 圆点 6px + 名称 + 百分比 + 倒计时 + 各 gap
-  const DOT_WIDTH = 6
-  const GAP = 6 * 2  // 2 个 gap
-  const PERCENT_WIDTH = 30  // 百分比列宽
-  const ITEM_PADDING = 8 * 2  // 左右 padding
-  const SHELL_PADDING = 8 * 2  // bubble-shell.expanded 左右 padding
-  
+
+  // 测量所有名称、百分比、倒计时的自然宽度
   let maxNameWidth = 0
+  let maxPercentWidth = 0
   let maxResetWidth = 0
-  
+
   for (const q of quotas.value) {
     const nameW = measureTextWidth(q.providerName, 11, '500')
+    const percentText = `${Math.round(q.remainingPercentage)}%`
+    const percentW = measureTextWidth(percentText, 11, '700')
     const resetW = q.resetTimeText ? measureTextWidth(q.resetTimeText, 9, '400') : 0
     if (nameW > maxNameWidth) maxNameWidth = nameW
+    if (percentW > maxPercentWidth) maxPercentWidth = percentW
     if (resetW > maxResetWidth) maxResetWidth = resetW
   }
-  
-  const contentWidth = DOT_WIDTH + GAP + maxNameWidth + GAP + PERCENT_WIDTH + GAP + maxResetWidth + ITEM_PADDING
-  const windowWidth = Math.ceil(contentWidth + SHELL_PADDING + 8)  // +8 安全边距
-  
+
+  // 布局：圆点 + gap + 名称 + gap + 百分比 + gap + 倒计时 + item padding
+  const DOT_WIDTH = 6
+  const GAP = 6
+  const GAPS = GAP * 3
+  const ITEM_PADDING = 8 * 2
+  const SHELL_PADDING = 8 * 2
+  const SAFETY_MARGIN = 12
+
+  const contentWidth = DOT_WIDTH + GAPS + maxNameWidth + maxPercentWidth + maxResetWidth + ITEM_PADDING
+  const windowWidth = Math.ceil(contentWidth + SHELL_PADDING + SAFETY_MARGIN)
+
   const count = quotas.value.length
   const height = Math.max(80, PANEL_PADDING + count * ITEM_HEIGHT)
-  
+
   await appWindow.setSize(new LogicalSize(windowWidth, height))
 }
 
