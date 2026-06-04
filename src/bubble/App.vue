@@ -9,18 +9,17 @@ const appWindow = getCurrentWindow()
 const isExpanded = ref(false)
 const { quotas, isLoading, error } = useBubbleQuota()
 
-const ITEM_HEIGHT = 34
-const PANEL_PADDING = 16
+const ITEM_HEIGHT = 32
+const PANEL_PADDING = 12
+const PANEL_WIDTH = 200  // 固定宽度足够显示 "ProviderName 100% 3天后"
 
 async function toggleExpand() {
   isExpanded.value = !isExpanded.value
   if (isExpanded.value) {
-    document.body.classList.add('bubble-expanded')
     const count = quotas.value.length
-    const height = Math.max(100, PANEL_PADDING + count * ITEM_HEIGHT)
-    await appWindow.setSize(new LogicalSize(220, height))
+    const height = Math.max(80, PANEL_PADDING + count * ITEM_HEIGHT)
+    await appWindow.setSize(new LogicalSize(PANEL_WIDTH, height))
   } else {
-    document.body.classList.remove('bubble-expanded')
     await appWindow.setSize(new LogicalSize(80, 80))
   }
 }
@@ -107,6 +106,7 @@ function handleMouseUp() {
   flex-direction: column;
   width: 100%;
   height: 100%;
+  overflow: hidden !important;  /* 彻底禁止滚动条 */
   transition: all 0.3s ease;
   position: relative;
 }
@@ -119,6 +119,7 @@ function handleMouseUp() {
   flex: 1;
   padding: 4px;
   min-height: 0;
+  overflow: hidden !important;  /* 彻底禁止滚动条 */
 }
 
 .detail-list {

@@ -10,12 +10,6 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* 展开状态：允许滚动内容 */
-.bubble-app.is-expanded body,
-body.bubble-expanded {
-  overflow: auto;
-}
-
 /* 确保透明背景不被覆盖 */
 #bubble-app {
   width: 100%;
