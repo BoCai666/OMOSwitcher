@@ -9,13 +9,7 @@ const props = defineProps<{
   error: string | null
 }>()
 
-const emit = defineEmits<{
-  expand: []
-  collapse: []
-}>()
-
 const localIndex = ref(0)
-const isExpanded = ref(false)
 const isHovering = ref(false)
 let rotateTimer: ReturnType<typeof setInterval> | null = null
 const ROTATE_INTERVAL = 4000
@@ -44,15 +38,6 @@ function stopRotate() {
   }
 }
 
-function handleDblClick() {
-  isExpanded.value = !isExpanded.value
-  if (isExpanded.value) {
-    emit('expand')
-  } else {
-    emit('collapse')
-  }
-}
-
 function handleMouseEnter() { isHovering.value = true }
 function handleMouseLeave() { isHovering.value = false }
 
@@ -71,8 +56,7 @@ onUnmounted(() => {
 <template>
   <div
     class="bubble-app"
-    :class="{ 'is-expanded': isExpanded, 'is-loading': isLoading }"
-    @dblclick="handleDblClick"
+    :class="{ 'is-loading': isLoading }"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >
@@ -118,10 +102,6 @@ onUnmounted(() => {
   border-radius: 50%;
   overflow: visible;
   position: relative;
-}
-
-.bubble-app.is-expanded {
-  border-radius: 12px;
 }
 
 .bubble-loading {

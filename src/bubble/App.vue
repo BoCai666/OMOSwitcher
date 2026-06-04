@@ -9,14 +9,13 @@ const appWindow = getCurrentWindow()
 const isExpanded = ref(false)
 const { quotas, isLoading, error } = useBubbleQuota()
 
-async function handleExpand() {
-  isExpanded.value = true
-  await appWindow.setSize(new LogicalSize(220, 280))
-}
-
-async function handleCollapse() {
-  isExpanded.value = false
-  await appWindow.setSize(new LogicalSize(80, 80))
+async function toggleExpand() {
+  isExpanded.value = !isExpanded.value
+  if (isExpanded.value) {
+    await appWindow.setSize(new LogicalSize(220, 280))
+  } else {
+    await appWindow.setSize(new LogicalSize(80, 80))
+  }
 }
 
 // 拖拽相关状态
@@ -59,6 +58,9 @@ function handleMouseUp() {
     appWindow.outerPosition().then(pos => {
       invoke('save_bubble_position', { x: pos.x, y: pos.y })
     })
+  } else {
+    // 不是拖拽 → 切换展开/收起
+    toggleExpand()
   }
 }
 </script>
@@ -69,8 +71,6 @@ function handleMouseUp() {
       :quotas="quotas"
       :is-loading="isLoading"
       :error="error"
-      @expand="handleExpand"
-      @collapse="handleCollapse"
     />
     
     <!-- 展开详情面板 -->
