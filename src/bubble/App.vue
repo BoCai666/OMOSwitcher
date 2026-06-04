@@ -9,11 +9,16 @@ const appWindow = getCurrentWindow()
 const isExpanded = ref(false)
 const { quotas, isLoading, error } = useBubbleQuota()
 
+const ITEM_HEIGHT = 34
+const PANEL_PADDING = 16
+
 async function toggleExpand() {
   isExpanded.value = !isExpanded.value
   if (isExpanded.value) {
     document.body.classList.add('bubble-expanded')
-    await appWindow.setSize(new LogicalSize(220, 280))
+    const count = quotas.value.length
+    const height = Math.max(100, PANEL_PADDING + count * ITEM_HEIGHT)
+    await appWindow.setSize(new LogicalSize(220, height))
   } else {
     document.body.classList.remove('bubble-expanded')
     await appWindow.setSize(new LogicalSize(80, 80))
@@ -70,6 +75,7 @@ function handleMouseUp() {
 <template>
   <div class="bubble-shell" :class="{ expanded: isExpanded }" @mousedown="handleMouseDown">
     <BubbleApp
+      v-if="!isExpanded"
       :quotas="quotas"
       :is-loading="isLoading"
       :error="error"
@@ -103,19 +109,15 @@ function handleMouseUp() {
   height: 100%;
   transition: all 0.3s ease;
   position: relative;
-  overflow: hidden;
 }
 
 .bubble-shell.expanded {
-  padding: 4px;
-  overflow: visible;
+  padding: 6px 8px;
 }
 
 .detail-panel {
   flex: 1;
-  margin-top: 4px;
   padding: 4px;
-  overflow-y: auto;
   min-height: 0;
 }
 
