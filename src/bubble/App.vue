@@ -33,20 +33,36 @@ async function measureAndResize() {
   await nextTick()
   if (quotas.value.length === 0) return
 
-  // 测量所有名称、百分比、倒计时的自然宽度
-  let maxNameWidth = 0
+  // 测量百分比和倒计时的自然宽度
+  // 名称有 max-width 截断（140px），不需要测量
   let maxPercentWidth = 0
   let maxResetWidth = 0
 
   for (const q of quotas.value) {
-    const nameW = measureTextWidth(q.providerName, 11, '500')
     const percentText = `${Math.round(q.remainingPercentage)}%`
     const percentW = measureTextWidth(percentText, 11, '700')
     const resetW = q.resetTimeText ? measureTextWidth(q.resetTimeText, 9, '400') : 0
-    if (nameW > maxNameWidth) maxNameWidth = nameW
     if (percentW > maxPercentWidth) maxPercentWidth = percentW
     if (resetW > maxResetWidth) maxResetWidth = resetW
   }
+
+  // 布局：圆点 + gap + 名称(140px) + gap + 百分比 + gap + 倒计时 + item padding
+  const DOT_WIDTH = 6
+  const NAME_MAX_WIDTH = 140
+  const GAP = 6
+  const GAPS = GAP * 3
+  const ITEM_PADDING = 8 * 2
+  const SHELL_PADDING = 8 * 2
+  const SAFETY_MARGIN = 12
+
+  const contentWidth = DOT_WIDTH + GAPS + NAME_MAX_WIDTH + maxPercentWidth + maxResetWidth + ITEM_PADDING
+  const windowWidth = Math.ceil(contentWidth + SHELL_PADDING + SAFETY_MARGIN)
+
+  const count = quotas.value.length
+  const height = Math.max(80, PANEL_PADDING + count * ITEM_HEIGHT)
+
+  await appWindow.setSize(new LogicalSize(windowWidth, height))
+}
 
   // 布局：圆点 + gap + 名称 + gap + 百分比 + gap + 倒计时 + item padding
   const DOT_WIDTH = 6
@@ -229,7 +245,11 @@ function handleMouseUp() {
 .name {
   font-weight: 500;
   white-space: nowrap;
-  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .item-bar {
