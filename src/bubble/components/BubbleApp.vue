@@ -99,7 +99,6 @@ onUnmounted(() => {
   cursor: pointer;
   user-select: none;
   -webkit-app-region: no-drag;
-  border-radius: 50%;
   overflow: visible;
   position: relative;
 }

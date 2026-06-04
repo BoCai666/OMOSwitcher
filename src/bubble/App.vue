@@ -117,12 +117,14 @@ function handleMouseUp() {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  overflow: hidden !important;  /* 彻底禁止滚动条 */
+  overflow: hidden !important;
+  border-radius: 50%;
   transition: all 0.3s ease;
   position: relative;
 }
 
 .bubble-shell.expanded {
+  border-radius: 12px;
   padding: 6px 8px;
 }
 
