@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, nextTick, watch } from 'vue'
 import { getCurrentWindow, LogicalSize, PhysicalPosition } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
 import BubbleApp from './components/BubbleApp.vue'
@@ -11,18 +11,44 @@ const { quotas, isLoading, error } = useBubbleQuota()
 
 const ITEM_HEIGHT = 44
 const PANEL_PADDING = 12
-const PANEL_WIDTH = 240
+const MIN_PANEL_WIDTH = 220
+const PANEL_EXTRA_PADDING = 24  // 窗口内边距
+
+const detailListRef = ref<HTMLElement | null>(null)
+
+async function measureAndResize() {
+  await nextTick()
+  if (!detailListRef.value) return
+  
+  const items = detailListRef.value.querySelectorAll('.detail-item')
+  let maxWidth = 0
+  items.forEach(item => {
+    const w = (item as HTMLElement).scrollWidth
+    if (w > maxWidth) maxWidth = w
+  })
+  
+  const count = quotas.value.length
+  const height = Math.max(80, PANEL_PADDING + count * ITEM_HEIGHT)
+  const width = Math.max(MIN_PANEL_WIDTH, maxWidth + PANEL_EXTRA_PADDING)
+  
+  await appWindow.setSize(new LogicalSize(width, height))
+}
 
 async function toggleExpand() {
   isExpanded.value = !isExpanded.value
   if (isExpanded.value) {
-    const count = quotas.value.length
-    const height = Math.max(80, PANEL_PADDING + count * ITEM_HEIGHT)
-    await appWindow.setSize(new LogicalSize(PANEL_WIDTH, height))
+    await measureAndResize()
   } else {
     await appWindow.setSize(new LogicalSize(80, 80))
   }
 }
+
+// 数据加载完成或变化时重新测量（如果当前展开）
+watch(quotas, async () => {
+  if (isExpanded.value) {
+    await measureAndResize()
+  }
+}, { deep: true })
 
 // 拖拽相关状态
 const DRAG_THRESHOLD = 5
@@ -82,7 +108,7 @@ function handleMouseUp() {
     
     <!-- 展开详情面板 -->
     <div v-if="isExpanded" class="detail-panel">
-      <div class="detail-list">
+      <div ref="detailListRef" class="detail-list">
         <div
           v-for="q in quotas"
           :key="q.providerId"
@@ -166,12 +192,14 @@ function handleMouseUp() {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .name {
   font-weight: 500;
-  text-align: center;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .item-bar {
