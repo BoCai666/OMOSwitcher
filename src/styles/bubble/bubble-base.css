@@ -6,26 +6,33 @@ html, body {
   height: 100%;
   overflow: hidden;
   background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 /* 强制整个 webview 渲染为圆形，消除方形窗口背景 */
 html {
-  mask-image: radial-gradient(circle, #000 100%, transparent 100%);
-  -webkit-mask-image: radial-gradient(circle, #000 100%, transparent 100%);
+  border-radius: 50%;
+  clip-path: circle(50% at 50% 50%);
+  -webkit-clip-path: circle(50% at 50% 50%);
 }
 
-/* 展开时取消圆形 mask，让面板显示为圆角矩形 */
-body.bubble-expanded html,
-body.bubble-expanded {
-  mask-image: none;
-  -webkit-mask-image: none;
+/* 展开时取消圆形裁剪，让面板显示为圆角矩形 */
+html.bubble-expanded {
+  border-radius: 12px;
+  clip-path: none;
+  -webkit-clip-path: none;
 }
 
 /* 确保透明背景不被覆盖 */
 #bubble-app {
   width: 100%;
   height: 100%;
-  background: transparent;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
 }

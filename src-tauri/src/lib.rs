@@ -160,6 +160,7 @@ pub fn run() {
                                     .skip_taskbar(true)
                                     .decorations(false)
                                     .transparent(true)
+                                    .shadow(false)
                                     .resizable(false)
                                     .visible(true)
                                     .build();

@@ -65,10 +65,17 @@ async function measureAndResize() {
 }
 
 async function toggleExpand() {
-  isExpanded.value = !isExpanded.value
-  if (isExpanded.value) {
+  if (!isExpanded.value) {
+    // 展开：先解除圆形裁剪并扩大窗口，最后才显示面板
+    // 避免面板在 80x80 圆形窗口内瞬间出现被裁剪
+    document.documentElement.classList.add('bubble-expanded')
     await measureAndResize()
+    isExpanded.value = true
   } else {
+    // 收起：先隐藏面板，再恢复圆形裁剪，最后缩小窗口
+    isExpanded.value = false
+    await nextTick() // 确保 Vue 已更新 DOM，面板变为 hidden
+    document.documentElement.classList.remove('bubble-expanded')
     await appWindow.setSize(new LogicalSize(80, 80))
   }
 }
@@ -129,15 +136,17 @@ function handleMouseUp() {
 
 <template>
   <div class="bubble-shell" :class="{ expanded: isExpanded }" @mousedown="handleMouseDown">
-    <BubbleApp
-      v-if="!isExpanded"
-      :quotas="quotas"
-      :is-loading="isLoading"
-      :error="error"
-    />
-    
-    <!-- 展开详情面板 -->
-    <div v-if="isExpanded" class="detail-panel">
+    <!-- 悬浮球内容：绝对定位叠加 -->
+    <div class="content-wrapper" :class="{ active: !isExpanded }">
+      <BubbleApp
+        :quotas="quotas"
+        :is-loading="isLoading"
+        :error="error"
+      />
+    </div>
+
+    <!-- 面板内容：绝对定位叠加 -->
+    <div class="detail-panel" :class="{ active: isExpanded }">
       <div class="detail-list">
         <div
           v-for="q in quotas"
@@ -175,26 +184,46 @@ function handleMouseUp() {
   height: 100%;
   overflow: hidden !important;
   border-radius: 50%;
-  transition: all 0.3s ease;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  clip-path: circle(50% at 50% 50%);
+  -webkit-clip-path: circle(50% at 50% 50%);
   position: relative;
+  transition: border-radius 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              clip-path 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              -webkit-clip-path 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .bubble-shell.expanded {
   border-radius: 12px;
   padding: 6px 8px;
+  clip-path: none;
+  -webkit-clip-path: none;
 }
 
+.content-wrapper,
 .detail-panel {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  height: 100%;
   padding: 4px 6px;
   overflow: hidden !important;
+  visibility: hidden;
+  pointer-events: none;
+  /* 不使用 opacity 过渡，避免交叉淡入时的重叠闪烁 */
 }
 
-.detail-list {
-  width: 100%;
+.content-wrapper.active,
+.detail-panel.active {
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .detail-list {
@@ -220,9 +249,15 @@ function handleMouseUp() {
 .item-info {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 6px;
   flex-wrap: nowrap;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .name {
@@ -231,8 +266,19 @@ function handleMouseUp() {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 140px;
-  flex-shrink: 1;
-  min-width: 0;
+  flex: 0 0 auto;
+}
+
+.percent {
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.reset-time {
+  font-size: 9px;
+  color: var(--app-text-secondary, #999);
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .item-bar {
@@ -249,31 +295,4 @@ function handleMouseUp() {
   transition: width 0.4s ease;
 }
 
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.name {
-  flex: 1;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.percent {
-  font-weight: 700;
-  min-width: 28px;
-  text-align: right;
-}
-
-.reset-time {
-  font-size: 9px;
-  color: var(--app-text-secondary, #999);
-  min-width: 50px;
-  text-align: right;
-}
 </style>

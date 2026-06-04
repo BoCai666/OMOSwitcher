@@ -50,6 +50,7 @@ pub async fn create_bubble(app: AppHandle) -> Result<(), String> {
             .skip_taskbar(true)
             .decorations(false)
             .transparent(true)
+            .shadow(false)
             .resizable(false)
             .visible(true)
             .build()

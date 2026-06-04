@@ -101,6 +101,10 @@ onUnmounted(() => {
   -webkit-app-region: no-drag;
   overflow: visible;
   position: relative;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 .bubble-loading {
