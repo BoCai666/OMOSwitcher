@@ -5,6 +5,7 @@ mod commands;
 mod monitor;
 mod quota;
 mod sync;
+mod bubble;
 
 use std::fmt;
 use tauri::Manager;
@@ -120,9 +121,12 @@ pub fn run() {
         // 创建系统托盘
         .setup(|app| {
             let show_item = MenuItem::with_id(app, "show", "显示 OMOSwitcher", true, None::<&str>)?;
+            let bubble_item = MenuItem::with_id(app, "toggle_bubble", "切换悬浮球", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
             let menu = MenuBuilder::new(app)
                 .item(&show_item)
+                .separator()
+                .item(&bubble_item)
                 .separator()
                 .item(&quit_item)
                 .build()?;
@@ -138,6 +142,27 @@ pub fn run() {
                             if let Some(window) = app.get_webview_window("main") {
                                 let _ = window.show();
                                 let _ = window.set_focus();
+                            }
+                        }
+                        "toggle_bubble" => {
+                            let is_visible = app.get_webview_window("bubble").is_some();
+                            if is_visible {
+                                if let Some(window) = app.get_webview_window("bubble") {
+                                    let _ = window.close();
+                                }
+                            } else {
+                                use tauri::WebviewUrl;
+                                use tauri::WebviewWindowBuilder;
+                                let _ = WebviewWindowBuilder::new(app, "bubble", WebviewUrl::App("bubble.html".into()))
+                                    .title("OMOSwitcher - 悬浮球")
+                                    .inner_size(80.0, 80.0)
+                                    .always_on_top(true)
+                                    .skip_taskbar(true)
+                                    .decorations(false)
+                                    .transparent(true)
+                                    .resizable(false)
+                                    .visible(true)
+                                    .build();
                             }
                         }
                         "quit" => {
@@ -257,13 +282,21 @@ pub fn run() {
             sync::command::sync_cancel_device_login,
             sync::command::sync_start_oauth_login,
             sync::command::sync_cancel_oauth_login,
+            // ========== Bubble 悬浮球命令 ==========
+            bubble::commands::create_bubble,
+            bubble::commands::destroy_bubble,
+            bubble::commands::toggle_bubble,
+            bubble::commands::get_bubble_settings,
+            bubble::commands::save_bubble_position,
         ])
         .on_window_event(|window, event| {
             // 窗口关闭时的处理
             if let tauri::WindowEvent::CloseRequested { .. } = event {
                 tracing::info!("[App] 窗口关闭...");
-                // 清理代理模式启动的 opencode 子进程
-                commands::launch::cleanup_opencode_child();
+                if window.label() == "main" {
+                    // 清理代理模式启动的 opencode 子进程
+                    commands::launch::cleanup_opencode_child();
+                }
                 // Monitor 服务会在应用退出时自动清理
                 // 不再尝试在窗口关闭时执行异步操作，避免 runtime 已停止的问题
                 let _ = window;

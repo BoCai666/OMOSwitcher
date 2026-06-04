@@ -12,6 +12,7 @@ import { useOpenCode } from '@/composables/useOpenCode'
 import { useProxyConfig } from '@/composables/useProxyConfig'
 import { useHotReloadConfig } from '@/composables/useHotReloadConfig'
 import { open } from '@tauri-apps/plugin-dialog'
+import { invoke } from '@tauri-apps/api/core'
 
 const router = useRouter()
 const configStore = useConfigStore()
@@ -39,6 +40,29 @@ const {
   loadHotReloadConfig,
   saveHotReloadConfig
 } = useHotReloadConfig()
+
+// 悬浮球状态
+const bubbleEnabled = ref(false)
+
+async function loadBubbleSettings() {
+  try {
+    const settings = await invoke<string>('get_bubble_settings')
+    const parsed = JSON.parse(settings)
+    bubbleEnabled.value = parsed.enabled ?? false
+  } catch (e) {
+    console.error('加载悬浮球设置失败:', e)
+    bubbleEnabled.value = false
+  }
+}
+
+async function toggleBubble() {
+  try {
+    await invoke('toggle_bubble')
+    bubbleEnabled.value = !bubbleEnabled.value
+  } catch (e) {
+    console.error('切换悬浮球失败:', e)
+  }
+}
 
 // 工作路径输入
 const workingPath = ref('')
@@ -216,6 +240,8 @@ onMounted(() => {
   loadProxyConfig()
   // 加载热重载配置
   loadHotReloadConfig()
+  // 加载悬浮球设置
+  loadBubbleSettings()
 })
 </script>
 
@@ -378,6 +404,14 @@ onMounted(() => {
                       </div>
                     </div>
                   </el-collapse-transition>
+                </div>
+
+                <!-- 悬浮球设置 -->
+                <div class="bubble-config-wrapper glass-card-overlay">
+                  <div class="bubble-switch-row">
+                    <span class="bubble-label">桌面悬浮球</span>
+                    <el-switch v-model="bubbleEnabled" @change="toggleBubble" class="glass-switch" />
+                  </div>
                 </div>
                
                 <el-button 
@@ -893,6 +927,40 @@ html.glassmorphism .hot-reload-info {
 .hot-reload-info .el-icon {
   margin-top: 2px;
   flex-shrink: 0;
+}
+
+/* ==================== 悬浮球配置区域 ==================== */
+.bubble-config-wrapper {
+  width: 100%;
+  margin-bottom: var(--app-spacing-3);
+  padding: var(--app-spacing-3);
+  background-color: var(--app-bg-hover);
+  border-radius: var(--app-radius-md);
+  transition: all 0.3s ease;
+}
+
+/* 赛博朋克主题 - 悬浮球配置区域 */
+html.cyberpunk .bubble-config-wrapper {
+  background: rgba(0, 255, 255, 0.05);
+  border: 1px solid rgba(0, 255, 255, 0.15);
+}
+
+/* 玻璃拟态主题 - 悬浮球配置区域 */
+html.glassmorphism .bubble-config-wrapper {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  backdrop-filter: blur(8px);
+}
+
+.bubble-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bubble-label {
+  font-size: 14px;
+  color: var(--app-text-primary);
 }
 
 .port-input-row {

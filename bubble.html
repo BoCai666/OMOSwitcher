@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OMOSwitcher - 悬浮球</title>
+    <!-- 内联 SVG favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%2300ffff'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='%231a1a2e'>O</text></svg>" />
+    <!-- 阻塞脚本：在 CSS 加载前设置主题 class，防止 FOUC -->
+    <script>
+      (function() {
+        var savedMode = localStorage.getItem('theme-mode');
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var mode = savedMode || (prefersDark ? 'cyberpunk' : 'glassmorphism');
+        document.documentElement.classList.add(mode);
+        // 设置 color-scheme
+        var colorScheme = (mode === 'cyberpunk') ? 'dark' : 'light';
+        document.documentElement.style.colorScheme = colorScheme;
+      })();
+    </script>
+    <!-- 悬浮球基础样式：透明背景，无滚动 -->
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+      }
+    </style>
+    <!-- 悬浮球样式（顺序：variables → bubble base → bubble theme） -->
+    <link rel="stylesheet" href="/src/styles/variables.css" />
+    <link rel="stylesheet" href="/src/styles/bubble/bubble-base.css" />
+    <link rel="stylesheet" href="/src/styles/bubble/bubble-cyberpunk.css" />
+    <link rel="stylesheet" href="/src/styles/bubble/bubble-glassmorphism.css" />
+  </head>
+  <body>
+    <div id="bubble-app"></div>
+    <script type="module" src="/src/bubble/main.ts"></script>
+  </body>
+</html>
