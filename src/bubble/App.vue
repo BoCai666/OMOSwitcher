@@ -9,7 +9,7 @@ const appWindow = getCurrentWindow()
 const isExpanded = ref(false)
 const { quotas, isLoading, error } = useBubbleQuota()
 
-const ITEM_HEIGHT = 32
+const ITEM_HEIGHT = 44
 const PANEL_PADDING = 12
 const PANEL_WIDTH = 200  // 固定宽度足够显示 "ProviderName 100% 3天后"
 
@@ -88,12 +88,23 @@ function handleMouseUp() {
           :key="q.providerId"
           class="detail-item"
         >
-          <span class="dot" :style="{ background: q.color }"></span>
-          <span class="name">{{ q.providerName }}</span>
-          <span class="percent" :style="{ color: q.remainingPercentage <= 20 ? '#e74c3c' : '#4caf50' }">
-            {{ Math.round(q.remainingPercentage) }}%
-          </span>
-          <span class="reset-time">{{ q.resetTimeText }}</span>
+          <div class="item-info">
+            <span class="dot" :style="{ background: q.color }"></span>
+            <span class="name">{{ q.providerName }}</span>
+            <span class="percent" :style="{ color: q.remainingPercentage <= 20 ? '#e74c3c' : '#4caf50' }">
+              {{ Math.round(q.remainingPercentage) }}%
+            </span>
+            <span class="reset-time">{{ q.resetTimeText }}</span>
+          </div>
+          <div class="item-bar">
+            <div
+              class="item-bar-fill"
+              :style="{
+                width: Math.round(q.remainingPercentage) + '%',
+                background: q.remainingPercentage <= 20 ? '#e74c3c' : q.remainingPercentage <= 40 ? '#f39c12' : q.color
+              }"
+            ></div>
+          </div>
         </div>
       </div>
     </div>
@@ -136,13 +147,34 @@ function handleMouseUp() {
 
 .detail-item {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
+  flex-direction: column;
+  gap: 3px;
+  padding: 3px 8px;
   border-radius: 6px;
   background: rgba(255,255,255,0.05);
   font-size: 11px;
   color: var(--app-text-primary, #fff);
+  width: 100%;
+}
+
+.item-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.item-bar {
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.1);
+  overflow: hidden;
+}
+
+.item-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
 }
 
 .dot {
