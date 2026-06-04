@@ -64,23 +64,6 @@ async function measureAndResize() {
   await appWindow.setSize(new LogicalSize(windowWidth, height))
 }
 
-  // 布局：圆点 + gap + 名称 + gap + 百分比 + gap + 倒计时 + item padding
-  const DOT_WIDTH = 6
-  const GAP = 6
-  const GAPS = GAP * 3
-  const ITEM_PADDING = 8 * 2
-  const SHELL_PADDING = 8 * 2
-  const SAFETY_MARGIN = 12
-
-  const contentWidth = DOT_WIDTH + GAPS + maxNameWidth + maxPercentWidth + maxResetWidth + ITEM_PADDING
-  const windowWidth = Math.ceil(contentWidth + SHELL_PADDING + SAFETY_MARGIN)
-
-  const count = quotas.value.length
-  const height = Math.max(80, PANEL_PADDING + count * ITEM_HEIGHT)
-
-  await appWindow.setSize(new LogicalSize(windowWidth, height))
-}
-
 async function toggleExpand() {
   isExpanded.value = !isExpanded.value
   if (isExpanded.value) {
