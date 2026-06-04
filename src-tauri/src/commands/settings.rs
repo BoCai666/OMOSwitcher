@@ -1,37 +1,7 @@
 // 设置管理命令
 
-use serde::{Deserialize, Serialize};
-
 use super::async_fs;
 use super::get_settings_path;
-
-// ============== 设置数据结构 ==============
-
-/// 悬浮气泡设置
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub(crate) struct BubbleSettings {
-    #[serde(default)]
-    pub(crate) enabled: bool,
-    #[serde(default = "default_bubble_position_x")]
-    pub(crate) position_x: f64,
-    #[serde(default = "default_bubble_position_y")]
-    pub(crate) position_y: f64,
-}
-
-fn default_bubble_position_x() -> f64 {
-    1100.0
-}
-
-fn default_bubble_position_y() -> f64 {
-    650.0
-}
-
-/// 应用设置结构
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub(crate) struct Settings {
-    #[serde(default)]
-    pub(crate) bubble: BubbleSettings,
-}
 
 /// 读取应用设置（异步）
 #[tauri::command]
