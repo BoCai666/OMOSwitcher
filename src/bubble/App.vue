@@ -11,27 +11,53 @@ const { quotas, isLoading, error } = useBubbleQuota()
 
 const ITEM_HEIGHT = 44
 const PANEL_PADDING = 12
-const MIN_PANEL_WIDTH = 220
-const PANEL_EXTRA_PADDING = 24  // 窗口内边距
 
-const detailListRef = ref<HTMLElement | null>(null)
+// 实际文字测量（不依赖 DOM 当前宽度）
+function measureTextWidth(text: string, fontSize: number, fontWeight: string): number {
+  // 创建一个隐藏的 span 来精确测量文字宽度
+  const span = document.createElement('span')
+  span.style.visibility = 'hidden'
+  span.style.position = 'absolute'
+  span.style.whiteSpace = 'nowrap'
+  span.style.fontSize = `${fontSize}px`
+  span.style.fontWeight = fontWeight
+  span.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+  span.textContent = text
+  document.body.appendChild(span)
+  const width = span.getBoundingClientRect().width
+  document.body.removeChild(span)
+  return width
+}
 
 async function measureAndResize() {
   await nextTick()
-  if (!detailListRef.value) return
+  if (quotas.value.length === 0) return
   
-  const items = detailListRef.value.querySelectorAll('.detail-item')
-  let maxWidth = 0
-  items.forEach(item => {
-    const w = (item as HTMLElement).scrollWidth
-    if (w > maxWidth) maxWidth = w
-  })
+  // 通过实际文字测量最宽内容：
+  // 圆点 6px + 名称 + 百分比 + 倒计时 + 各 gap
+  const DOT_WIDTH = 6
+  const GAP = 6 * 2  // 2 个 gap
+  const PERCENT_WIDTH = 30  // 百分比列宽
+  const ITEM_PADDING = 8 * 2  // 左右 padding
+  const SHELL_PADDING = 8 * 2  // bubble-shell.expanded 左右 padding
+  
+  let maxNameWidth = 0
+  let maxResetWidth = 0
+  
+  for (const q of quotas.value) {
+    const nameW = measureTextWidth(q.providerName, 11, '500')
+    const resetW = q.resetTimeText ? measureTextWidth(q.resetTimeText, 9, '400') : 0
+    if (nameW > maxNameWidth) maxNameWidth = nameW
+    if (resetW > maxResetWidth) maxResetWidth = resetW
+  }
+  
+  const contentWidth = DOT_WIDTH + GAP + maxNameWidth + GAP + PERCENT_WIDTH + GAP + maxResetWidth + ITEM_PADDING
+  const windowWidth = Math.ceil(contentWidth + SHELL_PADDING + 8)  // +8 安全边距
   
   const count = quotas.value.length
   const height = Math.max(80, PANEL_PADDING + count * ITEM_HEIGHT)
-  const width = Math.max(MIN_PANEL_WIDTH, maxWidth + PANEL_EXTRA_PADDING)
   
-  await appWindow.setSize(new LogicalSize(width, height))
+  await appWindow.setSize(new LogicalSize(windowWidth, height))
 }
 
 async function toggleExpand() {
@@ -108,7 +134,7 @@ function handleMouseUp() {
     
     <!-- 展开详情面板 -->
     <div v-if="isExpanded" class="detail-panel">
-      <div ref="detailListRef" class="detail-list">
+      <div class="detail-list">
         <div
           v-for="q in quotas"
           :key="q.providerId"
@@ -198,8 +224,7 @@ function handleMouseUp() {
 .name {
   font-weight: 500;
   white-space: nowrap;
-  flex-shrink: 1;
-  min-width: 0;
+  flex-shrink: 0;
 }
 
 .item-bar {
