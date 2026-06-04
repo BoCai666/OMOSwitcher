@@ -116,10 +116,16 @@ function handleMouseUp() {
 }
 
 .detail-panel {
-  flex: 1;
-  padding: 4px;
-  min-height: 0;
-  overflow: hidden !important;  /* 彻底禁止滚动条 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 6px;
+  overflow: hidden !important;
+}
+
+.detail-list {
+  width: 100%;
 }
 
 .detail-list {
