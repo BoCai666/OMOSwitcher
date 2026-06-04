@@ -1,4 +1,4 @@
-/* 悬浮球基础样式 */
+﻿/* 悬浮球基础样式 */
 html, body {
   margin: 0;
   padding: 0;
@@ -6,8 +6,21 @@ html, body {
   height: 100%;
   overflow: hidden;
   background: transparent !important;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* 强制整个 webview 渲染为圆形，消除方形窗口背景 */
+html {
+  mask-image: radial-gradient(circle, #000 100%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle, #000 100%, transparent 100%);
+}
+
+/* 展开时取消圆形 mask，让面板显示为圆角矩形 */
+body.bubble-expanded html,
+body.bubble-expanded {
+  mask-image: none;
+  -webkit-mask-image: none;
 }
 
 /* 确保透明背景不被覆盖 */

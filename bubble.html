@@ -28,6 +28,11 @@
         overflow: hidden;
         background: transparent;
       }
+      /* 用 mask 强制整个 webview 渲染为圆形，消除方形窗口背景 */
+      html {
+        mask-image: radial-gradient(circle, #000 100%, transparent 100%);
+        -webkit-mask-image: radial-gradient(circle, #000 100%, transparent 100%);
+      }
     </style>
     <!-- 悬浮球样式（顺序：variables → bubble base → bubble theme） -->
     <link rel="stylesheet" href="/src/styles/variables.css" />
