@@ -1,9 +1,6 @@
 /* 悬浮球 - 赛博朋克主题覆盖 */
 html.cyberpunk .bubble-app {
-  /* 暗色背景下微量玻璃态 */
-  background: rgba(26, 26, 46, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: transparent !important;
 }
 
 html.cyberpunk .bubble-shell.expanded {
