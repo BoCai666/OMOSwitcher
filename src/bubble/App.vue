@@ -7,7 +7,7 @@ import { useBubbleQuota } from './composables/useBubbleQuota'
 
 const appWindow = getCurrentWindow()
 const isExpanded = ref(false)
-const { quotas } = useBubbleQuota()
+const { quotas, isLoading, error } = useBubbleQuota()
 
 async function handleExpand() {
   isExpanded.value = true
@@ -65,7 +65,13 @@ function handleMouseUp() {
 
 <template>
   <div class="bubble-shell" :class="{ expanded: isExpanded }" @mousedown="handleMouseDown">
-    <BubbleApp @expand="handleExpand" @collapse="handleCollapse" />
+    <BubbleApp
+      :quotas="quotas"
+      :is-loading="isLoading"
+      :error="error"
+      @expand="handleExpand"
+      @collapse="handleCollapse"
+    />
     
     <!-- 展开详情面板 -->
     <div v-if="isExpanded" class="detail-panel">

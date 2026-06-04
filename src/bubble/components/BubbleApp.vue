@@ -1,33 +1,38 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onUnmounted, watch } from 'vue'
 import ProgressRing from './ProgressRing.vue'
-import { useBubbleQuota } from '../composables/useBubbleQuota'
+import type { BubbleQuotaItem } from '../composables/useBubbleQuota'
+
+const props = defineProps<{
+  quotas: BubbleQuotaItem[]
+  isLoading: boolean
+  error: string | null
+}>()
 
 const emit = defineEmits<{
   expand: []
   collapse: []
 }>()
 
-const { quotas, isLoading, error, startRefresh, stopRefresh } = useBubbleQuota()
-const currentIndex = ref(0)
+const localIndex = ref(0)
 const isExpanded = ref(false)
 const isHovering = ref(false)
 let rotateTimer: ReturnType<typeof setInterval> | null = null
 const ROTATE_INTERVAL = 4000
 
 const currentQuota = computed(() => {
-  if (quotas.value.length === 0) return null
-  return quotas.value[currentIndex.value] ?? quotas.value[0]
+  if (props.quotas.length === 0) return null
+  return props.quotas[localIndex.value] ?? props.quotas[0]
 })
 
-const hasMultiple = computed(() => quotas.value.length > 1)
+const hasMultiple = computed(() => props.quotas.length > 1)
 
 function startRotate() {
   stopRotate()
   if (!hasMultiple.value) return
   rotateTimer = setInterval(() => {
     if (!isHovering.value) {
-      currentIndex.value = (currentIndex.value + 1) % quotas.value.length
+      localIndex.value = (localIndex.value + 1) % props.quotas.length
     }
   }, ROTATE_INTERVAL)
 }
@@ -39,7 +44,7 @@ function stopRotate() {
   }
 }
 
-function handleClick() {
+function handleDblClick() {
   isExpanded.value = !isExpanded.value
   if (isExpanded.value) {
     emit('expand')
@@ -51,20 +56,15 @@ function handleClick() {
 function handleMouseEnter() { isHovering.value = true }
 function handleMouseLeave() { isHovering.value = false }
 
-watch(quotas, (newVal) => {
+watch(() => props.quotas, (newVal) => {
   if (newVal.length > 0) {
-    currentIndex.value = 0
+    localIndex.value = 0
     startRotate()
   }
-}, { immediate: true })
-
-onMounted(() => {
-  startRefresh()
-})
+}, { immediate: true, deep: true })
 
 onUnmounted(() => {
   stopRotate()
-  stopRefresh()
 })
 </script>
 
@@ -72,7 +72,7 @@ onUnmounted(() => {
   <div
     class="bubble-app"
     :class="{ 'is-expanded': isExpanded, 'is-loading': isLoading }"
-    @click="handleClick"
+    @dblclick="handleDblClick"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >
