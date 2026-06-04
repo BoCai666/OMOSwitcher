@@ -11,7 +11,7 @@ const { quotas, isLoading, error } = useBubbleQuota()
 
 const ITEM_HEIGHT = 44
 const PANEL_PADDING = 12
-const PANEL_WIDTH = 200  // 固定宽度足够显示 "ProviderName 100% 3天后"
+const PANEL_WIDTH = 240
 
 async function toggleExpand() {
   isExpanded.value = !isExpanded.value
@@ -144,7 +144,7 @@ function handleMouseUp() {
 .detail-list {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 6px;
   width: 100%;
 }
@@ -158,14 +158,20 @@ function handleMouseUp() {
   background: rgba(255,255,255,0.05);
   font-size: 11px;
   color: var(--app-text-primary, #fff);
-  min-width: 160px;
-  max-width: 100%;
+  width: 100%;
 }
 
 .item-info {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  flex-wrap: wrap;
+}
+
+.name {
+  font-weight: 500;
+  text-align: center;
 }
 
 .item-bar {
