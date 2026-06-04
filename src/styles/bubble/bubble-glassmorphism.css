@@ -5,8 +5,8 @@ html.glassmorphism .bubble-app {
   -webkit-backdrop-filter: blur(10px);
 }
 
-html.glassmorphism .bubble-app.is-expanded {
-  background: rgba(255, 255, 255, 0.8);
+html.glassmorphism .bubble-shell.expanded {
+  background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
