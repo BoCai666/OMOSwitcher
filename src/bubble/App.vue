@@ -12,8 +12,10 @@ const { quotas, isLoading, error } = useBubbleQuota()
 async function toggleExpand() {
   isExpanded.value = !isExpanded.value
   if (isExpanded.value) {
+    document.body.classList.add('bubble-expanded')
     await appWindow.setSize(new LogicalSize(220, 280))
   } else {
+    document.body.classList.remove('bubble-expanded')
     await appWindow.setSize(new LogicalSize(80, 80))
   }
 }
@@ -95,21 +97,26 @@ function handleMouseUp() {
 
 <style>
 .bubble-shell {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
   transition: all 0.3s ease;
   position: relative;
+  overflow: hidden;
 }
 
 .bubble-shell.expanded {
   padding: 4px;
+  overflow: visible;
 }
 
 .detail-panel {
-  margin-top: 8px;
-  padding: 8px 4px;
-  max-height: 180px;
+  flex: 1;
+  margin-top: 4px;
+  padding: 4px;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .detail-list {
