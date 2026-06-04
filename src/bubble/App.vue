@@ -144,7 +144,9 @@ function handleMouseUp() {
 .detail-list {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 6px;
+  width: 100%;
 }
 
 .detail-item {
@@ -156,7 +158,8 @@ function handleMouseUp() {
   background: rgba(255,255,255,0.05);
   font-size: 11px;
   color: var(--app-text-primary, #fff);
-  width: 100%;
+  min-width: 160px;
+  max-width: 100%;
 }
 
 .item-info {
