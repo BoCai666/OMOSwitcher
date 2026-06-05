@@ -9,8 +9,9 @@ const appWindow = getCurrentWindow()
 const isExpanded = ref(false)
 const { quotas, isLoading, error } = useBubbleQuota()
 
-const ITEM_HEIGHT = 44
-const PANEL_PADDING = 12
+const ITEM_HEIGHT = 32
+const PANEL_PADDING = 24
+const GAP_HEIGHT = 6
 
 // 实际文字测量（不依赖 DOM 当前宽度）
 function measureTextWidth(text: string, fontSize: number, fontWeight: string): number {
@@ -59,7 +60,8 @@ async function measureAndResize() {
   const windowWidth = Math.ceil(contentWidth + SHELL_PADDING + SAFETY_MARGIN)
 
   const count = quotas.value.length
-  const height = Math.max(80, PANEL_PADDING + count * ITEM_HEIGHT)
+  const gapHeight = count > 1 ? (count - 1) * GAP_HEIGHT : 0
+  const height = Math.max(80, PANEL_PADDING + count * ITEM_HEIGHT + gapHeight)
 
   await appWindow.setSize(new LogicalSize(windowWidth, height))
 }
