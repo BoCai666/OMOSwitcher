@@ -56,10 +56,13 @@ async function loadBubbleSettings() {
 }
 
 async function toggleBubble() {
+  // el-switch 的 v-model 已经自动更新了 bubbleEnabled 状态
+  // 这里只需要调用后端，失败时回滚
+  const prev = bubbleEnabled.value
   try {
     await invoke('toggle_bubble')
-    bubbleEnabled.value = !bubbleEnabled.value
   } catch (e) {
+    bubbleEnabled.value = prev
     console.error('切换悬浮球失败:', e)
   }
 }
