@@ -188,22 +188,31 @@ function handleMouseUp() {
   border: none !important;
   box-shadow: none !important;
   outline: none !important;
-  clip-path: circle(50% at 50% 50%);
-  -webkit-clip-path: circle(50% at 50% 50%);
   position: relative;
-  transition: border-radius 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
-              clip-path 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
-              -webkit-clip-path 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: border-radius 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .bubble-shell.expanded {
   border-radius: 12px;
-  padding: 6px 8px;
-  clip-path: none;
-  -webkit-clip-path: none;
+  background: #1a1a2e !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-.content-wrapper,
+.content-wrapper {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  overflow: hidden !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .detail-panel {
   position: absolute;
   inset: 0;
@@ -213,11 +222,9 @@ function handleMouseUp() {
   justify-content: center;
   width: 100%;
   height: 100%;
-  padding: 4px 6px;
-  overflow: hidden !important;
+  padding: 10px;
   visibility: hidden;
   pointer-events: none;
-  /* 不使用 opacity 过渡，避免交叉淡入时的重叠闪烁 */
 }
 
 .content-wrapper.active,
@@ -238,12 +245,14 @@ function handleMouseUp() {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: 6px;
-  background: rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
   font-size: 11px;
   color: var(--app-text-primary, #fff);
   width: 100%;
+  box-sizing: border-box;
 }
 
 .item-info {
