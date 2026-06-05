@@ -182,18 +182,14 @@ function handleMouseUp() {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  overflow: hidden !important;
-  border-radius: 50%;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   outline: none !important;
   position: relative;
-  transition: border-radius 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .bubble-shell.expanded {
-  border-radius: 12px;
   background: #1a1a2e !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
@@ -222,7 +218,7 @@ function handleMouseUp() {
   justify-content: center;
   width: 100%;
   height: 100%;
-  padding: 10px;
+  padding: 22px;
   visibility: hidden;
   pointer-events: none;
 }

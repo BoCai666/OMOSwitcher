@@ -22,6 +22,7 @@ html {
 /* 展开时取消圆形裁剪，让面板显示为圆角矩形 */
 html.bubble-expanded {
   border-radius: 12px;
+  overflow: hidden;
 }
 
 /* 确保透明背景不被覆盖 */
