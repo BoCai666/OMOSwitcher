@@ -121,7 +121,12 @@ pub fn run() {
         // 创建系统托盘
         .setup(|app| {
             let show_item = MenuItem::with_id(app, "show", "显示 OMOSwitcher", true, None::<&str>)?;
-            let bubble_item = MenuItem::with_id(app, "toggle_bubble", "切换悬浮球", true, None::<&str>)?;
+            let bubble_text = if app.get_webview_window("bubble").is_some() {
+                "关闭悬浮球"
+            } else {
+                "开启悬浮球"
+            };
+            let bubble_item = MenuItem::with_id(app, "toggle_bubble", bubble_text, true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
             let menu = MenuBuilder::new(app)
                 .item(&show_item)
@@ -136,7 +141,7 @@ pub fn run() {
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .tooltip("OMOSwitcher")
-                .on_menu_event(|app, event| {
+                .on_menu_event(move |app, event| {
                     match event.id.as_ref() {
                         "show" => {
                             if let Some(window) = app.get_webview_window("main") {
@@ -150,6 +155,7 @@ pub fn run() {
                                 if let Some(window) = app.get_webview_window("bubble") {
                                     let _ = window.close();
                                 }
+                                let _ = bubble_item.set_text("开启悬浮球");
                             } else {
                                 use tauri::WebviewUrl;
                                 use tauri::WebviewWindowBuilder;
@@ -164,6 +170,7 @@ pub fn run() {
                                     .resizable(false)
                                     .visible(true)
                                     .build();
+                                let _ = bubble_item.set_text("关闭悬浮球");
                             }
                         }
                         "quit" => {
