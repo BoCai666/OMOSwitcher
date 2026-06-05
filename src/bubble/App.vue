@@ -218,7 +218,6 @@ function handleMouseUp() {
   justify-content: center;
   width: 100%;
   height: 100%;
-  padding: 22px;
   visibility: hidden;
   pointer-events: none;
 }
@@ -234,7 +233,8 @@ function handleMouseUp() {
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
-  width: 100%;
+  width: calc(100% - 44px);
+  margin: 0 22px;
 }
 
 .detail-item {
