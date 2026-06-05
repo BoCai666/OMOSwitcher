@@ -296,6 +296,7 @@ pub fn run() {
             bubble::commands::toggle_bubble,
             bubble::commands::get_bubble_settings,
             bubble::commands::save_bubble_position,
+            bubble::commands::is_bubble_visible,
         ])
         .on_window_event(|window, event| {
             // 窗口关闭时的处理

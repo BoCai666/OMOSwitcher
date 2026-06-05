@@ -203,3 +203,9 @@ fn update_bubble_enabled_setting(app: &AppHandle, enabled: bool) -> Result<(), S
 
     Ok(())
 }
+
+/// 检查悬浮球窗口是否实际存在
+#[tauri::command]
+pub async fn is_bubble_visible(app: AppHandle) -> Result<bool, String> {
+    Ok(app.get_webview_window("bubble").is_some())
+}

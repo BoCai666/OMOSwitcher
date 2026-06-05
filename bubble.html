@@ -31,10 +31,9 @@
         box-shadow: none !important;
         outline: none !important;
       }
-      /* 强制整个 webview 渲染为圆形，消除方形窗口背景 */
+      /* 悬浮球窗口保持透明背景，不裁剪 */
       html {
-        border-radius: 50%;
-        overflow: hidden;
+        background: transparent !important;
       }
       html.bubble-expanded {
         border-radius: 12px;

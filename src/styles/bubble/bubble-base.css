@@ -13,13 +13,7 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* 强制整个 webview 渲染为圆形，消除方形窗口背景 */
-html {
-  border-radius: 50%;
-  overflow: hidden;
-}
-
-/* 展开时取消圆形裁剪，让面板显示为圆角矩形 */
+/* 展开时窗口变为圆角矩形 */
 html.bubble-expanded {
   border-radius: 12px;
   overflow: hidden;

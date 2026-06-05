@@ -9,13 +9,11 @@ const appWindow = getCurrentWindow()
 const isExpanded = ref(false)
 const { quotas, isLoading, error } = useBubbleQuota()
 
-const ITEM_HEIGHT = 32
-const PANEL_PADDING = 24
-const GAP_HEIGHT = 6
+const ITEM_HEIGHT = 24
+const PANEL_PADDING = 12
+const GAP_HEIGHT = 4
 
-// 实际文字测量（不依赖 DOM 当前宽度）
 function measureTextWidth(text: string, fontSize: number, fontWeight: string): number {
-  // 创建一个隐藏的 span 来精确测量文字宽度
   const span = document.createElement('span')
   span.style.visibility = 'hidden'
   span.style.position = 'absolute'
@@ -30,34 +28,37 @@ function measureTextWidth(text: string, fontSize: number, fontWeight: string): n
   return width
 }
 
+// 填充色按额度状态显示：鲜艳配色（主色+浅色用于渐变）
+function getFillColor(percentage: number): { main: string; light: string } {
+  if (percentage <= 10) return { main: '#e74c3c', light: '#ff6b6b' } // 严重不足
+  if (percentage <= 20) return { main: '#f39c12', light: '#ffd93d' } // 危险
+  if (percentage <= 50) return { main: '#f1c40f', light: '#f9ca24' } // 警告
+  return { main: '#2ecc71', light: '#6dd5b8' } // 充足
+}
+
 async function measureAndResize() {
   await nextTick()
   if (quotas.value.length === 0) return
 
-  // 测量百分比和倒计时的自然宽度
-  // 名称有 max-width 截断（140px），不需要测量
-  let maxPercentWidth = 0
-  let maxResetWidth = 0
+  let maxContentWidth = 0
 
   for (const q of quotas.value) {
+    // 测量每项实际文本宽度，不设上限，确保窗口足够容纳完整内容
+    const nameW = measureTextWidth(q.providerName, 11, '500')
     const percentText = `${Math.round(q.remainingPercentage)}%`
     const percentW = measureTextWidth(percentText, 11, '700')
     const resetW = q.resetTimeText ? measureTextWidth(q.resetTimeText, 9, '400') : 0
-    if (percentW > maxPercentWidth) maxPercentWidth = percentW
-    if (resetW > maxResetWidth) maxResetWidth = resetW
+
+    // 计算该行的总内容宽度：dot + 4个gap + name + spacer(min 8px) + percent + reset + item padding
+    const rowWidth = 6 + (6 * 4) + nameW + 8 + percentW + resetW + (10 * 2)
+    if (rowWidth > maxContentWidth) maxContentWidth = rowWidth
   }
 
-  // 布局：圆点 + gap + 名称(140px) + gap + 百分比 + gap + 倒计时 + item padding
-  const DOT_WIDTH = 6
-  const NAME_MAX_WIDTH = 140
-  const GAP = 6
-  const GAPS = GAP * 3
-  const ITEM_PADDING = 8 * 2
-  const SHELL_PADDING = 8 * 2
-  const SAFETY_MARGIN = 12
+  // detail-panel padding 是 12px，左右共 24px
+  const SHELL_PADDING = 12 * 2
+  const SAFETY_MARGIN = 20
 
-  const contentWidth = DOT_WIDTH + GAPS + NAME_MAX_WIDTH + maxPercentWidth + maxResetWidth + ITEM_PADDING
-  const windowWidth = Math.ceil(contentWidth + SHELL_PADDING + SAFETY_MARGIN)
+  const windowWidth = Math.ceil(maxContentWidth + SHELL_PADDING + SAFETY_MARGIN)
 
   const count = quotas.value.length
   const gapHeight = count > 1 ? (count - 1) * GAP_HEIGHT : 0
@@ -68,28 +69,23 @@ async function measureAndResize() {
 
 async function toggleExpand() {
   if (!isExpanded.value) {
-    // 展开：先解除圆形裁剪并扩大窗口，最后才显示面板
-    // 避免面板在 80x80 圆形窗口内瞬间出现被裁剪
     document.documentElement.classList.add('bubble-expanded')
     await measureAndResize()
     isExpanded.value = true
   } else {
-    // 收起：先隐藏面板，再恢复圆形裁剪，最后缩小窗口
     isExpanded.value = false
-    await nextTick() // 确保 Vue 已更新 DOM，面板变为 hidden
+    await nextTick()
     document.documentElement.classList.remove('bubble-expanded')
     await appWindow.setSize(new LogicalSize(80, 80))
   }
 }
 
-// 数据加载完成或变化时重新测量（如果当前展开）
 watch(quotas, async () => {
   if (isExpanded.value) {
     await measureAndResize()
   }
 }, { deep: true })
 
-// 拖拽相关状态
 const DRAG_THRESHOLD = 5
 let isDragging = false
 let dragStartX = 0
@@ -130,7 +126,6 @@ function handleMouseUp() {
       invoke('save_bubble_position', { x: pos.x, y: pos.y })
     })
   } else {
-    // 不是拖拽 → 切换展开/收起
     toggleExpand()
   }
 }
@@ -138,39 +133,35 @@ function handleMouseUp() {
 
 <template>
   <div class="bubble-shell" :class="{ expanded: isExpanded }" @mousedown="handleMouseDown">
-    <!-- 悬浮球内容：绝对定位叠加 -->
+    <!-- 悬浮球内容 -->
     <div class="content-wrapper" :class="{ active: !isExpanded }">
-      <BubbleApp
-        :quotas="quotas"
-        :is-loading="isLoading"
-        :error="error"
-      />
+      <BubbleApp :quotas="quotas" :is-loading="isLoading" :error="error" />
     </div>
 
-    <!-- 面板内容：绝对定位叠加 -->
+    <!-- 详情面板 -->
     <div class="detail-panel" :class="{ active: isExpanded }">
       <div class="detail-list">
         <div
           v-for="q in quotas"
           :key="q.providerId"
           class="detail-item"
+          :style="{
+            '--fill-width': Math.round(q.remainingPercentage) + '%',
+            '--fill-color': getFillColor(q.remainingPercentage).main,
+            '--fill-color-light': getFillColor(q.remainingPercentage).light
+          }"
         >
-          <div class="item-info">
+          <div class="item-fill"></div>
+          <div class="item-content">
             <span class="dot" :style="{ background: q.color }"></span>
             <span class="name">{{ q.providerName }}</span>
-            <span class="percent" :style="{ color: q.remainingPercentage <= 20 ? '#e74c3c' : '#4caf50' }">
+            <span class="spacer"></span>
+            <span 
+              class="percent"
+            >
               {{ Math.round(q.remainingPercentage) }}%
             </span>
-            <span class="reset-time">{{ q.resetTimeText }}</span>
-          </div>
-          <div class="item-bar">
-            <div
-              class="item-bar-fill"
-              :style="{
-                width: Math.round(q.remainingPercentage) + '%',
-                background: q.remainingPercentage <= 20 ? '#e74c3c' : q.remainingPercentage <= 40 ? '#f39c12' : q.color
-              }"
-            ></div>
+            <span v-if="q.resetTimeText" class="reset-time">{{ q.resetTimeText }}</span>
           </div>
         </div>
       </div>
@@ -191,9 +182,14 @@ function handleMouseUp() {
   position: relative;
 }
 
+/* ============ 展开面板样式 ============ */
 .bubble-shell.expanded {
-  background: #1a1a2e !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  background: rgba(30, 30, 32, 0.95) !important;
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .content-wrapper {
@@ -216,10 +212,11 @@ function handleMouseUp() {
   inset: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
+  padding: 12px;
+  box-sizing: border-box;
   visibility: hidden;
   pointer-events: none;
 }
@@ -230,33 +227,49 @@ function handleMouseUp() {
   pointer-events: auto;
 }
 
+/* 列表容器 - 无滚动条 */
 .detail-list {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  width: calc(100% - 44px);
-  margin: 0 22px;
+  gap: 4px;
 }
 
+/* 单个 provider 行 - 整行作为进度条 */
 .detail-item {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 4px 10px;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
   border-radius: 6px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
-  font-size: 11px;
-  color: var(--app-text-primary, #fff);
-  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   box-sizing: border-box;
+  overflow: hidden;
+  cursor: default;
 }
 
-.item-info {
+/* 填充层 - 渐变+光泽效果 */
+.item-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--fill-width);
+  height: 100%;
+  background: linear-gradient(90deg, var(--fill-color) 0%, var(--fill-color-light) 100%);
+  opacity: 0.3;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 5px 0 0 5px;
+}
+
+/* 内容层 - 在填充色上方 */
+.item-content {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 6px;
+  width: 100%;
   flex-wrap: nowrap;
 }
 
@@ -269,37 +282,29 @@ function handleMouseUp() {
 
 .name {
   font-weight: 500;
+  font-size: 11px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 140px;
-  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.spacer {
+  flex: 1;
+  min-width: 8px;
 }
 
 .percent {
   font-weight: 700;
-  flex: 0 0 auto;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
 .reset-time {
   font-size: 9px;
-  color: var(--app-text-secondary, #999);
+  color: rgba(255, 255, 255, 0.3);
   white-space: nowrap;
-  flex: 0 0 auto;
+  flex-shrink: 0;
 }
-
-.item-bar {
-  width: 100%;
-  height: 3px;
-  border-radius: 2px;
-  background: rgba(255,255,255,0.1);
-  overflow: hidden;
-}
-
-.item-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.4s ease;
-}
-
 </style>

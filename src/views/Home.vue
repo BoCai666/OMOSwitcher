@@ -41,28 +41,30 @@ const {
   saveHotReloadConfig
 } = useHotReloadConfig()
 
-// 悬浮球状态
+// 悬浮球状态（以实际窗口是否存在为准，而非设置文件）
 const bubbleEnabled = ref(false)
 
 async function loadBubbleSettings() {
   try {
-    const settings = await invoke<string>('get_bubble_settings')
-    const parsed = JSON.parse(settings)
-    bubbleEnabled.value = parsed.enabled ?? false
+    // 以实际窗口是否存在为真实状态，设置文件中的 enabled 仅作参考
+    const isVisible = await invoke<boolean>('is_bubble_visible')
+    bubbleEnabled.value = isVisible
   } catch (e) {
-    console.error('加载悬浮球设置失败:', e)
+    console.error('加载悬浮球状态失败:', e)
     bubbleEnabled.value = false
   }
 }
 
 async function toggleBubble() {
-  // el-switch 的 v-model 已经自动更新了 bubbleEnabled 状态
-  // 这里只需要调用后端，失败时回滚
-  const prev = bubbleEnabled.value
+  // el-switch v-model 已自动切换状态，这里调用后端同步实际窗口
+  const newState = bubbleEnabled.value
   try {
-    await invoke('toggle_bubble')
+    const actualState = await invoke<boolean>('toggle_bubble')
+    // 后端返回切换后的真实状态，同步到前端
+    bubbleEnabled.value = actualState
   } catch (e) {
-    bubbleEnabled.value = prev
+    // 失败时回滚状态
+    bubbleEnabled.value = !newState
     console.error('切换悬浮球失败:', e)
   }
 }
