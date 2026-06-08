@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useTweenedNumber } from '../composables/useTweenedNumber'
 
 const props = withDefaults(defineProps<{
   percentage: number
@@ -12,6 +13,9 @@ const props = withDefaults(defineProps<{
 })
 
 const clampedPercentage = computed(() => Math.max(0, Math.min(100, props.percentage)))
+
+// 数字平滑过渡：刷新时数字从旧值滚动到新值
+const displayPercentage = useTweenedNumber(() => clampedPercentage.value, { duration: 700 })
 
 // 水波高度：百分比越高，水面越往上
 const waterHeight = computed(() => clampedPercentage.value)
@@ -79,7 +83,7 @@ function darkenColor(hex: string, percent: number): string {
       <!-- 中心文字 -->
       <div class="ball-text">
         <span class="percentage" :style="{ color: textColor }">
-          {{ Math.round(clampedPercentage) }}%
+          {{ Math.round(displayPercentage) }}%
         </span>
         <span class="label">{{ label }}</span>
       </div>

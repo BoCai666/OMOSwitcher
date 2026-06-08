@@ -2,7 +2,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { quotaApi } from '@/services/quotaApi'
 import { getBalancePercentage, formatResetTime } from '@/composables/useQuotaFormatter'
 import type { ProviderQuota } from '@/types/quota'
-import { PROVIDER_METADATA } from '@/data/providerMetadata'
+import { getProviderMetadata } from '@/data/providerMetadata'
 
 const REFRESH_INTERVAL = 10 * 60 * 1000 // 10 分钟
 
@@ -71,7 +71,7 @@ export function useBubbleQuota() {
             providerId: q.providerId,
             providerName: q.providerName,
             remainingPercentage,
-            color: PROVIDER_METADATA[q.providerId]?.color ?? '#4d6bfe',
+            color: getProviderMetadata(q.providerId).color,
             label: computeLabel(q.providerId, q.providerName),
             resetTimeText: q.resetTime ? formatResetTime(q.resetTime) : '',
             raw: q,

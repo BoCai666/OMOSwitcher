@@ -3,11 +3,12 @@ import { ref, nextTick, watch } from 'vue'
 import { getCurrentWindow, LogicalSize, PhysicalPosition } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
 import BubbleApp from './components/BubbleApp.vue'
+import TweenedPercent from './components/TweenedPercent.vue'
 import { useBubbleQuota } from './composables/useBubbleQuota'
 
 const appWindow = getCurrentWindow()
 const isExpanded = ref(false)
-const { quotas, isLoading, error } = useBubbleQuota()
+const { quotas, isLoading, error, fetchQuotas } = useBubbleQuota()
 
 const ITEM_HEIGHT = 24
 const PANEL_PADDING = 12
@@ -72,6 +73,8 @@ async function toggleExpand() {
     document.documentElement.classList.add('bubble-expanded')
     await measureAndResize()
     isExpanded.value = true
+    // 主动刷新一次，让用户看到最新额度
+    fetchQuotas()
   } else {
     isExpanded.value = false
     await nextTick()
@@ -140,6 +143,10 @@ function handleMouseUp() {
 
     <!-- 详情面板 -->
     <div class="detail-panel" :class="{ active: isExpanded }">
+      <!-- 刷新指示条 -->
+      <div v-if="isLoading" class="refresh-indicator">
+        <div class="refresh-indicator-bar"></div>
+      </div>
       <div class="detail-list">
         <div
           v-for="q in quotas"
@@ -156,10 +163,10 @@ function handleMouseUp() {
             <span class="dot" :style="{ background: q.color }"></span>
             <span class="name">{{ q.providerName }}</span>
             <span class="spacer"></span>
-            <span 
+            <span
               class="percent"
             >
-              {{ Math.round(q.remainingPercentage) }}%
+              <TweenedPercent :value="q.remainingPercentage" />
             </span>
             <span v-if="q.resetTimeText" class="reset-time">{{ q.resetTimeText }}</span>
           </div>
@@ -225,6 +232,35 @@ function handleMouseUp() {
 .detail-panel.active {
   visibility: visible;
   pointer-events: auto;
+}
+
+/* 刷新指示条 - 绝对定位在面板顶部，indeterminate 进度条 */
+.refresh-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  overflow: hidden;
+  z-index: 10;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.refresh-indicator-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 50%;
+  background: linear-gradient(90deg, transparent, #2ecc71 30%, #6dd5fa 50%, #2ecc71 70%, transparent);
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(46, 204, 113, 0.6), 0 0 20px rgba(109, 213, 250, 0.3);
+  animation: refresh-slide 0.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes refresh-slide {
+  0% { left: -50%; }
+  100% { left: 100%; }
 }
 
 /* 列表容器 - 无滚动条 */
