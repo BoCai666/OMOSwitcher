@@ -29,6 +29,27 @@ fn read_bubble_position(_app: &AppHandle) -> Result<(f64, f64), String> {
     Ok((pos_x, pos_y))
 }
 
+/// 从设置中读取悬浮球的 enabled 状态
+pub fn read_bubble_enabled(_app: &AppHandle) -> bool {
+    let settings_path = match crate::commands::get_settings_path() {
+        Ok(p) => p,
+        Err(_) => return false,
+    };
+
+    let content = if settings_path.exists() {
+        std::fs::read_to_string(&settings_path).unwrap_or_else(|_| "{}".to_string())
+    } else {
+        "{}".to_string()
+    };
+
+    let json: serde_json::Value = serde_json::from_str(&content).unwrap_or_default();
+
+    json.get("bubble")
+        .and_then(|b| b.get("enabled"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+}
+
 /// 创建悬浮球窗口
 #[tauri::command]
 pub async fn create_bubble(app: AppHandle) -> Result<(), String> {

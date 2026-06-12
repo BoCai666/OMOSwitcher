@@ -195,6 +195,17 @@ pub fn run() {
             #[cfg(desktop)]
             app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
 
+            // 启动时根据保存的 enabled 状态自动恢复悬浮球
+            let bubble_should_restore = bubble::commands::read_bubble_enabled(&app.handle());
+            if bubble_should_restore && app.get_webview_window("bubble").is_none() {
+                let app_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Err(e) = bubble::commands::create_bubble(app_handle).await {
+                        tracing::error!("[Bubble] 启动时恢复悬浮球失败: {}", e);
+                    }
+                });
+            }
+
             Ok(())
         })
         // 注册 Monitor 状态管理
@@ -301,14 +312,13 @@ pub fn run() {
         .on_window_event(|window, event| {
             // 窗口关闭时的处理
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                tracing::info!("[App] 窗口关闭...");
+                tracing::info!("[App] 窗口关闭... label={}", window.label());
                 if window.label() == "main" {
                     // 清理代理模式启动的 opencode 子进程
                     commands::launch::cleanup_opencode_child();
+                    // 真正退出应用：主窗口关闭时一并退出整个进程（包括悬浮球）
+                    window.app_handle().exit(0);
                 }
-                // Monitor 服务会在应用退出时自动清理
-                // 不再尝试在窗口关闭时执行异步操作，避免 runtime 已停止的问题
-                let _ = window;
             }
         })
         .run(tauri::generate_context!())

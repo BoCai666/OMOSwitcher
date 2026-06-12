@@ -13,6 +13,7 @@ import { useProxyConfig } from '@/composables/useProxyConfig'
 import { useHotReloadConfig } from '@/composables/useHotReloadConfig'
 import { open } from '@tauri-apps/plugin-dialog'
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 
 const router = useRouter()
 const configStore = useConfigStore()
@@ -247,6 +248,10 @@ onMounted(() => {
   loadHotReloadConfig()
   // 加载悬浮球设置
   loadBubbleSettings()
+
+  // 监听后端悬浮球创建/销毁事件，同步开关显示
+  listen('bubble-created', () => { bubbleEnabled.value = true })
+  listen('bubble-destroyed', () => { bubbleEnabled.value = false })
 })
 </script>
 
