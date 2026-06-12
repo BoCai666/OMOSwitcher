@@ -41,7 +41,7 @@
       }
     ]
   },
-  "version": "2.0.15",
+  "version": "2.0.16",
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE0NzRCMzQzQzQ3M0U4ODMKUldTRDZIUEVRN04wRkJGOWZnRkxwcVEyKzBNTU1FUTZEa0VObndWR05pdG4vWWh6bE8vZ055QzEK",

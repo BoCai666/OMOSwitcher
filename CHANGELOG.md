@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.16] - 2026-06-12
+
+### 新增功能
+
+- **启动时自动恢复悬浮球** - 应用启动时根据保存的 `enabled` 状态自动创建悬浮球窗口，无需手动重新开启
+- **数字平滑过渡动画** - 新增 `useTweenedNumber` composable，悬浮球和详情面板的百分比数字在刷新时从旧值平滑滚动到新值
+- **详情面板主动刷新** - 展开面板时主动触发一次额度刷新，让用户看到最新数据
+- **详情面板刷新指示** - 面板顶部加 indeterminate 进度条，刷新时显示滑动的青色光带
+
+### 优化改进
+
+- **品牌色解析修复** - 改用 `getProviderMetadata()` 函数走完整 alias 匹配链，修复 kimi-for-coding / wuwen / minimax 等品牌色全部显示蓝色的问题
+
+### Bug 修复
+
+- **修复关闭主窗口不退出** - 关闭主窗口时调用 `app.exit(0)` 真正退出整个进程（之前悬浮球在时应用留在后台）
+
+---
+
 ## [2.0.15] - 2026-06-07
 
 ### 新增功能
