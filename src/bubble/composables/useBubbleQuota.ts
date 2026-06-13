@@ -1,10 +1,12 @@
-import { ref, onMounted, onUnmounted } from 'vue'
-import { quotaApi } from '@/services/quotaApi'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useQuotaStore } from '@/stores/quota'
 import { getBalancePercentage, formatResetTime } from '@/composables/useQuotaFormatter'
 import type { ProviderQuota } from '@/types/quota'
 import { getProviderMetadata } from '@/data/providerMetadata'
 
-const REFRESH_INTERVAL = 10 * 60 * 1000 // 10 分钟
+const REFRESH_INTERVAL = 10 * 60 * 1000 // 10 分钟（悬浮球自己的轮询阈值）
+const CACHE_TTL = REFRESH_INTERVAL
 
 export interface BubbleQuotaItem {
   providerId: string
@@ -22,7 +24,6 @@ export interface BubbleQuotaItem {
 }
 
 function computeLabel(providerId: string, providerName: string): string {
-  // 优先使用简称映射
   const shortNames: Record<string, string> = {
     'deepseek': 'DS',
     'zhipu': 'GLM',
@@ -37,58 +38,67 @@ function computeLabel(providerId: string, providerName: string): string {
   return shortNames[providerId] ?? providerName.slice(0, 3).toUpperCase()
 }
 
+function toBubbleItem(q: ProviderQuota): BubbleQuotaItem {
+  let remainingPercentage: number
+  if (q.quotaType === 'token_limit') {
+    remainingPercentage = 100 - (q.quotaPercentage ?? 0)
+  } else if (q.quotaType === 'balance') {
+    remainingPercentage = getBalancePercentage(q)
+  } else {
+    remainingPercentage = 0
+  }
+  remainingPercentage = Math.max(0, Math.min(100, remainingPercentage))
+
+  return {
+    providerId: q.providerId,
+    providerName: q.providerName,
+    remainingPercentage,
+    color: getProviderMetadata(q.providerId).color,
+    label: computeLabel(q.providerId, q.providerName),
+    resetTimeText: q.resetTime ? formatResetTime(q.resetTime) : '',
+    raw: q,
+  }
+}
+
 export function useBubbleQuota() {
-  const quotas = ref<BubbleQuotaItem[]>([])
+  const quotaStore = useQuotaStore()
+  const { data: rawData, isLoading, lastFetchTime } = storeToRefs(quotaStore)
+
+  // 派生 BubbleQuotaItem[]：从共享 store 的原始数据计算
+  const quotas = computed<BubbleQuotaItem[]>(() =>
+    rawData.value
+      .filter(q => q.status === 'success' && q.quotaType !== 'unsupported')
+      .map(toBubbleItem)
+  )
+
   const currentIndex = ref(0)
-  const isLoading = ref(true)
-  const error = ref<string | null>(null)
+  const error = ref<string | null>(null)  // 保留兼容旧 API
   let refreshTimer: ReturnType<typeof setInterval> | null = null
 
-  async function fetchQuotas() {
-    isLoading.value = true
-    error.value = null
-
+  /** 10 分钟定时拉取（10 分钟内有数据则跳过） */
+  async function pollFetch() {
     try {
-      const rawQuotas = await quotaApi.fetchAllProviderQuotas()
-
-      quotas.value = rawQuotas
-        .filter(q => q.status === 'success' && q.quotaType !== 'unsupported')
-        .map(q => {
-          let remainingPercentage: number
-
-          if (q.quotaType === 'token_limit') {
-            remainingPercentage = 100 - (q.quotaPercentage ?? 0)
-          } else if (q.quotaType === 'balance') {
-            remainingPercentage = getBalancePercentage(q)
-          } else {
-            remainingPercentage = 0
-          }
-
-          // Clamp to 0-100
-          remainingPercentage = Math.max(0, Math.min(100, remainingPercentage))
-
-          return {
-            providerId: q.providerId,
-            providerName: q.providerName,
-            remainingPercentage,
-            color: getProviderMetadata(q.providerId).color,
-            label: computeLabel(q.providerId, q.providerName),
-            resetTimeText: q.resetTime ? formatResetTime(q.resetTime) : '',
-            raw: q,
-          }
-        })
+      await quotaStore.fetchIfStale(CACHE_TTL)
+      error.value = null
     } catch (e) {
       error.value = e instanceof Error ? e.message : '未知错误'
-      // 保留上次成功数据
-    } finally {
-      isLoading.value = false
+    }
+  }
+
+  /** 展开面板时强制刷新 */
+  async function fetchQuotas() {
+    try {
+      await quotaStore.refresh()
+      error.value = null
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : '未知错误'
     }
   }
 
   function startRefresh() {
     stopRefresh()
-    fetchQuotas()
-    refreshTimer = setInterval(fetchQuotas, REFRESH_INTERVAL)
+    pollFetch()
+    refreshTimer = setInterval(pollFetch, REFRESH_INTERVAL)
   }
 
   function stopRefresh() {
@@ -99,7 +109,8 @@ export function useBubbleQuota() {
   }
 
   onMounted(() => {
-    startRefresh()
+    // 初始化 store（订阅跨 webview 同步事件），然后开始 10 分钟轮询
+    quotaStore.init().then(() => startRefresh())
   })
 
   onUnmounted(() => {
@@ -111,6 +122,7 @@ export function useBubbleQuota() {
     currentIndex,
     isLoading,
     error,
+    lastFetchTime,
     startRefresh,
     stopRefresh,
     fetchQuotas,

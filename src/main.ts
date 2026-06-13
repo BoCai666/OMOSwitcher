@@ -9,6 +9,7 @@ import 'element-plus/dist/index.css'
 import App from './App.vue'
 import router from './router'
 import { globalErrorHandler, setupGlobalErrorHandling } from './utils/errorHandler'
+import { useQuotaStore } from '@/stores/quota'
 
 // 设计系统样式引入（顺序重要）
 import '@/styles/variables.css'
@@ -53,6 +54,11 @@ if (import.meta.env.DEV) {
 
 // 使用 Pinia 状态管理
 app.use(createPinia())
+
+// 立即初始化 quota store：订阅跨 webview 同步事件
+// 这样无论用户在哪个页面（Home/QuotaView），bubble 拉取后 emit 的数据都能立即同步到主 webview
+// 避免用户在 Home 切到 QuotaView 时看到刷新转圈
+useQuotaStore().init()
 
 // 使用 Vue Router
 app.use(router)
