@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.17] - 2026-06-12
+
+### 优化改进
+
+- **跨 webview 共享额度数据** - 新建 quota store，悬浮球和额度页面共用同一份数据源；fetch 完成后通过 Tauri 事件同步到所有 webview
+- **bubble webview 启动时即订阅同步事件** - 避免用户在 Home 切到 QuotaView 时看到刷新转圈
+- **额度页未订阅供应商过滤** - 统一在 store 中过滤 `unsupported` 类型的 provider（保留 OpenCodeGo 和 error 状态）
+
+### Bug 修复
+
+- **修复 bubble 窗口不显示** - `bubble/main.ts` 之前没有初始化 Pinia，导致 `useQuotaStore()` 抛错
+
+---
+
 ## [2.0.16] - 2026-06-12
 
 ### 新增功能
